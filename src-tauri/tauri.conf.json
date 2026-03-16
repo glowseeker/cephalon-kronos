@@ -1,0 +1,53 @@
+{
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist",
+    "withGlobalTauri": false
+  },
+  "package": {
+    "productName": "Cephalon Kronos",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "protocol": {
+        "asset": true,
+        "assetScope": ["**"]
+      },
+      "shell": {
+        "all": false,
+        "open": true
+      }
+    },
+    "bundle": {
+     "active": true,
+     "targets": "all",
+     "identifier": "com.glowseeker.cephalonkronos",
+     "icon": [
+       "icons/icon.png"
+     ],
+     "resources": [
+      "data/bin/*",
+      "data/export/*",
+      "data/user/*"
+    ]
+   },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "resizable": true,
+        "title": "Cephalon Kronos",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600
+      }
+    ]
+  }
+}

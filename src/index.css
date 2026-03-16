@@ -1,0 +1,218 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Warframe Theme System - Based on official game themes */
+:root {
+  --color-bg: #04060b;
+  --color-panel: #0c101a;
+  --color-accent: #5590ab;
+  --color-accent-secondary: #b99354;
+  --color-text: #ffffff;
+  --color-text-dim: #9ca3af;
+  --glow-color: rgba(85, 144, 171, 0.5);
+}
+
+[data-theme='vitruvian'] {
+  --color-bg: #04060b;
+  --color-panel: #0c101a;
+  --color-accent: #5590ab;
+  --color-accent-secondary: #b99354;
+  --glow-color: rgba(85, 144, 171, 0.5);
+}
+
+[data-theme='baruuk'] {
+  --color-bg: #1d1b18;
+  --color-panel: #2b2822;
+  --color-accent: #c09e62;
+  --color-accent-secondary: #8b6b4b;
+  --glow-color: rgba(192, 158, 98, 0.5);
+}
+
+[data-theme='conquera'] {
+  --color-bg: #1a0822;
+  --color-panel: #421954;
+  --color-accent: #ff85e0;
+  --color-accent-secondary: #b95c9e;
+  --glow-color: rgba(255, 133, 224, 0.5);
+}
+
+[data-theme='corpus'] {
+  --color-bg: #020e1a;
+  --color-panel: #0e2e52;
+  --color-accent: #29b6f6;
+  --color-accent-secondary: #0d7ea3;
+  --glow-color: rgba(41, 182, 246, 0.5);
+}
+
+[data-theme='darklotus'] {
+  --color-bg: #13032d;
+  --color-panel: #2d0e58;
+  --color-accent: #a066ff;
+  --color-accent-secondary: #6b3bb3;
+  --glow-color: rgba(160, 102, 255, 0.5);
+}
+
+[data-theme='deadlock'] {
+  --color-bg: #060a13;
+  --color-panel: #162138;
+  --color-accent: #b99354;
+  --color-accent-secondary: #8a6b3c;
+  --glow-color: rgba(185, 147, 84, 0.5);
+}
+
+[data-theme='equinox'] {
+  --color-bg: #06070a;
+  --color-panel: #1e2129;
+  --color-accent: #ffffff;
+  --color-accent-secondary: #b0bec5;
+  --glow-color: rgba(255, 255, 255, 0.5);
+}
+
+[data-theme='fortuna'] {
+  --color-bg: #0c021a;
+  --color-panel: #240a3f;
+  --color-accent: #37d7ff;
+  --color-accent-secondary: #1f94b3;
+  --glow-color: rgba(55, 215, 255, 0.5);
+}
+
+[data-theme='grineer'] {
+  --color-bg: #0a0b04;
+  --color-panel: #262612;
+  --color-accent: #e1ad3a;
+  --color-accent-secondary: #a87c2b;
+  --glow-color: rgba(225, 173, 58, 0.5);
+}
+
+[data-theme='legacy'] {
+  --color-bg: #0d1a1d;
+  --color-panel: #1a3034;
+  --color-accent: #78a9a9;
+  --color-accent-secondary: #4f7a7a;
+  --glow-color: rgba(120, 169, 169, 0.5);
+}
+
+[data-theme='lunar'] {
+  --color-bg: #110202;
+  --color-panel: #360a0a;
+  --color-accent: #e53232;
+  --color-accent-secondary: #b32020;
+  --glow-color: rgba(229, 50, 50, 0.5);
+}
+
+[data-theme='pom2'] {
+  --color-bg: #020b08;
+  --color-panel: #0e2e21;
+  --color-accent: #4ade80;
+  --color-accent-secondary: #2f9e4e;
+  --glow-color: rgba(74, 222, 128, 0.5);
+}
+
+[data-theme='stalker'] {
+  --color-bg: #0a0000;
+  --color-panel: #280000;
+  --color-accent: #ff0000;
+  --color-accent-secondary: #b30000;
+  --glow-color: rgba(255, 0, 0, 0.5);
+}
+
+[data-theme='harrier'] {
+  --color-bg: #0a111a;
+  --color-panel: #18283a;
+  --color-accent: #f26d1d;
+  --color-accent-secondary: #b95216;
+  --glow-color: rgba(242, 109, 29, 0.5);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: 'Outfit', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 500ms ease, color 500ms ease;
+  }
+}
+
+@layer components {
+
+  /* Modern Glass Panel */
+  .glass-panel {
+    background-color: var(--color-panel);
+    border: 1px solid;
+    border-color: rgba(0, 0, 0, 0.3);
+  }
+
+  /* Glowing Border Effect */
+  .glow-border {
+    box-shadow: 0 0 12px var(--glow-color);
+  }
+
+  /* Glow on Hover */
+  .glow-hover {
+    transition: box-shadow 300ms ease;
+    position: relative;
+  }
+
+  .glow-hover:hover {
+    box-shadow: 0 0 20px var(--glow-color);
+  }
+
+  /* Page Header - Consistent across all pages */
+  .page-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #ffffff;
+  }
+
+  .page-subtitle {
+    font-size: 0.875rem;
+    color: var(--color-text-dim);
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 4px;
+    width: 12px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    /* Subtle grey by default */
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    /* Changes to your theme on hover */
+    background: var(--color-accent);
+    box-shadow: 0 0 10px var(--color-accent);
+  }
+
+  @keyframes shimmer {
+    from {
+      background-position: 0 0;
+    }
+
+    to {
+      background-position: 40px 0;
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s linear infinite;
+  }
+}
