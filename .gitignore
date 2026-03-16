@@ -23,7 +23,15 @@ dist-ssr
 *.sln
 *.sw?
 
-# User data, binaries, and exports
-src-tauri/data/
+# Ignore everything inside the data directory
+src-tauri/data/export/*
+src-tauri/data/user/*
+
+# But allow graphic assets and API helper
+!src-tauri/data/export/maps/
+!src-tauri/data/export/masteryicons/
+!src-tauri/data/bin/
+
+# Ignore target and Cargo.lock
 src-tauri/target/
 src-tauri/Cargo.lock
