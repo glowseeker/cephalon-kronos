@@ -259,8 +259,9 @@ function rivenWeaponType(itemType = '') {
   if (t.includes('melee')) return 'melee';
   if (t.includes('sniper')) return 'sniper';
   if (t.includes('shotgun')) return 'shotgun';
-  if (t.includes('pistol')) return 'pistol';
-  if (t.includes('rifle')) return 'rifle';
+  if (t.includes('pistol') || t.includes('sidearm')) return 'pistol';
+  if (t.includes('rifle') || t.includes('bow') || t.includes('launcher') || t.includes('speargun')) return 'rifle';
+  if (t.includes('archgun')) return 'archgun';
   return 'unknown';
 }
 

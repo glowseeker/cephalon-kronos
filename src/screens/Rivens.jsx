@@ -12,6 +12,7 @@ const TYPE_TABS = [
   { id: 'sniper', label: 'Sniper' },
   { id: 'kitgun', label: 'Kitgun' },
   { id: 'zaw', label: 'Zaw' },
+  { id: 'archgun', label: 'Archgun' },
 ]
 
 const STATE_TABS = [
