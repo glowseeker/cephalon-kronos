@@ -60,5 +60,5 @@ pnpm tauri build
 - **Auto-Syncing Checklists**: Automatically identify finished tasks and cross them off.
 - **Notification System**: Get system notifications of events like Arbitrations, Fissures, and Sorties.
 
-To report or follow up on bugs or to suggest features, check the [issues page](https://github.com/glowseeker/cephalon-kronos/issues), after checking the **Known Issues** header above.
+Before reporting bugs or suggesting features in the [issues page](https://github.com/glowseeker/cephalon-kronos/issues), check the **Known Issues** and **Planned Features** headers above.
 
