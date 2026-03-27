@@ -147,8 +147,11 @@ export function MonitoringProvider({ children }) {
   useEffect(() => {
     ; (async () => {
       try {
-        setStatusText('Checking exports…')
-        await invoke('check_exports')
+        setStatusText('Checking updates & assets…')
+        await Promise.all([
+          invoke('check_exports'),
+          invoke('check_media_assets')
+        ])
 
         setStatusText('Loading resources…')
         const [exports, spiText, arbText] = await Promise.all([

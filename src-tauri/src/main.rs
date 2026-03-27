@@ -277,6 +277,72 @@ async fn open_data_folder() -> Result<(), String> {
     Ok(())
 }
 
+// ─── Media Management ─────────────────────────────────────────────────────────
+
+const MAP_FILES: &[&str] = &[
+    "PlainsofEidolon_4k_Map.png",
+    "OrbVallis4kMap-min.png",
+    "CambianDrift4kMap.png",
+    "Duviri_map_with_caves.png",
+];
+
+const RANK_NAMES: &[&str] = &[
+    "Unranked", "Initiate", "SilverInitiate", "GoldInitiate",
+    "Novice", "SilverNovice", "GoldNovice",
+    "Disciple", "SilverDisciple", "GoldDisciple",
+    "Seeker", "SilverSeeker", "GoldSeeker",
+    "Hunter", "SilverHunter", "GoldHunter",
+    "Eagle", "SilverEagle", "GoldEagle",
+    "Tiger", "SilverTiger", "GoldTiger",
+    "Dragon", "SilverDragon", "GoldDragon",
+    "Sage", "SilverSage", "GoldSage",
+    "Master", "MiddleMaster", "GrandMaster"
+];
+
+#[tauri::command]
+async fn check_media_assets() -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let mut downloaded = 0u32;
+    let base_url = "https://raw.githubusercontent.com/glowseeker/cephalon-kronos/main/src-tauri/data/export/master";
+
+    // Maps
+    let maps_dir = resolve_path("data/export/maps");
+    if !maps_dir.exists() { fs::create_dir_all(&maps_dir).map_err(|e| e.to_string())?; }
+    for map in MAP_FILES {
+        let path = maps_dir.join(map);
+        if !path.exists() {
+            let url = format!("{}/maps/{}", base_url, map);
+            let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
+            if resp.status().is_success() {
+                fs::write(&path, resp.bytes().await.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+                downloaded += 1;
+            }
+        }
+    }
+
+    // Mastery Icons
+    let icons_dir = resolve_path("data/export/masteryicons");
+    if !icons_dir.exists() { fs::create_dir_all(&icons_dir).map_err(|e| e.to_string())?; }
+    for rank in 0..=40 {
+        let filename = if rank <= 30 {
+            format!("Rank{:02}{}.png", rank, RANK_NAMES[rank])
+        } else {
+            format!("Rank{}.png", rank)
+        };
+        let path = icons_dir.join(&filename);
+        if !path.exists() {
+            let url = format!("{}/masteryicons/{}", base_url, filename);
+            let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
+            if resp.status().is_success() {
+                fs::write(&path, resp.bytes().await.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+                downloaded += 1;
+            }
+        }
+    }
+
+    Ok(format!("Downloaded {} media assets", downloaded))
+}
+
 #[tauri::command]
 fn get_mastery_icons_path() -> String {
     resolve_path("data/export/masteryicons").to_string_lossy().to_string()
@@ -293,6 +359,7 @@ fn main() {
             load_cached_inventory,
             call_api_helper,
             check_exports,
+            check_media_assets,
             load_all_exports,
             load_txt_file,
             list_notes,
