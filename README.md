@@ -1,8 +1,8 @@
 # Cephalon Kronos
 
-A desktop companion for Warframe built with React, Rust, and Tauri.
+An open source desktop companion for Warframe built with React, Rust, and Tauri.
 
-Cephalon Kronos tracks inventory, relics, and mastery progress while providing world-state data and personal tools.
+Cephalon Kronos tracks inventory, relics, rivens and mastery progress while providing world-state data and personal tools to accompany you alongside your game.
 
 ## Features
 
@@ -49,6 +49,10 @@ pnpm install
 pnpm tauri build
 ```
 
+## Known Issues
+
+- **Nightwave** and the **1999 Calendar** in the dashboard are not fully implemented yet.
+
 ## Planned Features
 
 - **Warframe.Market Integration**: Evaluate relics, check prices on prime parts, and use the Ducanator.
@@ -56,5 +60,5 @@ pnpm tauri build
 - **Auto-Syncing Checklists**: Automatically identify finished tasks and cross them off.
 - **Notification System**: Get system notifications of events like Arbitrations, Fissures, and Sorties.
 
-To report or follow up on bugs or to suggest features, check the **issues** page above.
+To report or follow up on bugs or to suggest features, check the [issues page](https://github.com/glowseeker/cephalon-kronos/issues), after checking the **Known Issues** header above.
 

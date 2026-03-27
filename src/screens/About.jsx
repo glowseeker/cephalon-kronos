@@ -21,11 +21,11 @@ export default function About() {
             </div>
             <div>
               <h2 className="text-2xl font-bold">Cephalon Kronos</h2>
-              <p className="text-kronos-dim text-sm">v0.1.0 - All in one Warframe companion</p>
+              <p className="text-kronos-dim text-sm">v0.1.0 - Open source Warframe companion</p>
             </div>
           </div>
           <p className="text-kronos-text/90 mb-4 leading-relaxed text-sm">
-            Track your inventory, relics, and mastery alongside live worldstate: timers, fissures, arbitrations, Nightwave and more. Lightweight and offline-capable.
+            Track your inventory, relics, rivens and mastery alongside a live worldstate with timers, fissures, arbitrations and more.
           </p>
           <a
             href="https://github.com/glowseeker/cephalon-kronos"
@@ -66,9 +66,8 @@ export default function About() {
                 {' '}to extract your AccountID and session nonce by scanning your running game's memory.
               </p>
               <ul className="text-kronos-text/80 text-xs space-y-0.5 mb-2 list-disc list-inside">
-                <li>I have not vetted this tool's full safety</li>
-                <li>Digital Extremes has not approved this app</li>
-                <li>Memory scanning carries inherent risk</li>
+                <li>I am not the developer of neither that fork nor the original project.</li>
+                <li>Digital Extremes has not approved this application.</li>
               </ul>
               <p className="text-red-400 font-medium text-xs">Use at your own risk - potential ban risk always exists.</p>
               <p className="text-kronos-dim text-xs mt-1">The app never modifies game files or memory, only reads authentication tokens.</p>
