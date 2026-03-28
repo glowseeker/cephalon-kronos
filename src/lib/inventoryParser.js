@@ -444,23 +444,26 @@ export function parseInventory(raw, exports) {
     const e = EW[i.unique_name];
     const un = i.unique_name;
     if (un.includes('ModularPistol') || un.includes('ModularPrimary')) {
-      const item = { ...i, category: 'kitguns' };
-      kitguns.push(item);
+      i.category = 'kitguns';
+      kitguns.push(i);
     } else if (un.includes('ModularMelee')) {
-      const item = { ...i, category: 'zaws' };
-      zaws.push(item);
+      i.category = 'zaws';
+      zaws.push(i);
     } else if (e.productCategory === 'LongGuns' && e.noise) {
       // LongGuns: noise field present on real weapons; excludes bayonet-only melee attachments
-      const item = { ...i, category: 'primary', weapon_type: 'primary' };
-      primary.push(item);
+      i.category = 'primary';
+      i.weapon_type = 'primary';
+      primary.push(i);
     } else if (e.productCategory === 'Pistols' && e.noise) {
       // Pistols: noise field absent on MOA/companion parts and kubrow antigens/mutagents
-      const item = { ...i, category: 'secondary', weapon_type: 'secondary' };
-      secondary.push(item);
+      i.category = 'secondary';
+      i.weapon_type = 'secondary';
+      secondary.push(i);
     } else if (e.productCategory === 'Melee' && e.damagePerShot) {
       // Melee: damagePerShot absent on Vinquibus bayonet attachment (which is a primary)
-      const item = { ...i, category: 'melee', weapon_type: 'melee' };
-      melee.push(item);
+      i.category = 'melee';
+      i.weapon_type = 'melee';
+      melee.push(i);
     }
   });
 
@@ -680,6 +683,7 @@ export function parseInventory(raw, exports) {
         image, category: 'amps',
         xp, rank, mastery_xp, owned, mastered,
         ownedCustomName,
+        components: resolveAmpComponents(a, dict, EW, ER),
       };
     }
   });
