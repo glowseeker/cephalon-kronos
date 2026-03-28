@@ -185,7 +185,11 @@ function nameFromPath(path = '') {
 }
 
 function resolveName(un, dict, ...tables) {
-  if (!un) return '';
+  return _resolveNameInternal(un, dict, 0, ...tables);
+}
+
+function _resolveNameInternal(un, dict, depth, ...tables) {
+  if (!un || depth > 5) return '';
   if (un.includes('DrifterPistol')) return 'Sirocco';
 
   // Try direct match or normalized path (stripping /StoreItems/)
@@ -203,7 +207,20 @@ function resolveName(un, dict, ...tables) {
         const cleaned = cleanName(locKey);
         if (cleaned) return cleaned;
       }
+    } else if (entry.resultType) {
+      // If recipe has no name, try to resolve its resultType
+      let name = _resolveNameInternal(entry.resultType, dict, depth + 1, ...tables);
+      if (un.toLowerCase().endsWith('blueprint') && !name.toLowerCase().includes('blueprint')) {
+        name += ' Blueprint';
+      }
+      return name;
     }
+  }
+
+  // Fallback: Check if the path itself is a key in the dictionary
+  if (dict[un]) {
+    const resolved = cleanName(dict[un]);
+    if (resolved) return resolved;
   }
 
   // Handle Recipe paths (e.g. /Lotus/Types/Recipes/Helmets/BrawlerAltHelmetBlueprint)
@@ -718,7 +735,7 @@ export function parseInventory(raw, exports) {
   const resources = [], prime_parts = [];
   for (const item of (raw.MiscItems ?? [])) {
     const un = item.ItemType ?? '';
-    if (un.includes('/Upgrades/Relic/')) continue;
+    if (un.includes('/Projections/') || un.includes('/Upgrades/Relic/')) continue;
     const name = resolveName(un, dict, ER, ERel);
     const isPrimePart = /Prime (Barrel|Receiver|Stock|Blade|Handle|Link|Neuroptics|Chassis|Systems|Blueprint|Carapace|Cerebrum)/i.test(name);
     const obj = { unique_name: un, name, image: resolveImage(un, ER, ERel), category: isPrimePart ? 'prime_parts' : 'resources', quantity: item.ItemCount ?? 1, owned: true };
@@ -726,61 +743,88 @@ export function parseInventory(raw, exports) {
     else resources.push(obj);
   }
 
-  const relics = (raw.MiscItems ?? []).filter(i => i.ItemType?.includes('/Projections/') || i.ItemType?.includes('/Upgrades/Relic/')).map(item => {
+  const relicGroups = {};
+  (raw.MiscItems ?? []).filter(i => i.ItemType?.includes('/Projections/') || i.ItemType?.includes('/Upgrades/Relic/')).forEach(item => {
     const un = item.ItemType;
+    if (!un) return;
     const entry = ERel[un];
-    let name = relicNameFromPath(un, ERel);
-    let rewards = [];
+    
+    // Determine refinement level
+    const qualityMap = { 'VPQ_BRONZE': 'Intact', 'VPQ_SILVER': 'Exceptional', 'VPQ_GOLD': 'Flawless', 'VPQ_PLATINUM': 'Radiant' };
+    const leafQualityMap = { 'Silver': 'Exceptional', 'Gold': 'Flawless', 'Platinum': 'Radiant' };
     let refinement = 'Intact';
-
-    const qualityMap = {
-      'VPQ_BRONZE': 'Intact',
-      'VPQ_SILVER': 'Exceptional',
-      'VPQ_GOLD': 'Flawless',
-      'VPQ_PLATINUM': 'Radiant'
-    };
-
-    if (entry) {
-      if (entry.quality && qualityMap[entry.quality]) {
-        refinement = qualityMap[entry.quality];
-      }
-
-      // Resolve rewards from ExportRewards using rewardManifest
-      if (entry.rewardManifest && ERew[entry.rewardManifest]) {
-        const manifest = ERew[entry.rewardManifest];
-        // manifest is typically [[{type, itemCount, rarity}, ...]]
-        const rewardList = Array.isArray(manifest[0]) ? manifest[0] : (Array.isArray(manifest) ? manifest : []);
-        rewards = rewardList.map(r => ({
-          name: resolveName(r.type || r.rewardItem, dict, EW, ES, ER, EWf, EA, EM),
-          rarity: r.rarity,
-          tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
-        }));
-      } else if (Array.isArray(entry.relicRewards)) {
-        rewards = entry.relicRewards.map(r => ({
-          name: resolveName(r.rewardItem, dict, EW, ES, ER, EWf, EA, EM),
-          rarity: r.rarity,
-          tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
-        }));
-      }
-    } else {
-      // Fallback refinement from name
+    if (entry?.quality && qualityMap[entry.quality]) refinement = qualityMap[entry.quality];
+    else {
       const leaf = un.split('/').at(-1) ?? un;
-      if (leaf.endsWith('Silver')) refinement = 'Exceptional';
-      else if (leaf.endsWith('Gold')) refinement = 'Flawless';
-      else if (leaf.endsWith('Platinum')) refinement = 'Radiant';
+      for (const [rawQ, cleanQ] of Object.entries(leafQualityMap)) {
+        if (leaf.endsWith(rawQ)) { refinement = cleanQ; break; }
+      }
     }
 
-    return {
-      unique_name: un,
-      name,
-      image: resolveImage(un, ERel),
-      category: 'relics',
-      count: item.ItemCount ?? 1,
-      owned: true,
-      refinement,
-      rewards
-    };
+    // Get base name (stripping quality suffix)
+    const fullName = relicNameFromPath(un, ERel);
+    const era = fullName.split(' ')[0] ?? 'Other';
+    const baseName = (fullName || 'Unknown Relic').replace(/\s\((Intact|Exceptional|Flawless|Radiant)\)$/, '').trim();
+    const relicId = baseName;
+
+    if (!relicGroups[relicId]) {
+      let rewards = [];
+      if (entry) {
+        if (entry.rewardManifest && ERew[entry.rewardManifest]) {
+          const manifest = ERew[entry.rewardManifest];
+          const rewardList = Array.isArray(manifest[0]) ? manifest[0] : (Array.isArray(manifest) ? manifest : []);
+          rewards = rewardList.map(r => ({
+            name: resolveName(r.type || r.rewardItem, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+            rarity: r.rarity,
+            tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
+          }));
+        } else if (Array.isArray(entry.relicRewards)) {
+          rewards = entry.relicRewards.map(r => ({
+            name: resolveName(r.rewardItem, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+            rarity: r.rarity,
+            tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
+          }));
+        }
+      }
+
+      relicGroups[relicId] = {
+        unique_name: relicId,
+        name: baseName,
+        era,
+        image: resolveImage(un, ERel),
+        category: 'relics',
+        refinements: { Intact: 0, Exceptional: 0, Flawless: 0, Radiant: 0 },
+        rewards: rewards || [],
+        owned: true
+      };
+    } else if (relicGroups[relicId].rewards.length === 0) {
+      // If group exists but has no rewards, try to populate from current entry
+      let rewards = [];
+      if (entry) {
+        if (entry.rewardManifest && ERew[entry.rewardManifest]) {
+          const manifest = ERew[entry.rewardManifest];
+          const rewardList = Array.isArray(manifest[0]) ? manifest[0] : (Array.isArray(manifest) ? manifest : []);
+          rewards = rewardList.map(r => ({
+            name: resolveName(r.type || r.rewardItem, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+            rarity: r.rarity,
+            tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
+          }));
+        } else if (Array.isArray(entry.relicRewards)) {
+          rewards = entry.relicRewards.map(r => ({
+            name: resolveName(r.rewardItem, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+            rarity: r.rarity,
+            tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
+          }));
+        }
+      }
+      if (rewards.length > 0) relicGroups[relicId].rewards = rewards;
+    }
+    
+    if (relicGroups[relicId].refinements[refinement] !== undefined) {
+      relicGroups[relicId].refinements[refinement] += (item.ItemCount ?? 1);
+    }
   });
+  const relics = Object.values(relicGroups);
 
   const rivens = [
     ...(raw.RawUpgrades ?? []).filter(u => u.ItemType?.includes('Randomized') || u.ItemType?.includes('RandomMod')).map(u => ({
@@ -1083,7 +1127,7 @@ export function parseInventory(raw, exports) {
       };
     });
 
-  const all = [...warframes, ...primary, ...secondary, ...melee, ...kitguns, ...zaws, ...sentinels, ...moas, ...hounds, ...beasts, ...archwings, ...kdrives, ...archweapons, ...necramechs, ...amps, ...mods, ...arcanes, ...relics, ...resources, ...rivens, ...prime_parts, ...intrinsics, ...plexus];
+  const all = [...warframes, ...primary, ...secondary, ...melee, ...kitguns, ...zaws, ...sentinels, ...moas, ...hounds, ...beasts, ...archwings, ...kdrives, ...archweapons, ...necramechs, ...amps, ...mods, ...arcanes, ...resources, ...rivens, ...prime_parts, ...intrinsics, ...plexus];
 
   const playerLevel = raw.PlayerLevel ?? 0;
   const rivenBin = raw.RandomModBin ?? { Slots: 0, Extra: 0 };
