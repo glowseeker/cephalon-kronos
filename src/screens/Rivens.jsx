@@ -97,7 +97,7 @@ export default function Rivens() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pb-8">
             {filtered.map((riven, idx) => (
-              <Card key={idx} glow={!riven.veiled} className="relative p-0 overflow-hidden flex h-52 group border-kronos-panel/40">
+              <Card key={idx} glow={!riven.veiled} className="relative p-0 overflow-hidden flex h-full min-h-[13rem] group border-kronos-panel/40">
                 {/* Left: Image */}
                 <div className="w-32 bg-kronos-panel/30 flex-shrink-0 p-2 flex items-center justify-center relative overflow-hidden border-r border-white/5">
                   <img
@@ -135,7 +135,7 @@ export default function Rivens() {
 
                   {riven.challenge && (
                     <div className="mb-2 px-1">
-                      <p className="text-xs text-kronos-text/80 leading-snug italic line-clamp-3">{riven.challenge}</p>
+                      <p className="text-xs text-kronos-text/80 leading-snug italic">{riven.challenge}</p>
                     </div>
                   )}
 
