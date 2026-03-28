@@ -1,3 +1,22 @@
+/**
+ * Mastery.jsx
+ *
+ * Tracks the user's Mastery Rank (MR) progress, starchart completion, and
+ * equipment leveling status.
+ *
+ * DATA FLOW
+ * ─────────────────────────────────────────
+ * 1. MonitoringContext provides the full inventory and account stats.
+ * 2. This file calculates cumulative Mastery XP based on item ranks and
+ *    compares it against the official Warframe MR thresholds.
+ *
+ * FEATURES
+ * ─────────────────────────────────────────
+ * - Real-time progress bar towards the next Mastery Rank.
+ * - Breakdown of XP sources (Warframes vs Weapons vs Starchart).
+ * - "Incomplete" list of items that still need to be mastered.
+ * - Dynamic rank icons loaded via Tauri's `get_mastery_icons_path()`.
+ */
 import { useState, useEffect } from 'react'
 import { PageLayout, Card } from '../components/UI'
 import { Trophy, X, CheckCircle2, Circle } from 'lucide-react'
@@ -60,10 +79,12 @@ export default function Mastery() {
   const { inventoryData } = useMonitoring()
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [iconsPath, setIconsPath] = useState('');
+  const [assetsPath, setAssetsPath] = useState('');
   const [hideNonMastery, setHideNonMastery] = useState(false)
 
   useEffect(() => {
     invoke('get_mastery_icons_path').then(setIconsPath).catch(console.error);
+    invoke('get_assets_path').then(setAssetsPath).catch(console.error);
   }, []);
 
   if (!inventoryData) {
@@ -233,124 +254,139 @@ export default function Mastery() {
         {/* MR card */}
         <Card glow className="p-0 overflow-hidden border-kronos-accent/30 shadow-2xl">
           {/* Rank-up banner - shown when ready*/}
-          {(isRankUpReady) && (
-            <div className="bg-gradient-to-br from-kronos-accent/20 via-kronos-accent/5 to-transparent p-10 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-[url('https://warframe.com/static/warframe/images/mule/new-war/background-texture.jpg')] opacity-5 mix-blend-overlay" />
+          {isRankUpReady && (
+            <div className="flex flex-col md:flex-row relative overflow-hidden bg-gradient-to-br from-kronos-accent/20 via-kronos-accent/5 to-transparent min-h-[400px]">
+              {/* Content on the left */}
 
-              <div className="relative z-10 flex flex-col items-center">
-                <div className="flex items-center justify-center gap-12 mb-8">
+              <div className="relative z-10 flex-1 p-10 flex flex-col items-start text-left">
+                <div className="flex items-center gap-12 mb-8">
                   <div className="relative">
-                    <img src={getMRIcon(currentRank, iconsPath)} alt="" className="w-24 h-24 opacity-50 grayscale contrast-125" />
-                    <p className="text-[12px] text-kronos-dim uppercase font-black mt-2">Current: {currentRank}</p>
+                    <img src={getMRIcon(currentRank, iconsPath)} alt="" className="w-20 h-20 opacity-40 grayscale contrast-125" />
+                    <p className="text-[10px] text-kronos-dim uppercase font-black mt-2">Current: {currentRank}</p>
                   </div>
 
                   <div className="flex flex-col items-center">
-                    <div className="w-16 h-px bg-gradient-to-r from-transparent via-kronos-accent to-transparent mb-2" />
-                    <div className="text-kronos-accent font-black text-xl">READY</div>
-                    <div className="w-16 h-px bg-gradient-to-r from-transparent via-kronos-accent to-transparent mt-2" />
+                    <div className="w-12 h-px bg-gradient-to-r from-transparent via-kronos-accent to-transparent mb-1" />
+                    <div className="text-kronos-accent font-black text-sm">READY</div>
+                    <div className="w-12 h-px bg-gradient-to-r from-transparent via-kronos-accent to-transparent mt-1" />
                   </div>
 
                   <div className="relative">
-                    <img src={getMRIcon(nextRank, iconsPath)} alt="" className="w-40 h-40 drop-shadow-[0_0_30px_rgba(var(--color-accent-rgb),0.4)]" />
+                    <img src={getMRIcon(nextRank, iconsPath)} alt="" className="w-32 h-32 drop-shadow-[0_0_30px_rgba(var(--color-accent-rgb),0.4)]" />
                     <p className="text-xs text-kronos-accent uppercase font-black mt-2 tracking-[0.2em]">Next: {nextRank}</p>
                   </div>
                 </div>
 
-                <h2 className="text-4xl font-black text-kronos-text uppercase tracking-tighter mb-2">Mastery Rank Up Available</h2>
-                <p className="text-xl text-kronos-accent font-bold italic mb-6">Rank Up to {nextTitle}</p>
+                <h2 className="text-4xl font-black text-kronos-text uppercase tracking-tighter mb-2 max-w-lg leading-none">
+                  Mastery Rank Up Available
+                </h2>
+                <p className="text-xl text-kronos-accent font-bold italic mb-6">
+                  Advance to {nextTitle}
+                </p>
 
-                <div className="text-sm text-kronos-dim max-w-md mx-auto leading-relaxed border-t border-kronos-accent/10 pt-6">
-                  You have accumulated enough mastery to qualify for the mastery test.
-                  Complete it at any relay to advance to the next mastery rank.
+                <div className="text-sm text-kronos-dim max-w-sm leading-relaxed border-t border-kronos-accent/10 pt-6">
+                  You have accumulated enough mastery to qualify for the rank up test.
+                  Visit Teshin at any relay to prove your worth.
                 </div>
+              </div>
+
+              {/* Teshin Image on the right - transparent png */}
+              <div className="relative w-full md:w-[45%] h-80 md:h-[450px] overflow-visible">
+                <img
+                  src={assetsPath ? convertFileSrc(`${assetsPath}/teshin.png`) : ''}
+                  alt="Teshin"
+                  className="absolute bottom-0 right-0 w-full h-full object-contain object-bottom pointer-events-none"
+                />
               </div>
             </div>
           )}
 
-          {/* Progress card - always visible */}
-          <div className="bg-gradient-to-br from-kronos-accent/10 via-transparent to-transparent p-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
-              <div className="flex items-center gap-6">
-                <div className="relative w-20 h-20 flex items-center justify-center">
-                  <img
-                    src={getMRIcon(currentRank, iconsPath)}
-                    alt=""
-                    className="w-20 h-20 object-contain relative z-10 drop-shadow-[0_0_15px_rgba(var(--color-accent-rgb),0.6)]"
-                  />
+          {/* Progress card - visible only when NOT ready for rank up */}
+          {!isRankUpReady && (
+            <div className="bg-gradient-to-br from-kronos-accent/10 via-transparent to-transparent p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+                <div className="flex items-center gap-6">
+                  <div className="relative w-20 h-20 flex items-center justify-center">
+                    <img
+                      src={getMRIcon(currentRank, iconsPath)}
+                      alt=""
+                      className="w-20 h-20 object-contain relative z-10 drop-shadow-[0_0_15px_rgba(var(--color-accent-rgb),0.6)]"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-kronos-accent uppercase font-black tracking-[0.3em] mb-1 opacity-80">Current Rank</div>
+                    <h2 className="text-4xl font-black text-kronos-text leading-none tracking-tight">
+                      {isLegendary ? `Legendary ${currentRank - 30}` : `Mastery Rank ${currentRank}`}
+                    </h2>
+                    <p className="text-lg text-kronos-dim mt-1 font-bold italic tracking-wider flex items-center gap-2">
+                      {currentTitle}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-[10px] text-kronos-accent uppercase font-black tracking-[0.3em] mb-1 opacity-80">Current Rank</div>
-                  <h2 className="text-4xl font-black text-kronos-text leading-none tracking-tight">
-                    {isLegendary ? `Legendary ${currentRank - 30}` : `Mastery Rank ${currentRank}`}
-                  </h2>
-                  <p className="text-lg text-kronos-dim mt-1 font-bold italic tracking-wider flex items-center gap-2">
-                    {currentTitle}
-                  </p>
+
+                <div className="flex flex-col md:items-end">
+                  <div className="text-[10px] text-kronos-accent uppercase font-black tracking-[0.3em] mb-2 opacity-80">Next Rank</div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="text-2xl font-black text-kronos-accent uppercase tracking-wide leading-none">
+                        {isLegendary ? `Legendary ${nextRank - 30}` : `MR ${nextRank}`}
+                      </div>
+                      <div className="text-[10px] text-kronos-dim uppercase font-bold tracking-tighter mt-1 opacity-60">
+                        {nextTitle}
+                      </div>
+                    </div>
+                    <img src={getMRIcon(nextRank, iconsPath)} alt="" className="w-12 h-12 drop-shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.2)]" />
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col md:items-end">
-                <div className="text-[10px] text-kronos-accent uppercase font-black tracking-[0.3em] mb-2 opacity-80">Next Rank</div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="text-2xl font-black text-kronos-accent uppercase tracking-wide leading-none">
-                      {isLegendary ? `Legendary ${nextRank - 30}` : `MR ${nextRank}`}
-                    </div>
-                    <div className="text-[10px] text-kronos-dim uppercase font-bold tracking-tighter mt-1 opacity-60">
-                      {nextTitle}
-                    </div>
-                  </div>
-                  <img src={getMRIcon(nextRank, iconsPath)} alt="" className="w-12 h-12 drop-shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.2)]" />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="relative pt-10 pb-2">
-                {/* Floating Label (Top) */}
-                <div
-                  className="absolute top-0 flex flex-col items-center -translate-x-1/2 transition-all duration-1000 ease-out"
-                  style={{ left: `${progress}%` }}
-                >
-                  <div className="text-xs font-black text-kronos-accent uppercase whitespace-nowrap bg-kronos-bg/80 backdrop-blur-md px-3 py-1 rounded border border-kronos-accent/30 mb-1 shadow-lg">
-                    {xpIntoRank.toLocaleString()} mastery | {xpUntilNext.toLocaleString()} left
-                  </div>
-                  <div className="w-px h-3 bg-kronos-accent/60" />
-                </div>
-
-                {/* Progress Track */}
-                <div className="bg-kronos-bg/60 h-7 rounded-full border border-white/5 overflow-hidden shadow-inner relative flex items-center">
+              <div className="space-y-4">
+                <div className="relative pt-10 pb-2">
+                  {/* Floating Label (Top) */}
                   <div
-                    className="absolute inset-y-0 left-0 bg-kronos-accent transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(var(--color-accent-rgb),0.5)]"
-                    style={{ width: `${Math.max(0, progress)}%` }}
-                  />
-
-                  {/* Percentage Label inside Bar */}
-                  <div
-                    className={`absolute inset-y-0 flex items-center px-3 transition-all duration-1000 ease-out font-black text-sm pointer-events-none z-20 ${progress > 20 ? 'text-kronos-bg' : 'text-kronos-accent'
-                      }`}
-                    style={{
-                      left: `${progress}%`,
-                      transform: progress > 20 ? 'translateX(-100%)' : 'translateX(0%)'
-                    }}
+                    className="absolute top-0 flex flex-col items-center -translate-x-1/2 transition-all duration-1000 ease-out"
+                    style={{ left: `${progress}%` }}
                   >
-                    {progress.toFixed(1)}%
+                    <div className="text-xs font-black text-kronos-accent uppercase whitespace-nowrap bg-kronos-bg/80 backdrop-blur-md px-3 py-1 rounded border border-kronos-accent/30 mb-1 shadow-lg">
+                      {xpIntoRank.toLocaleString()} mastery | {xpUntilNext.toLocaleString()} left
+                    </div>
+                    <div className="w-px h-3 bg-kronos-accent/60" />
                   </div>
 
-                  {/* Graduation marks */}
-                  {[25, 50, 75].map(p => (
-                    <div key={p} className="absolute top-0 bottom-0 w-px bg-kronos-bg/80 z-10" style={{ left: `${p}%` }} />
-                  ))}
-                </div>
+                  {/* Progress Track */}
+                  <div className="bg-kronos-bg/60 h-7 rounded-full border border-white/5 overflow-hidden shadow-inner relative flex items-center">
+                    <div
+                      className="absolute inset-y-0 left-0 bg-kronos-accent transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(var(--color-accent-rgb),0.5)]"
+                      style={{ width: `${Math.max(0, progress)}%` }}
+                    />
 
-                {/* Floor/Ceiling Labels */}
-                <div className="flex justify-between mt-3 px-1 items-center">
-                  <span className="text-sm text-kronos-dim font-black uppercase tracking-widest opacity-60">{xpAtCurrent.toLocaleString()}</span>
-                  <span className="text-sm text-kronos-dim font-black uppercase tracking-widest opacity-60">{getXPForRank(nextRank).toLocaleString()}</span>
+                    {/* Percentage Label inside Bar */}
+                    <div
+                      className={`absolute inset-y-0 flex items-center px-3 transition-all duration-1000 ease-out font-black text-sm pointer-events-none z-20 ${progress > 20 ? 'text-kronos-bg' : 'text-kronos-accent'
+                        }`}
+                      style={{
+                        left: `${progress}%`,
+                        transform: progress > 20 ? 'translateX(-100%)' : 'translateX(0%)'
+                      }}
+                    >
+                      {progress.toFixed(1)}%
+                    </div>
+
+                    {/* Graduation marks */}
+                    {[25, 50, 75].map(p => (
+                      <div key={p} className="absolute top-0 bottom-0 w-px bg-kronos-bg/80 z-10" style={{ left: `${p}%` }} />
+                    ))}
+                  </div>
+
+                  {/* Floor/Ceiling Labels */}
+                  <div className="flex justify-between mt-3 px-1 items-center">
+                    <span className="text-sm text-kronos-dim font-black uppercase tracking-widest opacity-60">{xpAtCurrent.toLocaleString()}</span>
+                    <span className="text-sm text-kronos-dim font-black uppercase tracking-widest opacity-60">{getXPForRank(nextRank).toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </Card>
 
         <div className="space-y-8">
