@@ -318,6 +318,9 @@ export function parseInventory(raw, exports) {
   const ER = toMap(exports.ExportResources, 'ExportResources');
   const ERel = toMap(exports.ExportRelics, 'ExportRelics');
   const ERew = toMap(exports.ExportRewards, 'ExportRewards');
+  const ERecipe = toMap(exports.ExportRecipes, 'ExportRecipes');
+  const ECust = toMap(exports.ExportCustoms, 'ExportCustoms');
+  const EGear = toMap(exports.ExportGear, 'ExportGear');
 
   const xpMap = {};
   (raw.XPInfo ?? []).forEach(i => {
@@ -410,7 +413,7 @@ export function parseInventory(raw, exports) {
       subsumed: subsumedSet.has(un),
       is_incarnon: incarnonSet.has(un),
       quantity: sourceItem?.ItemCount ?? (sourceItem || xpMap[un] ? 1 : 0),
-      formas: sourceItem?.FormaCount ?? 0,
+      formas: sourceItem?.Polarized ?? 0,
       components,
       ...sourceItem
     };
@@ -1085,8 +1088,16 @@ export function parseInventory(raw, exports) {
   const playerLevel = raw.PlayerLevel ?? 0;
   const rivenBin = raw.RandomModBin ?? { Slots: 0, Extra: 0 };
 
-  const voidTraces = (raw.MiscItems ?? []).find(i => i.ItemType === '/Lotus/Types/Items/MiscItems/VoidTearDrop')?.ItemCount ?? 0;
+  const miscItems = raw.MiscItems ?? [];
+  const voidTraces = miscItems.find(i => i.ItemType === '/Lotus/Types/Items/MiscItems/VoidTearDrop')?.ItemCount ?? 0;
   const voidTracesMax = (playerLevel * 50) + 100;
+
+  const formaCount = miscItems.find(i => i.ItemType === '/Lotus/Types/Items/MiscItems/Forma')?.ItemCount ?? 0;
+  const auraFormaCount = miscItems.find(i => i.ItemType === '/Lotus/Types/Items/MiscItems/FormaAura')?.ItemCount ?? 0;
+  const stanceFormaCount = miscItems.find(i => i.ItemType === '/Lotus/Types/Items/MiscItems/FormaStance')?.ItemCount ?? 0;
+  const umbraFormaCount = miscItems.find(i => i.ItemType === '/Lotus/Types/Items/MiscItems/FormaUmbra')?.ItemCount ?? 0;
+  const reactorCount = miscItems.find(i => i.ItemType === '/Lotus/Types/Items/MiscItems/OrokinReactor')?.ItemCount ?? 0;
+  const catalystCount = miscItems.find(i => i.ItemType === '/Lotus/Types/Items/MiscItems/OrokinCatalyst')?.ItemCount ?? 0;
 
   return {
     account: {
@@ -1095,7 +1106,13 @@ export function parseInventory(raw, exports) {
       platinum: raw.PremiumCredits ?? 0,
       riven_capacity: 15 + playerLevel + (rivenBin.Extra ?? 0),
       void_traces: voidTraces,
-      void_traces_max: voidTracesMax
+      void_traces_max: voidTracesMax,
+      forma: formaCount,
+      aura_forma: auraFormaCount,
+      stance_forma: stanceFormaCount,
+      umbra_forma: umbraFormaCount,
+      orokin_reactor: reactorCount,
+      orokin_catalyst: catalystCount
     },
     warframes,
     weapons: weaponsRaw, // Compatibility
@@ -1107,15 +1124,22 @@ export function parseInventory(raw, exports) {
     archwings, kdrives,
     archweapons, necramechs, amps, mods, arcanes, relics, resources, rivens, prime_parts, intrinsics, starchart, plexus, all,
     kitgunChambers, zawStrikes, moaHeads, houndHeads,
-    foundry: (raw.PendingItems ?? []).map(p => ({
-      unique_name: p.ItemType,
-      name: resolveName(p.ItemType, dict, EW, ES, ER, EWf, EA, EM),
-      image: resolveImage(p.ItemType, EW, ES, ER, EWf, EA, EM),
-      startTime: p.StartTime,
-      finishTime: p.FinishTime,
-      ready: (Date.now() / 1000) > p.FinishTime,
-      ...p
-    })),
+    foundry: (raw.PendingRecipes ?? []).map(p => {
+      const recipe = ERecipe[p.ItemType];
+      const resultType = recipe?.resultType ?? p.ItemType;
+      const completionDate = p.CompletionDate?.$date?.$numberLong;
+      const finishTime = completionDate ? parseInt(completionDate, 10) / 1000 : 0;
+      return {
+        unique_name: p.ItemType,
+        result_type: resultType,
+        name: resolveName(resultType, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+        image: resolveImage(resultType, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+        finishTime,
+        buildTime: recipe?.buildTime ?? (12 * 3600),
+        ready: finishTime > 0 && (Date.now() / 1000) > finishTime,
+        ...p
+      }
+    }),
     globalBoosters: (raw.GlobalUpgrades || []).map(u => {
       const typeMap = {
         'GAMEPLAY_KILL_XP_AMOUNT': 'Affinity Booster',

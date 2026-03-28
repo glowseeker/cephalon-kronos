@@ -132,9 +132,9 @@ export default function Inventory() {
     return (
       <div className="space-y-4 max-h-full overflow-y-auto custom-scrollbar pr-2">
         {items.map((item, idx) => {
-          const duration = item.startTime ? (item.finishTime - item.startTime) : (12 * 3600); // Default 12h for recipes if unknown
+          const duration = item.startTime ? (item.finishTime - item.startTime) : (item.buildTime || 12 * 3600); // Use recipe buildTime if unknown
           const now = Date.now() / 1000;
-          const elapsed = item.startTime ? (now - item.startTime) : (now - (item.finishTime - (12 * 3600))); 
+          const elapsed = item.startTime ? (now - item.startTime) : (now - (item.finishTime - (item.buildTime || 12 * 3600))); 
           const progress = Math.min(100, Math.max(0, (elapsed / duration) * 100));
           const timeLeft = Math.max(0, item.finishTime - now);
           const isReallyReady = timeLeft <= 0 || item.ready;
@@ -152,7 +152,7 @@ export default function Inventory() {
                     {item.ready ? 'Construction Complete' : 'In Progress'}
                   </p>
 
-                  {!item.ready && item.startTime ? (
+                  {!item.ready ? (
                     <>
                       <div className="w-full bg-kronos-panel/60 h-1.5 rounded-full overflow-hidden mb-1 relative border border-white/5">
                         <div
@@ -168,15 +168,10 @@ export default function Inventory() {
                         </span>
                       </div>
                     </>
-                  ) : item.ready ? (
+                  ) : (
                     <div className="flex items-center gap-1.5 text-green-500 font-bold text-[10px] uppercase">
                       <CheckCircle2 size={12} />
                       <span>Ready to Claim</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-kronos-dim font-bold text-[10px] uppercase">
-                      <Clock size={12} />
-                      <span>Building...</span>
                     </div>
                   )}
                 </div>
@@ -188,10 +183,70 @@ export default function Inventory() {
     )
   }
 
+  const renderHeaderStats = () => {
+    if (!inventoryData?.account) return null
+    const { credits, platinum, void_traces, void_traces_max, forma, aura_forma, stance_forma, umbra_forma, orokin_reactor, orokin_catalyst } = inventoryData.account
+
+    return (
+      <div className="flex items-center gap-6">
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] text-kronos-dim uppercase font-black tracking-widest">Credits</span>
+          <span className="text-sm font-bold text-kronos-text">{credits.toLocaleString()}</span>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] text-kronos-accent uppercase font-black tracking-widest">Platinum</span>
+          <span className="text-sm font-bold text-kronos-text">{platinum.toLocaleString()}</span>
+        </div>
+        <div className="h-8 w-px bg-white/10 mx-2" />
+        <div className="flex flex-col items-end group relative cursor-help">
+          <span className="text-[10px] text-kronos-accent uppercase font-black tracking-widest">Forma</span>
+          <span className="text-sm font-bold text-kronos-text">{forma + aura_forma + stance_forma + umbra_forma}</span>
+          
+          {/* Forma Breakdown Tooltip */}
+          <div className="absolute top-full right-0 mt-2 p-3 bg-kronos-bg border border-white/10 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[110] min-w-[140px] glass-panel">
+             <div className="space-y-2">
+                <div className="flex justify-between gap-4">
+                  <span className="text-[10px] text-kronos-dim uppercase font-bold">Standard</span>
+                  <span className="text-xs font-bold text-kronos-text">{forma}</span>
+                </div>
+                {aura_forma > 0 && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[10px] text-blue-300 uppercase font-bold">Aura</span>
+                    <span className="text-xs font-bold text-kronos-text">{aura_forma}</span>
+                  </div>
+                )}
+                {stance_forma > 0 && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[10px] text-green-300 uppercase font-bold">Stance</span>
+                    <span className="text-xs font-bold text-kronos-text">{stance_forma}</span>
+                  </div>
+                )}
+                {umbra_forma > 0 && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-[10px] text-purple-400 uppercase font-bold">Umbra</span>
+                    <span className="text-xs font-bold text-kronos-text">{umbra_forma}</span>
+                  </div>
+                )}
+             </div>
+          </div>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] text-yellow-500 uppercase font-black tracking-widest">Reactors</span>
+          <span className="text-sm font-bold text-kronos-text">{orokin_reactor}</span>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] text-blue-400 uppercase font-black tracking-widest">Catalysts</span>
+          <span className="text-sm font-bold text-kronos-text">{orokin_catalyst}</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <PageLayout
       title="Inventory"
       subtitle={lastUpdate ? `Last synced: ${formatLastUpdate(lastUpdate)}` : statusText}
+      extra={renderHeaderStats()}
     >
       <div className="space-y-4">
         <div className="flex gap-3">
@@ -292,6 +347,14 @@ export default function Inventory() {
                       : 'border-kronos-panel/40'
                       }`}
                   >
+                    {/* Applied Forma Badge */}
+                    {!isUnowned && item.formas > 0 && (
+                      <div className="absolute top-2 left-2 z-20 flex items-center gap-0.5 bg-kronos-accent text-kronos-bg px-1.5 py-0.5 rounded-full shadow-lg border border-white/20">
+                        <span className="text-[10px] font-black">{item.formas}</span>
+                        <span className="text-[8px]">★</span>
+                      </div>
+                    )}
+
                     {/* Left: Image */}
                     <div className="w-28 bg-kronos-panel/30 flex-shrink-0 p-2 flex items-center justify-center relative overflow-hidden">
                       <Box className="text-kronos-panel absolute w-16 h-16 opacity-20" />
@@ -338,16 +401,12 @@ export default function Inventory() {
                               <Gem size={10} />
                               <span>{item.owned ? 'Unmastered' : 'Unowned'}</span>
                             </div>
-                          )}                        </div>
-                      )}
-
-                      {/* Line 5: Forma Count */}
-                      {!isUnowned && item.formas > 0 && (
-                        <div className="text-[10px] flex items-center gap-1 text-kronos-accent font-black uppercase">
-                          <span className="text-xs">★</span>
-                          <span>{item.formas} Forma</span>
+                          )}
                         </div>
                       )}
+
+                      {/* Line 5: Applied Information */}
+
 
                       {/* Line 6: Subsumed Status (Frames only) */}
                       {item.subsumed && (
