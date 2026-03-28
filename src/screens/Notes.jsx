@@ -275,15 +275,31 @@ export default function Notes() {
         .kronos-editor .mdxeditor-root-contenteditable span {
           color: var(--color-text) !important;
         }
+        .kronos-editor .mdxeditor-root-contenteditable p { margin-bottom: 1em; line-height: 1.6; }
+        .kronos-editor .mdxeditor-root-contenteditable ul { list-style-type: disc !important; padding-left: 1.5em !important; margin-bottom: 1em; }
+        .kronos-editor .mdxeditor-root-contenteditable ol { list-style-type: decimal !important; padding-left: 1.5em !important; margin-bottom: 1em; }
+        .kronos-editor .mdxeditor-root-contenteditable li { margin-bottom: 0.25em; }
+
         .kronos-editor .mdxeditor-root-contenteditable h1,
         .kronos-editor .mdxeditor-root-contenteditable h2,
         .kronos-editor .mdxeditor-root-contenteditable h3,
         .kronos-editor .mdxeditor-root-contenteditable h4 {
           color: var(--color-text) !important;
+          margin-top: 1.5em;
+          margin-bottom: 0.5em;
+          line-height: 1.2;
         }
+        .kronos-editor .mdxeditor-root-contenteditable h1 { font-size: 2.25em; font-weight: 800; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.3em; margin-top: 0; }
+        .kronos-editor .mdxeditor-root-contenteditable h2 { font-size: 1.75em; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.3em; }
+        .kronos-editor .mdxeditor-root-contenteditable h3 { font-size: 1.25em; font-weight: 600; }
+        .kronos-editor .mdxeditor-root-contenteditable h4 { font-size: 1em; font-weight: 600; }
+
         .kronos-editor .mdxeditor-root-contenteditable blockquote {
-          border-left-color: var(--color-accent) !important;
+          border-left: 4px solid var(--color-accent) !important;
+          padding-left: 1em;
+          margin: 1em 0;
           color: var(--color-text-dim) !important;
+          font-style: italic;
         }
         .kronos-editor .mdxeditor-root-contenteditable code {
           color: var(--color-accent) !important;
