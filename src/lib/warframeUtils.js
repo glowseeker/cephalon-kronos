@@ -42,6 +42,9 @@ export const GeneralOverrides = {
   'SORTIE_BOSS_NIRA': 'Nira',
   'SORTIE_BOSS_BOREAL': 'Boreal',
   'SORTIE_BOSS_NIHIL': 'Nihil',
+  // Deep Archimedea overrides
+  'EMPBlackHole': 'Alluring Arcocanids',
+
   // Sortie modifiers
   'SORTIE_MODIFIER_POISON': 'Toxin',
   'SORTIE_MODIFIER_SLASH': 'Slash',
@@ -92,7 +95,9 @@ const clean = (s) => {
   return s.replace(/<[^>]*>/g, '').replace(/\|[^|]*\|/g, '').replace(/\\n/g, ' ').trim()
 }
 
-export const DescriptionOverrides = {}
+export const DescriptionOverrides = {
+  'EMPBlackHole': 'As Rogue Arcocanids charge attacks, they pull Warframes toward them.',
+}
 
 export function resolveNode(node, dict, ERg) {
   if (!node) return 'Unknown Node'
