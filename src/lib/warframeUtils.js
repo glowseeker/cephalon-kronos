@@ -1,5 +1,41 @@
-// ── Warframe Data Resolution Utilities ───────────────────────────────────────
+/**
+ * warframeUtils.js
+ *
+ * Shared lookup tables and resolution utilities imported by both
+ * inventoryParser.js and worldstateParser.js.
+ *
+ * Nothing in this file makes network calls or reads from disk.
+ * It is purely declarative data + pure functions.
+ *
+ * KEY EXPORTS
+ * ─────────────────────────────────────────
+ * GeneralOverrides   - internal key → display string (ally agents, factions, bosses, modifiers)
+ * MAPPING_TYPES      - mission type code → display name
+ * resolveNode        - resolve a node tag / faction / modifier key to a display string
+ * resolveMissionType - resolve a raw mission type value to a display name
+ * resolveChallenge   - resolve a Nightwave challenge path to a title
+ * resolveChallengeDesc - resolve the body text of a Nightwave challenge
+ * resolveRewardText  - turn a reward object into a human-readable string
+ * resolveItemName    - resolve an item unique name to a display string
+ * resolveAnyImage    - find a usable image URL for an item or reward
+ * timeRemaining      - format time until an expiry date
+ * timeSince          - format elapsed time since a date
+ * formatLastUpdate   - format a timestamp as "today HH:MM" or "Jan 1 HH:MM"
+ */
 
+// ─── General Display Overrides ──────────────────────────────────────────
+//
+// Maps internal key strings (ally agents, faction codes, boss/modifier tags)
+// to human-readable display names.
+// Used by resolveNode() as a fallback after dictionary lookups.
+//
+// Groups:
+//   Ally Agents (1999/Hex NPCs)
+//   Factions
+//   Sortie Bosses
+//   Archon Hunt Bosses
+//   Deep Archimedea overrides
+//   Sortie / Mission Modifiers
 export const GeneralOverrides = {
   // Ally agents (1999 / Hex)
   'AoiAllyAgent': 'Aoi',
@@ -66,6 +102,11 @@ export const GeneralOverrides = {
   'SORTIE_MODIFIER_HAZARD_MAGNETIC': 'Magnetic Storm',
 }
 
+// ─── Mission Type Lookup ─────────────────────────────────────────────────
+//
+// Maps MT_ mission type codes to display names.
+// Also includes some legacy text-key overrides (Destroy, Mobile, etc.) that
+// appear in older worldstate data and the /Disruption alias for MT_ARTIFACT.
 export const MAPPING_TYPES = {
   'MT_MOBILE_DEFENSE': 'Mobile Defense',
   'MT_INTEL': 'Spy',
@@ -95,10 +136,27 @@ const clean = (s) => {
   return s.replace(/<[^>]*>/g, '').replace(/\|[^|]*\|/g, '').replace(/\\n/g, ' ').trim()
 }
 
+
+// ─── Warframe Skin Folder Overrides ───────────────────────────────────
+//
+// Maps the parent folder name of a skin path to the Warframe it belongs to.
+// Tennogen / Deluxe skin paths use designer-chosen folder names (e.g. 'Harlequin'
+// for the Mirage skin), so we need this to display the correct Warframe name.
+// Used by nameFromPath() in both resolveItemName() and inventoryParser.resolveName().
+
 export const DescriptionOverrides = {
   'EMPBlackHole': 'As Rogue Arcocanids charge attacks, they pull Warframes toward them.',
 }
 
+
+// ─── Node / Key Resolution ────────────────────────────────────────────────────
+
+/**
+ * Resolve a node tag, faction code, boss key, or modifier identifier to a
+ * human-readable display string.
+ * Priority: description overrides → dict → ExportRegions → GeneralOverrides →
+ *   MAPPING_TYPES → dict tail → prefix formatting → PascalCase → raw string.
+ */
 export function resolveNode(node, dict, ERg) {
   if (!node) return 'Unknown Node'
 
@@ -146,6 +204,11 @@ export function resolveNode(node, dict, ERg) {
   return clean(node)
 }
 
+
+/**
+ * Resolve a raw mission type value (MT_ code, text alias) to a display name.
+ * Wraps resolveNode() and also consults MAPPING_TYPES directly.
+ */
 export function resolveMissionType(raw, dict, ERg) {
   if (!raw) return ''
   if (MAPPING_TYPES[raw] !== undefined) return MAPPING_TYPES[raw]
@@ -153,6 +216,13 @@ export function resolveMissionType(raw, dict, ERg) {
   return MAPPING_TYPES[resolved] ?? resolved
 }
 
+
+// ─── Nightwave / Challenge Resolution ─────────────────────────────────
+
+/**
+ * Resolve a Nightwave challenge path to its title string.
+ * Tries dict, ExportChallenges, then falls back to formatting the path leaf.
+ */
 export function resolveChallenge(path, dict, EC) {
   if (!path) return 'Bounty'
 
@@ -170,19 +240,29 @@ export function resolveChallenge(path, dict, EC) {
   return last.replace(/Challenge$/, '').replace(/([A-Z])/g, ' $1').trim()
 }
 
+
 export function resolveChallengeDesc(path, dict, EC, ERg, allyPath = '') {
   if (!path) return ''
   const entry = EC[path]
   let res = ''
 
+  // 1. Try specified description key in EC
   if (entry && entry.description) {
     res = dict[entry.description] || dict['/' + entry.description] || ''
   }
 
-  // Fallback to direct dictionary resolution if EC metadata is missing
+  // 2. Try replacing _Name with _Description (standard pattern)
+  if (!res && entry && entry.name && entry.name.endsWith('_Name')) {
+    const descKey = entry.name.replace('_Name', '_Description')
+    res = dict[descKey] || dict['/' + descKey] || ''
+  }
+
+  // 3. Fallback to direct dictionary resolution based on path
   if (!res) {
     const last = path.split('/').at(-1)
-    res = dict[path + '_Desc'] || dict['/' + path + '_Desc'] || dict[last + '_Desc'] || ''
+    res = dict[path + '_Description'] || dict['/' + path + '_Description'] ||
+          dict[path + '_Desc'] || dict['/' + path + '_Desc'] ||
+          dict[last + '_Description'] || dict[last + '_Desc'] || ''
   }
 
   if (res) {
@@ -198,6 +278,11 @@ export function resolveChallengeDesc(path, dict, EC, ERg, allyPath = '') {
   return ''
 }
 
+
+/**
+ * Resolve a Nightwave challenge's flavour (lore) text.
+ * Returns '' if no flavour entry exists in ExportChallenges.
+ */
 export function resolveChallengeFlavour(path, dict, EC, ERg, allyPath = '') {
   if (!path) return ''
   const entry = EC[path]
@@ -215,6 +300,14 @@ export function resolveChallengeFlavour(path, dict, EC, ERg, allyPath = '') {
   return ''
 }
 
+
+// ─── Reward / Item Resolution ──────────────────────────────────────────
+
+/**
+ * Turn a Warframe reward object ({items, countedItems, itemString}) into a
+ * human-readable comma-separated string (or the chosen separator).
+ * Returns null if the reward object is empty / unresolvable.
+ */
 export function resolveRewardText(reward, dict, ERg, uniqueNameToName = {}, sep = ', ') {
   if (!reward) return null
   const cItems = reward.countedItems ?? reward.CountedItems ?? []
@@ -298,6 +391,14 @@ function nameFromPath(path = '') {
   return leaf.endsWith('Blueprint') && !name.endsWith('Blueprint') ? name + ' Blueprint' : name;
 }
 
+
+/**
+ * Resolve an item unique name (e.g. /Lotus/Weapons/Tenno/Rifle/Latron) to a
+ * display name string.  Resolution order:
+ *  1. uniqueNameToName map → dict localisation
+ *  2. Direct dict lookup
+ *  3. nameFromPath() fallback
+ */
 export function resolveItemName(path, dict, uniqueNameToName) {
   if (!path) return ''
 
@@ -335,6 +436,13 @@ export function resolveItemName(path, dict, uniqueNameToName) {
   return clean(path);
 }
 
+
+/**
+ * Find a usable image URL for an item or reward object.
+ * Checks EI (uniqueName → browse.wf URL), nameToImage (lowercase name → URL),
+ * and falls back through recipe path → weapon path transformations.
+ * Returns null if no image is found.
+ */
 export function resolveAnyImage(rewardOrItem, EI, nameToImage, uniqueNameToName = {}) {
   if (!rewardOrItem) return null
   const byName = (s) => {
@@ -422,6 +530,10 @@ export function resolveAnyImage(rewardOrItem, EI, nameToImage, uniqueNameToName 
   return null
 }
 
+
+// ─── Time Formatting Utilities ───────────────────────────────────────────
+
+/** Format time remaining until expiry as "Xd Xh", "Xh Xm", or "Xm". */
 export function timeRemaining(expiry) {
   if (!expiry) return ''
   const expDate = typeof expiry === 'object' && expiry.$date ? new Date(parseInt(expiry.$date.$numberLong, 10)) : new Date(expiry)
@@ -435,6 +547,8 @@ export function timeRemaining(expiry) {
   return `${m}m`
 }
 
+
+/** Format elapsed time since a past date as "Xd ago", "Xh ago", or "Xm ago". */
 export function timeSince(date) {
   if (!date) return ''
   const d = typeof date === 'object' && date.$date ? new Date(parseInt(date.$date.$numberLong, 10)) : new Date(date)
@@ -448,6 +562,9 @@ export function timeSince(date) {
   return `${m}m ago`
 }
 
+
+/** Format a raw timestamp (ms) as a short date string.
+ *  If the date is today, show "HH:MM"; otherwise show "Month Day HH:MM". */
 export function formatLastUpdate(ts) {
   if (!ts) return 'never'
   const date = new Date(Number(ts))

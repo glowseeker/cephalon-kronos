@@ -1,3 +1,22 @@
+/**
+ * Inventory.jsx
+ *
+ * Displays the user's full collection of items, including equipment, mods,
+ * arcanes and resources.  Provides categorised tabs and multi-column
+ * filtering (e.g., "Owned + Unmastered").
+ *
+ * DATA FLOW
+ * ─────────────────────────────────────────
+ * 1. MonitoringContext provides the `inventory` object (result of parseInventory).
+ * 2. This file filters and sorts that object based on local state (`activeTab`,
+ *    `searchQuery`, `filters`, `sortBy`).
+ *
+ * FEATURES
+ * ─────────────────────────────────────────
+ * - Category-specific filters (e.g. 'Subsumed' for Warframes, 'Incarnon' for Weapons).
+ * - Mastery status tracking (Mastered vs Unmastered icons).
+ * - Real-time search by item name or unique name.
+ */
 import { useState, useMemo, useEffect } from 'react'
 import { Search, Filter, ArrowUpDown, AlertCircle, CheckCircle2, Box, Zap, Gem, Clock, Pyramid, X } from 'lucide-react'
 import { PageLayout, Card, Input, Button, Tabs } from '../components/UI'
@@ -134,7 +153,7 @@ export default function Inventory() {
         {items.map((item, idx) => {
           const duration = item.startTime ? (item.finishTime - item.startTime) : (item.buildTime || 12 * 3600); // Use recipe buildTime if unknown
           const now = Date.now() / 1000;
-          const elapsed = item.startTime ? (now - item.startTime) : (now - (item.finishTime - (item.buildTime || 12 * 3600))); 
+          const elapsed = item.startTime ? (now - item.startTime) : (now - (item.finishTime - (item.buildTime || 12 * 3600)));
           const progress = Math.min(100, Math.max(0, (elapsed / duration) * 100));
           const timeLeft = Math.max(0, item.finishTime - now);
           const isReallyReady = timeLeft <= 0 || item.ready;
@@ -201,33 +220,33 @@ export default function Inventory() {
         <div className="flex flex-col items-end group relative cursor-help">
           <span className="text-[10px] text-kronos-accent uppercase font-black tracking-widest">Forma</span>
           <span className="text-sm font-bold text-kronos-text">{forma + aura_forma + stance_forma + umbra_forma}</span>
-          
+
           {/* Forma Breakdown Tooltip */}
           <div className="absolute top-full right-0 mt-2 p-3 bg-kronos-bg border border-white/10 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[110] min-w-[140px] glass-panel">
-             <div className="space-y-2">
+            <div className="space-y-2">
+              <div className="flex justify-between gap-4">
+                <span className="text-[10px] text-kronos-dim uppercase font-bold">Standard</span>
+                <span className="text-xs font-bold text-kronos-text">{forma}</span>
+              </div>
+              {aura_forma > 0 && (
                 <div className="flex justify-between gap-4">
-                  <span className="text-[10px] text-kronos-dim uppercase font-bold">Standard</span>
-                  <span className="text-xs font-bold text-kronos-text">{forma}</span>
+                  <span className="text-[10px] text-blue-300 uppercase font-bold">Aura</span>
+                  <span className="text-xs font-bold text-kronos-text">{aura_forma}</span>
                 </div>
-                {aura_forma > 0 && (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-[10px] text-blue-300 uppercase font-bold">Aura</span>
-                    <span className="text-xs font-bold text-kronos-text">{aura_forma}</span>
-                  </div>
-                )}
-                {stance_forma > 0 && (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-[10px] text-green-300 uppercase font-bold">Stance</span>
-                    <span className="text-xs font-bold text-kronos-text">{stance_forma}</span>
-                  </div>
-                )}
-                {umbra_forma > 0 && (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-[10px] text-purple-400 uppercase font-bold">Umbra</span>
-                    <span className="text-xs font-bold text-kronos-text">{umbra_forma}</span>
-                  </div>
-                )}
-             </div>
+              )}
+              {stance_forma > 0 && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-[10px] text-green-300 uppercase font-bold">Stance</span>
+                  <span className="text-xs font-bold text-kronos-text">{stance_forma}</span>
+                </div>
+              )}
+              {umbra_forma > 0 && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-[10px] text-purple-400 uppercase font-bold">Umbra</span>
+                  <span className="text-xs font-bold text-kronos-text">{umbra_forma}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex flex-col items-end">
@@ -276,7 +295,7 @@ export default function Inventory() {
               <div>
                 <p className="text-xs font-bold text-kronos-accent uppercase tracking-widest mb-3">Filters</p>
                 <div className="flex flex-wrap gap-2">
-                  <Tabs 
+                  <Tabs
                     tabs={(FILTER_CONFIG[activeTab] ?? []).map(f => ({ id: f, label: f.replace(/_/g, ' ') }))}
                     activeTab={Object.keys(currentFilters).filter(k => currentFilters[k])}
                     onChange={toggleFilter}
@@ -285,33 +304,33 @@ export default function Inventory() {
               </div>
               <div>
                 <p className="text-xs font-bold text-kronos-accent uppercase tracking-widest mb-3">Sort By</p>
-                <Tabs 
-                  tabs={['name', 'rank', 'xp', ...(showQuantitySort ? ['quantity'] : [])].map(opt => ({ 
-                    id: opt, 
+                <Tabs
+                  tabs={['name', 'rank', 'xp', ...(showQuantitySort ? ['quantity'] : [])].map(opt => ({
+                    id: opt,
                     label: (
                       <div className="flex items-center gap-1.5">
                         <span className={opt === 'xp' ? 'uppercase' : 'capitalize'}>{opt}</span>
                         {sortCriteria === opt && (
-                          <ArrowUpDown 
-                            size={12} 
-                            className={`transition-transform duration-300 ${sortDirection === 'desc' ? 'rotate-180' : ''}`} 
+                          <ArrowUpDown
+                            size={12}
+                            className={`transition-transform duration-300 ${sortDirection === 'desc' ? 'rotate-180' : ''}`}
                           />
                         )}
                       </div>
                     )
-                  }))} 
-                  activeTab={sortCriteria} 
-                  onChange={handleSort} 
+                  }))}
+                  activeTab={sortCriteria}
+                  onChange={handleSort}
                 />
               </div>
             </div>
           </Card>
         )}
 
-        <Tabs 
-          tabs={INVENTORY_TABS} 
-          activeTab={activeTab} 
-          onChange={(id) => { setActiveTab(id); setCurrentFilters({}) }} 
+        <Tabs
+          tabs={INVENTORY_TABS}
+          activeTab={activeTab}
+          onChange={(id) => { setActiveTab(id); setCurrentFilters({}) }}
         />
 
         {inventoryData && (

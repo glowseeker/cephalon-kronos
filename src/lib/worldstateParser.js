@@ -1,3 +1,25 @@
+/**
+ * worldstateParser.js
+ *
+ * Parses the live worldstate JSON from Warframe's servers into structured data
+ * for the Dashboard screen.
+ *
+ * DATA PIPELINE
+ * ─────────────────────────────────────────
+ * MonitoringContext.jsx fetches the live worldstate JSON from
+ * https://content.warframe.com/dynamic/worldState.php on each monitoring cycle.
+ * That raw JSON object is passed to parseWorldstate() here, which returns a
+ * clean, UI-friendly structure consumed by Dashboard.jsx.
+ *
+ * Environmental cycle timestamps (Cetus, Vallis, etc.) are calculated purely
+ * from Date.now() using wiki-confirmed epoch values -- no network calls needed.
+ *
+ * EXPORTS FROM THIS FILE
+ * ─────────────────────────────────────────
+ * parseWorldstate(raw, options) → dashboard data object
+ *   All cycle parsers and helpers are internal.
+ */
+
 import {
   resolveNode,
   resolveMissionType,
@@ -7,15 +29,21 @@ import {
   resolveItemName
 } from './warframeUtils'
 
+// ─── Environment Cycle Parsers ────────────────────────────────────────────────
+//
+// Each open-world area cycles between two states on a fixed timer.
+// All timers are deterministic -- given an epoch timestamp and each phase
+// length, we compute the current state purely from the system clock.
+// Epoch values are sourced from the Warframe wiki.
+
 /**
- * Compute which phase of an alternating A/B cycle we're currently in,
- * and how long until the next phase transition.
- * 
- * @param {number} epochSec - Known transition timestamp (start of phase A).
- * @param {number} aLenSec - Duration of phase A (seconds).
- * @param {number} bLenSec - Duration of phase B (seconds).
- * @param {string} aLabel - Label for phase A.
- * @param {string} bLabel - Label for phase B.
+ * Generic A/B cycle calculator.
+ * @param {number} epochSec  Known transition timestamp (Unix seconds, start of phase A).
+ * @param {number} aLenSec   Duration of phase A in seconds.
+ * @param {number} bLenSec   Duration of phase B in seconds.
+ * @param {string} aLabel    Display label for phase A (e.g. 'Day').
+ * @param {string} bLabel    Display label for phase B (e.g. 'Night').
+ * @returns {{ state: string, expiry: Date }}
  */
 function computeCycle(epochSec, aLenSec, bLenSec, aLabel, bLabel) {
   const totalSec = aLenSec + bLenSec
@@ -29,75 +57,64 @@ function computeCycle(epochSec, aLenSec, bLenSec, aLabel, bLabel) {
   }
 }
 
+/** Plains of Eidolon / Cetus day-night cycle.
+ *  Day = 5998.874 s, Night = 3000 s.  Epoch: 2021-02-05 12:27:54 UTC (wiki). */
 function parseCetusCycle(_raw) {
-  // Plains of Eidolon / Earth (Cetus): looptime 8998.874s (~150m), delaytime 3000s (50m night).
-  // Wiki epoch: February 5, 2021 12:27:54 UTC (1612528074)
-  // Day = 5998.874s, Night = 3000s
   return computeCycle(1612528074, 5998.874, 3000, 'Day', 'Night')
 }
 
+/** Orb Vallis warm-cold cycle.
+ *  Warm = 400 s, Cold = 1200 s.  Epoch: 2021-01-09 08:13:48 UTC (wiki). */
 function parseVallisCycle(_raw) {
-  // Orb Vallis: looptime 1600s, delaytime 1200s (20m cold).
-  // Wiki epoch: January 9, 2021 08:13:48 UTC (1610170428)
-  // Warm = 400s, Cold = 1200s
   return computeCycle(1610170428, 400, 1200, 'Warm', 'Cold')
 }
 
+/** Cambion Drift Fass/Vome cycle; shares the same epoch and lengths as Cetus. */
 function parseCambionCycle(_raw) {
-  // Cambion Drift: Same cycle as Cetus, but labels are Fass/Vome.
-  // Fass = 5998.874s, Vome = 3000s
   const { state, expiry } = computeCycle(1612528074, 5998.874, 3000, 'Fass', 'Vome')
   return { state, expiry, active: state === 'Fass' }
 }
 
+/** Earth forest day-night cycle.  4 h day, 4 h night.  Epoch: 2020-06-16 00:00:00 UTC (wiki). */
 function parseEarthCycle(_raw) {
-  // Earth (Forest): looptime 14400s (4h), delaytime 14400s (4h).
-  // Epoch: June 16, 2020 00:00:00 UTC (1592265600)
   return computeCycle(1592265600, 14400, 14400, 'Day', 'Night')
 }
 
+/** Zariman Ten Zero faction cycle.
+ *  The faction (Corpus/Grineer) is sourced from the oracle bounty-cycle API;
+ *  its expiry is synced with the HexSyndicate (1999) bounty timer. */
 function parseZarimanCycle(raw, bountyCycle) {
-  // Zariman faction is pulled from oracle bounty-cycle API
-  // Expiry is synced with HexSyndicate (1999) bounty timer
   const hex = (raw.SyndicateMissions || []).find(s => s.Tag === 'HexSyndicate')
   const expiry = hex ? (hex.Expiry?.$date?.$numberLong ? new Date(parseInt(hex.Expiry.$date.$numberLong, 10)) : new Date(hex.Expiry)) : null
-
   const factionRaw = bountyCycle?.zarimanFaction || 'FC_CORPUS'
   const state = factionRaw === 'FC_GRINEER' ? 'Grineer' : 'Corpus'
-
   return { state, expiry }
 }
 
+/** Duviri emotional state cycle.
+ *  5 states (Sorrow, Fear, Joy, Anger, Envy), each 2 hours.  Rotates from Unix epoch 0. */
 function parseDuviriCycle(_raw) {
-  // Duviri rotates through 5 emotional states, 2h each, starting from Unix epoch 0
   const states = ['Sorrow', 'Fear', 'Joy', 'Anger', 'Envy']
   const stateLenMs = 7200000 // 2 hours
-  const nowMs = Date.now()
-
-  const idx = Math.floor(nowMs / stateLenMs)
-  const currentState = states[idx % 5]
-  const expiry = new Date((idx + 1) * stateLenMs)
-
+  const idx = Math.floor(Date.now() / stateLenMs)
   return {
-    state: currentState,
-    expiry: expiry
+    state: states[idx % 5],
+    expiry: new Date((idx + 1) * stateLenMs)
   }
 }
 
+// ─── Deep Archimedea Helper ──────────────────────────────────────────────────
+
 /**
- * Build a short-key → value index for archimedea modifier strings from the suppDict.
+ * Build a lowercase short-key → display string lookup for Deep Archimedea
+ * modifiers from the main dict and supplementary dict.
  *
- * Raw worldstate values are short identifiers like "OverSensitive", "UnpoweredCapsules".
- * The oracle dict stores them as full paths like:
- *   /Lotus/Language/Conquest/PersonalMod_OverSensitive
- *   /Lotus/Language/Conquest/MissionVariant_LabConquest_UnpoweredCapsules_Desc
- *
- * Rather than hardcoding which prefix tokens to strip (which would break for other languages
- * or if DE adds new prefix groups), we index every possible underscore-suffix of the last
- * path segment. The raw worldstate key always matches one of those suffixes.
- *
- * Works for any locale - path structure under /Conquest/ is language-agnostic,
- * only the values change.
+ * Worldstate reports modifier names as short identifiers like 'OverSensitive'
+ * or 'UnpoweredCapsules'.  The dictionaries store them as full localisation
+ * paths (e.g. /Lotus/Language/Conquest/PersonalMod_OverSensitive).
+ * To avoid hardcoding prefix tokens (which break on new content), we index
+ * every underscore-joined suffix of each /Conquest/ path segment, so that
+ * any raw key will match one of them.
  */
 function buildArchimedeaMap(dict, suppDict) {
   const map = {}
@@ -109,9 +126,18 @@ function buildArchimedeaMap(dict, suppDict) {
       const segment = key.split('/').at(-1) // e.g. "PersonalMod_OverSensitive_Desc"
       const parts = segment.split('_')
       // Index every suffix: "OverSensitive_Desc", "Sensitive_Desc", "Desc", etc.
+      // Also index _Description suffixes (used by newer modifiers)
       for (let i = 0; i < parts.length; i++) {
-        const shortKey = parts.slice(i).join('_').toLowerCase()
-        if (shortKey && !map[shortKey]) map[shortKey] = clean(val)
+        const base = parts.slice(i).join('_').toLowerCase()
+        if (base && !map[base]) map[base] = clean(val)
+        
+        // Canonical description suffixes
+        if (base.endsWith('_desc') && !map[base.replace('_desc', '_description')]) {
+          map[base.replace('_desc', '_description')] = clean(val)
+        }
+        if (base.endsWith('_description') && !map[base.replace('_description', '_desc')]) {
+          map[base.replace('_description', '_desc')] = clean(val)
+        }
       }
     }
   }
@@ -124,9 +150,30 @@ function buildArchimedeaMap(dict, suppDict) {
 
 const CONQUEST_OVERRIDES = {
   'undersupplied': 'maxammo',
-  'dullblades': 'combocountchance'
+  'dullblades': 'combocountchance',
+  'magnetichounds': 'condition_magnetichounds'
 }
 
+// ─── Main Parser ───────────────────────────────────────────────────────────
+
+/**
+ * Parse the live Warframe worldstate JSON into a clean UI-friendly object.
+ * Called by MonitoringContext.jsx on each monitoring cycle.
+ *
+ * @param {object} raw         The raw worldstate JSON object from Warframe's servers.
+ * @param {object} options     Resolution helpers:
+ *   - dict            Main localisation dictionary (dict.en)
+ *   - suppDict        Supplementary dictionary (from oracle.browse.wf)
+ *   - ERg             ExportRegions: node name resolution
+ *   - EC              ExportChallenges: Nightwave challenge text
+ *   - EI              Item unique name → image URL map
+ *   - nameToImage     Additional image lookup
+ *   - uniqueNameToName  Item unique name → display name map
+ *   - bountyCycle     Oracle bounty cycle data (for Zariman faction)
+ *   - ES              ExportSentinels (for companion images)
+ *   - ENW             ExportNightwave: Nightwave reward list
+ * @returns {object} Structured data consumed by Dashboard.jsx, or null if raw is falsy.
+ */
 export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENW }) {
   if (!raw) return null
 
@@ -168,7 +215,14 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
         const ts = e.Date?.$date?.$numberLong
           ? parseInt(e.Date.$date.$numberLong, 10)
           : (e.Date ? new Date(e.Date).getTime() : 0)
-        return { message, link: e.Prop, date: new Date(ts), image: e.ImageUrl, priority: e.Priority, community: !!e.Community }
+
+        // Try 'Links' array first (modern worldstate), fallback to 'Prop'
+        const linkRaw = e.Links?.find(l => l.LanguageCode === 'en')?.Link || e.Links?.[0]?.Link || e.Prop || ''
+        const link = (linkRaw.startsWith('http') || !linkRaw)
+          ? linkRaw
+          : `https://www.warframe.com${linkRaw.startsWith('/') ? '' : '/'}${linkRaw}`
+
+        return { message, link, date: new Date(ts), image: e.ImageUrl, priority: e.Priority, community: !!e.Community }
       })
       .filter(Boolean)
       .sort((a, b) => b.date - a.date),
@@ -349,15 +403,20 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
         itemCount: r.itemCount,
         image: EI[r.uniqueName] || null
       })),
-      challenges: (raw.SeasonInfo.ActiveChallenges || []).map(c => ({
-        id: c._id?.$oid || c._id,
-        name: resolveChallenge(c.Challenge, dict, EC),
-        desc: resolveChallengeDesc(c.Challenge, dict, EC, ERg),
-        expiry: c.Expiry,
-        isDaily: !!c.Daily,
-        xp: c.xpAmount || c.XP || 0,
-        isElite: (c.xpAmount || 0) >= 7000
-      }))
+      challenges: (raw.SeasonInfo.ActiveChallenges || []).map(c => {
+        const challengeEntry = EC?.[c.Challenge] || {}
+        const standing = challengeEntry.standing || c.xpAmount || c.XP || 0
+        return {
+          id: c._id?.$oid || c._id,
+          name: resolveChallenge(c.Challenge, dict, EC),
+          desc: resolveChallengeDesc(c.Challenge, dict, EC, ERg),
+          expiry: c.Expiry,
+          isDaily: !!c.Daily,
+          xp: standing,
+          isElite: standing >= 7000,
+          icon: challengeEntry.icon || null
+        }
+      })
     } : null,
 
     archimedeas: (raw.Conquests || []).map(c => ({
@@ -369,7 +428,7 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
         const lookup = (CONQUEST_OVERRIDES[v.toLowerCase()] || v).toLowerCase()
         return {
           name: archMap[lookup] ?? resolvePriority(v),
-          description: archMap[lookup + '_desc'] ?? null
+          description: archMap[lookup + '_desc'] || archMap[lookup + '_description'] || archMap[lookup] || null
         }
       }),
       missions: (c.Missions || []).map(m => {
@@ -380,13 +439,13 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
           faction: resolveNode(m.faction, dict, ERg),
           deviation: diff?.deviation ? {
             name: archMap[devLookup] ?? resolvePriority(diff.deviation),
-            description: archMap[devLookup + '_desc'] ?? null
+            description: archMap[devLookup + '_desc'] || archMap[devLookup + '_description'] || archMap[devLookup] || null
           } : null,
           risks: (diff?.risks || []).map(r => {
             const rLookup = (CONQUEST_OVERRIDES[r.toLowerCase()] || r).toLowerCase()
             return {
               name: archMap[rLookup] ?? resolvePriority(r),
-              description: archMap[rLookup + '_desc'] ?? null
+              description: archMap[rLookup + '_desc'] || archMap[rLookup + '_description'] || archMap[rLookup] || null
             }
           })
         };

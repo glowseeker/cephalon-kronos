@@ -1,13 +1,40 @@
 /**
  * inventoryParser.js
  *
- * Parses raw inventory.json from Warframe using local export data.
+ * Turns the raw API response from warframe-api-helper into structured data for
+ * every screen in the app.  Nothing in here touches the network or the disk;
+ * all that is handled by main.rs before this file even runs.
+ *
+ * DATA PIPELINE (how raw bytes become UI)
+ * ─────────────────────────────────────────
+ * 1. main.rs:check_exports()      – downloads / refreshes JSON export files
+ * 2. main.rs:load_all_exports()   – reads them from disk into one big object
+ * 3. main.rs:call_api_helper()    – runs the bundled helper binary, produces inventory.json
+ * 4. main.rs:load_cached_inventory() – reads inventory.json from disk
+ * 5. MonitoringContext.jsx        – calls (2) and (3)/(4) on startup / each scan
+ * 6. parseInventory(raw, exports) – <-- YOU ARE HERE
+ *    Takes the raw inventory object and the exports bundle, returns a flat
+ *    structured object consumed by Inventory.jsx, Mastery.jsx, Relics.jsx, etc.
+ *
+ * EXPORTS FROM THIS FILE
+ * ─────────────────────────────────────────
+ * parseInventory(raw, exports) → structured inventory object
+ *   All other functions are internal helpers.
  */
 
-// Riven tag data ported from calamity-inc/warframe-riven-info/riven_tags.json
-// Contains per-weapon-type base values, prefixes, and suffixes for all riven stats.
+// ─── Riven Tag Data ───────────────────────────────────────────────────────────
+//
+// Per-weapon-type base values, prefixes, and suffixes for every riven stat.
+// Ported from calamity-inc/warframe-riven-info/riven_tags.json.
+// Used by the riven stat formula in parseInventory to calculate displayed values.
 const RIVEN_TAGS = { "LotusArchgunRandomModRare": [{ "tag": "WeaponArmorPiercingDamageMod", "value": 0.01, "prefix": "insi", "suffix": "cak" }, { "tag": "WeaponCritChanceMod", "value": 0.0111, "prefix": "crita", "suffix": "cron" }, { "tag": "WeaponCritDamageMod", "value": 0.0089, "prefix": "acri", "suffix": "tis" }, { "tag": "WeaponElectricityDamageMod", "value": 0.0133, "prefix": "vexi", "suffix": "tio" }, { "tag": "WeaponFireDamageMod", "value": 0.0133, "prefix": "igni", "suffix": "pha" }, { "tag": "WeaponFireRateMod", "value": 0.00667, "prefix": "croni", "suffix": "dra" }, { "tag": "WeaponFreezeDamageMod", "value": 0.0133, "prefix": "geli", "suffix": "do" }, { "tag": "WeaponImpactDamageMod", "value": 0.01, "prefix": "magna", "suffix": "ton" }, { "tag": "WeaponProcTimeMod", "value": 0.01111, "prefix": "deci", "suffix": "des" }, { "tag": "WeaponSlashDamageMod", "value": 0.01, "prefix": "sci", "suffix": "sus" }, { "tag": "WeaponStunChanceMod", "value": 0.0067, "prefix": "hexa", "suffix": "dex" }, { "tag": "WeaponToxinDamageMod", "value": 0.0133, "prefix": "toxi", "suffix": "tox" }, { "tag": "WeaponAmmoMaxMod", "value": 0.0111, "prefix": "ampi", "suffix": "bin" }, { "tag": "WeaponClipMaxMod", "value": 0.0067, "prefix": "arma", "suffix": "tin" }, { "tag": "WeaponDamageAmountMod", "value": 0.0111, "prefix": "visi", "suffix": "ata" }, { "tag": "WeaponFireIterationsMod", "value": 0.0067, "prefix": "sati", "suffix": "can" }, { "tag": "WeaponPunctureDepthMod", "value": 0.03, "prefix": "lexi", "suffix": "nok" }, { "tag": "WeaponRecoilReductionMod", "value": -0.01, "prefix": "zeti", "suffix": "mag" }, { "tag": "WeaponReloadSpeedMod", "value": 0.0111, "prefix": "feva", "suffix": "tak" }, { "tag": "WeaponFactionDamageCorpus", "value": 0.005, "prefix": "manti", "suffix": "tron" }, { "tag": "WeaponFactionDamageGrineer", "value": 0.005, "prefix": "argi", "suffix": "con" }, { "tag": "WeaponZoomFovMod", "value": 0.006666, "prefix": "hera", "suffix": "lis" }], "LotusModularMeleeRandomModRare": [{ "tag": "WeaponMeleeDamageMod", "value": 0.0183, "prefix": "visi", "suffix": "ata" }, { "tag": "WeaponArmorPiercingDamageMod", "value": 0.0133, "prefix": "insi", "suffix": "cak" }, { "tag": "WeaponImpactDamageMod", "value": 0.0133, "prefix": "magna", "suffix": "ton" }, { "tag": "WeaponSlashDamageMod", "value": 0.0133, "prefix": "sci", "suffix": "sus" }, { "tag": "WeaponCritChanceMod", "value": 0.02, "prefix": "crita", "suffix": "cron" }, { "tag": "WeaponCritDamageMod", "value": 0.01, "prefix": "acri", "suffix": "tis" }, { "tag": "WeaponElectricityDamageMod", "value": 0.01, "prefix": "vexi", "suffix": "tio" }, { "tag": "WeaponFireDamageMod", "value": 0.01, "prefix": "igni", "suffix": "pha" }, { "tag": "WeaponFreezeDamageMod", "value": 0.01, "prefix": "geli", "suffix": "do" }, { "tag": "WeaponToxinDamageMod", "value": 0.01, "prefix": "toxi", "suffix": "tox" }, { "tag": "WeaponProcTimeMod", "value": 0.01111, "prefix": "deci", "suffix": "des" }, { "tag": "WeaponMeleeFactionDamageCorpus", "value": 0.005, "prefix": "manti", "suffix": "tron" }, { "tag": "WeaponMeleeFactionDamageGrineer", "value": 0.005, "prefix": "argi", "suffix": "con" }, { "tag": "WeaponMeleeFactionDamageInfested", "value": 0.005, "prefix": "pura", "suffix": "ada" }, { "tag": "WeaponFireRateMod", "value": 0.0061, "prefix": "croni", "suffix": "dra" }, { "tag": "WeaponStunChanceMod", "value": 0.01, "prefix": "hexa", "suffix": "dex" }, { "tag": "ComboDurationMod", "value": 0.09, "prefix": "tempi", "suffix": "nem" }, { "tag": "SlideAttackCritChanceMod", "value": 0.013334, "prefix": "pleci", "suffix": "nent" }, { "tag": "WeaponMeleeRangeIncMod", "value": 0.02158, "prefix": "locti", "suffix": "tor" }, { "tag": "WeaponMeleeFinisherDamageMod", "value": 0.0133, "prefix": "exi", "suffix": "cta" }, { "tag": "WeaponMeleeComboEfficiencyMod", "value": 0.00816, "prefix": "forti", "suffix": "us" }, { "tag": "WeaponMeleeComboInitialBonusMod", "value": 0.27224, "prefix": "para", "suffix": "um" }, { "tag": "WeaponMeleeComboPointsOnHitMod", "value": -0.01165 }, { "tag": "WeaponMeleeComboBonusOnHitMod", "value": 0.00653, "prefix": "laci", "suffix": "nus" }], "LotusModularPistolRandomModRare": [{ "tag": "WeaponArmorPiercingDamageMod", "value": 0.01333, "prefix": "insi", "suffix": "cak" }, { "tag": "WeaponCritChanceMod", "value": 0.016666, "prefix": "crita", "suffix": "cron" }, { "tag": "WeaponCritDamageMod", "value": 0.01, "prefix": "acri", "suffix": "tis" }, { "tag": "WeaponElectricityDamageMod", "value": 0.01, "prefix": "vexi", "suffix": "tio" }, { "tag": "WeaponFireDamageMod", "value": 0.01, "prefix": "igni", "suffix": "pha" }, { "tag": "WeaponFireRateMod", "value": 0.0083, "prefix": "croni", "suffix": "dra" }, { "tag": "WeaponFreezeDamageMod", "value": 0.01, "prefix": "geli", "suffix": "do" }, { "tag": "WeaponImpactDamageMod", "value": 0.013333, "prefix": "magna", "suffix": "ton" }, { "tag": "WeaponProcTimeMod", "value": 0.01111, "prefix": "deci", "suffix": "des" }, { "tag": "WeaponSlashDamageMod", "value": 0.013333, "prefix": "sci", "suffix": "sus" }, { "tag": "WeaponStunChanceMod", "value": 0.01, "prefix": "hexa", "suffix": "dex" }, { "tag": "WeaponToxinDamageMod", "value": 0.01, "prefix": "toxi", "suffix": "tox" }, { "tag": "WeaponAmmoMaxMod", "value": 0.01, "prefix": "ampi", "suffix": "bin" }, { "tag": "WeaponClipMaxMod", "value": 0.005555, "prefix": "arma", "suffix": "tin" }, { "tag": "WeaponDamageAmountMod", "value": 0.0244, "prefix": "visi", "suffix": "ata" }, { "tag": "WeaponFireIterationsMod", "value": 0.0133, "prefix": "sati", "suffix": "can" }, { "tag": "WeaponProjectileSpeedMod", "value": 0.01, "prefix": "conci", "suffix": "nak" }, { "tag": "WeaponPunctureDepthMod", "value": 0.03, "prefix": "lexi", "suffix": "nok" }, { "tag": "WeaponRecoilReductionMod", "value": -0.01, "prefix": "zeti", "suffix": "mag" }, { "tag": "WeaponReloadSpeedMod", "value": 0.005555, "prefix": "feva", "suffix": "tak" }, { "tag": "WeaponFactionDamageCorpus", "value": 0.005, "prefix": "manti", "suffix": "tron" }, { "tag": "WeaponFactionDamageGrineer", "value": 0.005, "prefix": "argi", "suffix": "con" }, { "tag": "WeaponFactionDamageInfested", "value": 0.005, "prefix": "pura", "suffix": "ada" }, { "tag": "WeaponZoomFovMod", "value": 0.0089, "prefix": "hera", "suffix": "lis" }], "LotusPistolRandomModRare": [{ "tag": "WeaponArmorPiercingDamageMod", "value": 0.01333, "prefix": "insi", "suffix": "cak" }, { "tag": "WeaponCritChanceMod", "value": 0.016666, "prefix": "crita", "suffix": "cron" }, { "tag": "WeaponCritDamageMod", "value": 0.01, "prefix": "acri", "suffix": "tis" }, { "tag": "WeaponElectricityDamageMod", "value": 0.01, "prefix": "vexi", "suffix": "tio" }, { "tag": "WeaponFireDamageMod", "value": 0.01, "prefix": "igni", "suffix": "pha" }, { "tag": "WeaponFireRateMod", "value": 0.0083, "prefix": "croni", "suffix": "dra" }, { "tag": "WeaponFreezeDamageMod", "value": 0.01, "prefix": "geli", "suffix": "do" }, { "tag": "WeaponImpactDamageMod", "value": 0.013333, "prefix": "magna", "suffix": "ton" }, { "tag": "WeaponProcTimeMod", "value": 0.01111, "prefix": "deci", "suffix": "des" }, { "tag": "WeaponSlashDamageMod", "value": 0.013333, "prefix": "sci", "suffix": "sus" }, { "tag": "WeaponStunChanceMod", "value": 0.01, "prefix": "hexa", "suffix": "dex" }, { "tag": "WeaponToxinDamageMod", "value": 0.01, "prefix": "toxi", "suffix": "tox" }, { "tag": "WeaponAmmoMaxMod", "value": 0.01, "prefix": "ampi", "suffix": "bin" }, { "tag": "WeaponClipMaxMod", "value": 0.005555, "prefix": "arma", "suffix": "tin" }, { "tag": "WeaponDamageAmountMod", "value": 0.0244, "prefix": "visi", "suffix": "ata" }, { "tag": "WeaponFireIterationsMod", "value": 0.0133, "prefix": "sati", "suffix": "can" }, { "tag": "WeaponProjectileSpeedMod", "value": 0.01, "prefix": "conci", "suffix": "nak" }, { "tag": "WeaponPunctureDepthMod", "value": 0.03, "prefix": "lexi", "suffix": "nok" }, { "tag": "WeaponRecoilReductionMod", "value": -0.01, "prefix": "zeti", "suffix": "mag" }, { "tag": "WeaponReloadSpeedMod", "value": 0.005555, "prefix": "feva", "suffix": "tak" }, { "tag": "WeaponFactionDamageCorpus", "value": 0.005, "prefix": "manti", "suffix": "tron" }, { "tag": "WeaponFactionDamageGrineer", "value": 0.005, "prefix": "argi", "suffix": "con" }, { "tag": "WeaponFactionDamageInfested", "value": 0.005, "prefix": "pura", "suffix": "ada" }, { "tag": "WeaponZoomFovMod", "value": 0.0089, "prefix": "hera", "suffix": "lis" }], "LotusRifleRandomModRare": [{ "tag": "WeaponArmorPiercingDamageMod", "value": 0.01333, "prefix": "insi", "suffix": "cak" }, { "tag": "WeaponCritChanceMod", "value": 0.016666, "prefix": "crita", "suffix": "cron" }, { "tag": "WeaponCritDamageMod", "value": 0.013333, "prefix": "acri", "suffix": "tis" }, { "tag": "WeaponElectricityDamageMod", "value": 0.01, "prefix": "vexi", "suffix": "tio" }, { "tag": "WeaponFireDamageMod", "value": 0.01, "prefix": "igni", "suffix": "pha" }, { "tag": "WeaponFireRateMod", "value": 0.00667, "prefix": "croni", "suffix": "dra" }, { "tag": "WeaponFreezeDamageMod", "value": 0.01, "prefix": "geli", "suffix": "do" }, { "tag": "WeaponImpactDamageMod", "value": 0.013333, "prefix": "magna", "suffix": "ton" }, { "tag": "WeaponProcTimeMod", "value": 0.01111, "prefix": "deci", "suffix": "des" }, { "tag": "WeaponSlashDamageMod", "value": 0.013333, "prefix": "sci", "suffix": "sus" }, { "tag": "WeaponStunChanceMod", "value": 0.01, "prefix": "hexa", "suffix": "dex" }, { "tag": "WeaponToxinDamageMod", "value": 0.01, "prefix": "toxi", "suffix": "tox" }, { "tag": "WeaponAmmoMaxMod", "value": 0.00555, "prefix": "ampi", "suffix": "bin" }, { "tag": "WeaponClipMaxMod", "value": 0.005555, "prefix": "arma", "suffix": "tin" }, { "tag": "WeaponDamageAmountMod", "value": 0.018333, "prefix": "visi", "suffix": "ata" }, { "tag": "WeaponFireIterationsMod", "value": 0.01, "prefix": "sati", "suffix": "can" }, { "tag": "WeaponProjectileSpeedMod", "value": 0.01, "prefix": "conci", "suffix": "nak" }, { "tag": "WeaponPunctureDepthMod", "value": 0.03, "prefix": "lexi", "suffix": "nok" }, { "tag": "WeaponRecoilReductionMod", "value": -0.01, "prefix": "zeti", "suffix": "mag" }, { "tag": "WeaponReloadSpeedMod", "value": 0.005555, "prefix": "feva", "suffix": "tak" }, { "tag": "WeaponFactionDamageCorpus", "value": 0.005, "prefix": "manti", "suffix": "tron" }, { "tag": "WeaponFactionDamageGrineer", "value": 0.005, "prefix": "argi", "suffix": "con" }, { "tag": "WeaponFactionDamageInfested", "value": 0.005, "prefix": "pura", "suffix": "ada" }, { "tag": "WeaponZoomFovMod", "value": 0.006666, "prefix": "hera", "suffix": "lis" }], "LotusShotgunRandomModRare": [{ "tag": "WeaponArmorPiercingDamageMod", "value": 0.01333, "prefix": "insi", "suffix": "cak" }, { "tag": "WeaponCritChanceMod", "value": 0.01, "prefix": "crita", "suffix": "cron" }, { "tag": "WeaponCritDamageMod", "value": 0.01, "prefix": "acri", "suffix": "tis" }, { "tag": "WeaponElectricityDamageMod", "value": 0.01, "prefix": "vexi", "suffix": "tio" }, { "tag": "WeaponFireDamageMod", "value": 0.01, "prefix": "igni", "suffix": "pha" }, { "tag": "WeaponFireRateMod", "value": 0.01, "prefix": "croni", "suffix": "dra" }, { "tag": "WeaponFreezeDamageMod", "value": 0.01, "prefix": "geli", "suffix": "do" }, { "tag": "WeaponImpactDamageMod", "value": 0.013333, "prefix": "magna", "suffix": "ton" }, { "tag": "WeaponProcTimeMod", "value": 0.01111, "prefix": "deci", "suffix": "des" }, { "tag": "WeaponSlashDamageMod", "value": 0.013333, "prefix": "sci", "suffix": "sus" }, { "tag": "WeaponStunChanceMod", "value": 0.01, "prefix": "hexa", "suffix": "dex" }, { "tag": "WeaponToxinDamageMod", "value": 0.01, "prefix": "toxi", "suffix": "tox" }, { "tag": "WeaponAmmoMaxMod", "value": 0.01, "prefix": "ampi", "suffix": "bin" }, { "tag": "WeaponClipMaxMod", "value": 0.005555, "prefix": "arma", "suffix": "tin" }, { "tag": "WeaponDamageAmountMod", "value": 0.0183, "prefix": "visi", "suffix": "ata" }, { "tag": "WeaponFireIterationsMod", "value": 0.0133, "prefix": "sati", "suffix": "can" }, { "tag": "WeaponProjectileSpeedMod", "value": 0.01, "prefix": "conci", "suffix": "nak" }, { "tag": "WeaponPunctureDepthMod", "value": 0.03, "prefix": "lexi", "suffix": "nok" }, { "tag": "WeaponRecoilReductionMod", "value": -0.01, "prefix": "zeti", "suffix": "mag" }, { "tag": "WeaponReloadSpeedMod", "value": 0.005555, "prefix": "feva", "suffix": "tak" }, { "tag": "WeaponFactionDamageCorpus", "value": 0.005, "prefix": "manti", "suffix": "tron" }, { "tag": "WeaponFactionDamageGrineer", "value": 0.005, "prefix": "argi", "suffix": "con" }, { "tag": "WeaponFactionDamageInfested", "value": 0.005, "prefix": "pura", "suffix": "ada" }], "PlayerMeleeWeaponRandomModRare": [{ "tag": "WeaponMeleeDamageMod", "value": 0.0183, "prefix": "visi", "suffix": "ata" }, { "tag": "WeaponArmorPiercingDamageMod", "value": 0.0133, "prefix": "insi", "suffix": "cak" }, { "tag": "WeaponImpactDamageMod", "value": 0.0133, "prefix": "magna", "suffix": "ton" }, { "tag": "WeaponSlashDamageMod", "value": 0.0133, "prefix": "sci", "suffix": "sus" }, { "tag": "WeaponCritChanceMod", "value": 0.02, "prefix": "crita", "suffix": "cron" }, { "tag": "WeaponCritDamageMod", "value": 0.01, "prefix": "acri", "suffix": "tis" }, { "tag": "WeaponElectricityDamageMod", "value": 0.01, "prefix": "vexi", "suffix": "tio" }, { "tag": "WeaponFireDamageMod", "value": 0.01, "prefix": "igni", "suffix": "pha" }, { "tag": "WeaponFreezeDamageMod", "value": 0.01, "prefix": "geli", "suffix": "do" }, { "tag": "WeaponToxinDamageMod", "value": 0.01, "prefix": "toxi", "suffix": "tox" }, { "tag": "WeaponProcTimeMod", "value": 0.01111, "prefix": "deci", "suffix": "des" }, { "tag": "WeaponMeleeFactionDamageCorpus", "value": 0.005, "prefix": "manti", "suffix": "tron" }, { "tag": "WeaponMeleeFactionDamageGrineer", "value": 0.005, "prefix": "argi", "suffix": "con" }, { "tag": "WeaponMeleeFactionDamageInfested", "value": 0.005, "prefix": "pura", "suffix": "ada" }, { "tag": "WeaponFireRateMod", "value": 0.0061, "prefix": "croni", "suffix": "dra" }, { "tag": "WeaponStunChanceMod", "value": 0.01, "prefix": "hexa", "suffix": "dex" }, { "tag": "ComboDurationMod", "value": 0.09, "prefix": "tempi", "suffix": "nem" }, { "tag": "SlideAttackCritChanceMod", "value": 0.013334, "prefix": "pleci", "suffix": "nent" }, { "tag": "WeaponMeleeRangeIncMod", "value": 0.02158, "prefix": "locti", "suffix": "tor" }, { "tag": "WeaponMeleeFinisherDamageMod", "value": 0.0133, "prefix": "exi", "suffix": "cta" }, { "tag": "WeaponMeleeComboEfficiencyMod", "value": 0.00816, "prefix": "forti", "suffix": "us" }, { "tag": "WeaponMeleeComboInitialBonusMod", "value": 0.27224, "prefix": "para", "suffix": "um" }, { "tag": "WeaponMeleeComboPointsOnHitMod", "value": -0.01165 }, { "tag": "WeaponMeleeComboBonusOnHitMod", "value": 0.00653, "prefix": "laci", "suffix": "nus" }] };
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Riven Display Helpers ────────────────────────────────────────────────────
+//
+// RIVEN_STAT_MAP  : internal tag name → human-readable stat label (e.g. "WeaponCritChanceMod" → "Critical Chance")
+// RIVEN_AFFIXES   : internal tag name → prefix/suffix syllables used to build the riven's constructed name
+//                   (e.g. CritChance → prefix "Crita", suffix "cron").
+//                   These are the same syllables the game uses; the constructed name comes from combining
+//                   the prefix of the primary buff with the suffix of the secondary buff.
 
 const RIVEN_STAT_MAP = {
   'WeaponMeleeDamageMod': 'Melee Damage',
@@ -91,6 +118,10 @@ const RIVEN_AFFIXES = {
   'WeaponPunchThroughMod': { pre: 'Lexi', suf: 'nok' },
 };
 
+// ─── Rank / XP Helpers ───────────────────────────────────────────────────────
+
+/** Return the maximum possible rank for an item (30 for most things, 40 for
+ *  special cases like Necramechs, Kuva/Tenet weapons, and Paracesis). */
 function getRankLimit(un, category) {
   if (category === 'necramechs') return 40;
   if (un?.includes('Paracesis')) return 40;
@@ -99,14 +130,17 @@ function getRankLimit(un, category) {
 }
 
 /**
- * Calculates the rank based on cumulative XP using the official formula:
- * For heavy items (Warframe, Companion, Vehicle): Total XP = rank² × 1000
- * For weapons: Total XP = rank² × 500
- * @param {number} xp - The cumulative Affinity (XP) the item has earned.
- * @param {string} category - The item's category (e.g., 'warframes', 'primary').
- * @param {string} un - The item's unique name (used for special cases like Paracesis).
- * @param {number} limit - The maximum possible rank for this item (30 or 40).
- * @returns {number} The correct rank (0-40).
+ * Calculate the current rank of an item from its cumulative affinity (XP).
+ * Warframe uses: XP to reach rank R = R² × baseXPPerRank
+ *   Heavy items (Warframes, companions, vehicles): baseXPPerRank = 1000
+ *   Weapons and everything else:                  baseXPPerRank = 500
+ * We scan upward from rank 1 until the required XP exceeds what the item has.
+ *
+ * @param {number} xp        Cumulative affinity earned by this item.
+ * @param {string} category  Item category string (e.g. 'warframes', 'primary').
+ * @param {string} un        Unique name - used only for the Paracesis/Kuva/Tenet special case.
+ * @param {number} limit     Maximum rank ceiling (30 or 40).
+ * @returns {number}         Correct rank (0–40).
  */
 function calculateRank(xp, category, un, limit = 30) {
   if (!xp || xp <= 0) return 0;
@@ -137,12 +171,17 @@ function calculateRank(xp, category, un, limit = 30) {
   return rank;
 }
 
+// ─── String / Path Helpers ────────────────────────────────────────────────────
+
+/** Strip HTML tags and trim whitespace from a display name.  Returns '' for
+ *  any value that looks like an internal path (/Lotus/...). */
 function cleanName(name) {
   if (!name) return '';
   if (typeof name === 'string' && name.startsWith('/Lotus/')) return '';
   return name.replace(/<[^>]*>/g, '').trim();
 }
 
+/** Split a PascalCase string into space-separated words. */
 function splitPascal(str) {
   return str
     .replace(/([a-z\d])([A-Z])/g, '$1 $2')
@@ -169,6 +208,14 @@ const FOLDER_OVERRIDES = {
   Fairy: 'Wisp', Jade: 'Nyx',
 };
 
+// ─── Name / Image Resolution ─────────────────────────────────────────────────
+
+/**
+ * Derive a human-readable display name from an internal asset path.
+ * Used as the last-resort fallback when no export table has a localisation key.
+ * Strips common suffix tokens (Suit, Blueprint, etc.) and converts PascalCase
+ * to spaced words.  Also handles skin folder overrides.
+ */
 function nameFromPath(path = '') {
   const parts = path.split('/').filter(Boolean);
   const leaf = parts.at(-1) ?? path;
@@ -184,10 +231,24 @@ function nameFromPath(path = '') {
   return splitPascal(stripped).trim() || leaf;
 }
 
+/**
+ * Public entry point for name resolution.  Wraps the recursive internal helper
+ * with a depth of 0 to prevent runaway recursion on circular references.
+ * Called by: createItem, relic reward mapping, riven parsing, and most of parseInventory.
+ */
 function resolveName(un, dict, ...tables) {
   return _resolveNameInternal(un, dict, 0, ...tables);
 }
 
+/**
+ * Internal recursive resolver.  Tries each export table in order:
+ *  1. Direct key match (exact uniqueName or with /StoreItems/ stripped)
+ *  2. Dict localisation key lookup
+ *  3. Recipe resultType follow (recurse, max depth 5)
+ *  4. Dictionary direct lookup on the raw path
+ *  5. /Recipes/ path leaf match
+ *  6. nameFromPath() fallback
+ */
 function _resolveNameInternal(un, dict, depth, ...tables) {
   if (!un || depth > 5) return '';
   if (un.includes('DrifterPistol')) return 'Sirocco';
@@ -238,6 +299,11 @@ function _resolveNameInternal(un, dict, depth, ...tables) {
   return cleanName(nameFromPath(un));
 }
 
+/**
+ * Find an icon/thumbnail URL for an item by scanning export tables in order.
+ * Returns a full browse.wf URL, or null if no image is found.
+ * Falls back to a leaf-match search for recipe paths.
+ */
 function resolveImage(un, ...tables) {
   // Check exact match first
   for (const tbl of tables) {
@@ -264,11 +330,19 @@ function resolveImage(un, ...tables) {
   return null;
 }
 
+// ─── Modular Item Helpers ─────────────────────────────────────────────────────
+
+/** Parse a JSON UpgradeFingerprint string safely; returns {} on failure. */
 function parseFP(raw) {
   if (!raw) return {};
   try { return JSON.parse(raw); } catch { return {}; }
 }
 
+/**
+ * Map a riven's internal ItemType path to a broad weapon category string
+ * ('melee', 'pistol', 'rifle', 'shotgun', 'archgun', 'zaw', 'kitgun', 'unknown').
+ * Used to bucket rivens into sub-tabs in the Rivens screen.
+ */
 function rivenWeaponType(itemType = '') {
   const t = (itemType || '').toLowerCase();
   if (t.includes('modularmelee') || t.includes('zaw')) return 'zaw';
@@ -282,6 +356,10 @@ function rivenWeaponType(itemType = '') {
   return 'unknown';
 }
 
+/**
+ * Extract the modular component names for an Operator Amp or Zaw.
+ * Some amps store components in ModularParts; others encode them in UpgradeFingerprint.
+ */
 function resolveAmpComponents(sourceItem, dict, EW, ER) {
   const modParts = sourceItem?.ModularParts ?? [];
   if (modParts.length > 0) {
@@ -297,11 +375,46 @@ function resolveAmpComponents(sourceItem, dict, EW, ER) {
   return compPaths.map(c => resolveName(c, dict, EW, ER)).filter(Boolean);
 }
 
+/** Extract component display names for a K-Drive from its ModularParts list. */
 function resolveHoverboardComponents(sourceItem, dict, EW) {
   const modParts = sourceItem?.ModularParts ?? [];
   return modParts.map(c => resolveName(c, dict, EW)).filter(Boolean);
 }
 
+// ─── Relic Reward Resolution ──────────────────────────────────────────────────
+
+/**
+ * Extract the reward list from a relic's export entry.
+ * Tries two formats that DE has used at different times:
+ *  - entry.rewardManifest  (points into ExportRewards)
+ *  - entry.relicRewards    (inline array on the entry itself)
+ * Returns an array of { name, rarity, tier } objects, or [] if nothing is found.
+ */
+function resolveRelicRewards(entry, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe, ERew) {
+  if (!entry) return [];
+  const mapReward = (r) => ({
+    name: resolveName(r.type || r.rewardItem, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+    rarity: r.rarity,
+    tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
+  });
+  if (entry.rewardManifest && ERew[entry.rewardManifest]) {
+    const manifest = ERew[entry.rewardManifest];
+    const rewardList = Array.isArray(manifest[0]) ? manifest[0] : (Array.isArray(manifest) ? manifest : []);
+    return rewardList.map(mapReward);
+  }
+  if (Array.isArray(entry.relicRewards)) {
+    return entry.relicRewards.map(mapReward);
+  }
+  return [];
+}
+
+/**
+ * Main export.  Receives the raw inventory JSON (from warframe-api-helper via
+ * main.rs) and the full exports bundle (from load_all_exports via main.rs).
+ * Returns a single structured object with named arrays for every item category
+ * plus account-level stats.  Consumed by Inventory.jsx, Mastery.jsx,
+ * Relics.jsx, Rivens.jsx, and Dashboard.jsx.
+ */
 export function parseInventory(raw, exports) {
   if (!raw || typeof raw !== 'object' || !exports) return { all: [] };
   const dict = exports['dict.en'] ?? {};
@@ -339,11 +452,18 @@ export function parseInventory(raw, exports) {
   const ECust = toMap(exports.ExportCustoms, 'ExportCustoms');
   const EGear = toMap(exports.ExportGear, 'ExportGear');
 
+  // ── XP lookup ──
+  // inventory.XPInfo contains per-item affinity totals, referenced by ItemType.
+  // We build a quick map here so createItem can look it up in O(1).
   const xpMap = {};
   (raw.XPInfo ?? []).forEach(i => {
     if (i.ItemType) xpMap[i.ItemType] = i.XP ?? 0;
   });
 
+  // ── Owned-item index ──
+  // We first group all owned instances by their ItemType (unique name) so that
+  // later per-category processors can quickly check "does the player own this?"
+  // without iterating the whole inventory each time.
   const ownedItems = {};
   const processList = (list) => {
     for (const item of (list ?? [])) {
@@ -364,6 +484,9 @@ export function parseInventory(raw, exports) {
   const subsumedSet = new Set((raw.InfestedFoundry?.ConsumedSuits ?? []).map(s => s.s).filter(Boolean));
   const incarnonSet = new Set((raw.EvolutionProgress ?? []).map(e => e.ItemType).filter(Boolean));
 
+  // ── createItem ──
+  // Central factory used by every category processor.
+  // Resolves name, image, rank, mastery XP, and metadata for one item instance.
   const createItem = (un, category, nameTbls, imgTbls, sourceItem = null) => {
     const xp = sourceItem?.XP ?? xpMap[un] ?? 0;
     const limit = getRankLimit(un, category);
@@ -743,12 +866,36 @@ export function parseInventory(raw, exports) {
     else resources.push(obj);
   }
 
+  /**
+   * Helper to resolve relic rewards from manifest or entry
+   */
+  const resolveRelicRewards = (entry, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe, ERew) => {
+    if (!entry) return [];
+    if (entry.rewardManifest && ERew[entry.rewardManifest]) {
+      const manifest = ERew[entry.rewardManifest];
+      const rewardList = Array.isArray(manifest[0]) ? manifest[0] : (Array.isArray(manifest) ? manifest : []);
+      return rewardList.map(r => ({
+        name: resolveName(r.type || r.rewardItem, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+        rarity: r.rarity,
+        tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
+      }));
+    } else if (Array.isArray(entry.relicRewards)) {
+      return entry.relicRewards.map(r => ({
+        name: resolveName(r.rewardItem, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+        rarity: r.rarity,
+        tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
+      }));
+    }
+    return [];
+  };
+
+  // ── Relics ──────────────────────────────────────────────────────────────────
   const relicGroups = {};
   (raw.MiscItems ?? []).filter(i => i.ItemType?.includes('/Projections/') || i.ItemType?.includes('/Upgrades/Relic/')).forEach(item => {
     const un = item.ItemType;
     if (!un) return;
     const entry = ERel[un];
-    
+
     // Determine refinement level
     const qualityMap = { 'VPQ_BRONZE': 'Intact', 'VPQ_SILVER': 'Exceptional', 'VPQ_GOLD': 'Flawless', 'VPQ_PLATINUM': 'Radiant' };
     const leafQualityMap = { 'Silver': 'Exceptional', 'Gold': 'Flawless', 'Platinum': 'Radiant' };
@@ -768,25 +915,6 @@ export function parseInventory(raw, exports) {
     const relicId = baseName;
 
     if (!relicGroups[relicId]) {
-      let rewards = [];
-      if (entry) {
-        if (entry.rewardManifest && ERew[entry.rewardManifest]) {
-          const manifest = ERew[entry.rewardManifest];
-          const rewardList = Array.isArray(manifest[0]) ? manifest[0] : (Array.isArray(manifest) ? manifest : []);
-          rewards = rewardList.map(r => ({
-            name: resolveName(r.type || r.rewardItem, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
-            rarity: r.rarity,
-            tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
-          }));
-        } else if (Array.isArray(entry.relicRewards)) {
-          rewards = entry.relicRewards.map(r => ({
-            name: resolveName(r.rewardItem, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
-            rarity: r.rarity,
-            tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
-          }));
-        }
-      }
-
       relicGroups[relicId] = {
         unique_name: relicId,
         name: baseName,
@@ -794,32 +922,16 @@ export function parseInventory(raw, exports) {
         image: resolveImage(un, ERel),
         category: 'relics',
         refinements: { Intact: 0, Exceptional: 0, Flawless: 0, Radiant: 0 },
-        rewards: rewards || [],
+        rewards: resolveRelicRewards(entry, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe, ERew),
         owned: true
       };
     } else if (relicGroups[relicId].rewards.length === 0) {
-      // If group exists but has no rewards, try to populate from current entry
-      let rewards = [];
-      if (entry) {
-        if (entry.rewardManifest && ERew[entry.rewardManifest]) {
-          const manifest = ERew[entry.rewardManifest];
-          const rewardList = Array.isArray(manifest[0]) ? manifest[0] : (Array.isArray(manifest) ? manifest : []);
-          rewards = rewardList.map(r => ({
-            name: resolveName(r.type || r.rewardItem, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
-            rarity: r.rarity,
-            tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
-          }));
-        } else if (Array.isArray(entry.relicRewards)) {
-          rewards = entry.relicRewards.map(r => ({
-            name: resolveName(r.rewardItem, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
-            rarity: r.rarity,
-            tier: r.rarity === 'COMMON' ? 0 : (r.rarity === 'UNCOMMON' ? 1 : 2)
-          }));
-        }
-      }
+      // A previous refinement variant already created the group but had no entry;
+      // try to fill in the rewards now that we have one.
+      const rewards = resolveRelicRewards(entry, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe, ERew);
       if (rewards.length > 0) relicGroups[relicId].rewards = rewards;
     }
-    
+
     if (relicGroups[relicId].refinements[refinement] !== undefined) {
       relicGroups[relicId].refinements[refinement] += (item.ItemCount ?? 1);
     }
@@ -1199,6 +1311,15 @@ export function parseInventory(raw, exports) {
   };
 }
 
+// ─── Relic Name Helper ────────────────────────────────────────────────────────
+
+/**
+ * Derive a human-readable relic name from its internal path.
+ * Tries the ExportRelics entry first (era + category + quality).
+ * Falls back to parsing the leaf segment of the path (e.g. T4VoidProjectionGoldP
+ * → "Axi P Relic (Radiant)").
+ * Called before parseInventory groups relics by base name.
+ */
 function relicNameFromPath(path, ERel = {}) {
   const leaf = path.split('/').at(-1) ?? path;
   const entry = ERel[path];
