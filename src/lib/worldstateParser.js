@@ -458,7 +458,10 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
       const isHard = cat.includes('HARD')
       return {
         category: isHard ? 'Steel Path' : 'Normal',
-        choices: (c.Choices || []).map(choice => resolveItemName(choice, dict, uniqueNameToName))
+        choices: (c.Choices || []).map(choice => ({
+          name: resolveItemName(choice, dict, uniqueNameToName),
+          uniqueName: choice
+        }))
       }
     }),
 

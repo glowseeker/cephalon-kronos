@@ -518,17 +518,43 @@ export default function Dashboard() {
       return acc
     }, {})
 
+    const getCircuitImage = (ch) => {
+      const byUnique = resolveAnyImage(ch.uniqueName, EI, nameToImage)
+      if (byUnique) return byUnique
+      const byName = nameToImage[ch.name.toLowerCase()]
+      if (byName) return byName
+      const partialMatch = Object.entries(nameToImage).find(([k]) => k.includes(ch.name.toLowerCase().replace(/\s+/g, '')))
+      return partialMatch ? partialMatch[1] : null
+    }
+
     return (
       <div className="space-y-4 mt-2">
         {Object.entries(groups).map(([cat, choices], idx) => (
           <div key={idx} className="bg-kronos-panel/40 p-2.5 rounded border border-transparent hover:border-kronos-accent/20 transition-all">
-            <p className="text-[11px] font-black text-kronos-accent uppercase mb-2 tracking-widest">{cat}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {choices.map((ch, ci) => (
-                <div key={ci} className="bg-black/20 px-2 py-1 rounded text-[10px] text-kronos-text font-medium">
-                  {ch}
-                </div>
-              ))}
+            <p className="text-[11px] font-black text-kronos-accent uppercase mb-2 tracking-widest text-center">{cat}</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {choices.map((ch, ci) => {
+                const img = getCircuitImage(ch)
+                return (
+                  <div key={ci} className="bg-black/20 p-3 rounded flex flex-col items-center gap-2 text-center min-h-[90px] basis-[32%] flex-grow max-w-[32%]">
+                    <div className="w-14 h-14 flex items-center justify-center">
+                      {img ? (
+                        <img
+                          src={img}
+                          alt=""
+                          className="max-w-full max-h-full object-contain"
+                          onError={e => { e.target.style.display = 'none'; e.target.onerror = null }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-kronos-panel/40 rounded flex items-center justify-center">
+                          <Package size={20} className="text-kronos-dim/30" />
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs text-kronos-text font-medium leading-tight">{ch.name}</span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         ))}
