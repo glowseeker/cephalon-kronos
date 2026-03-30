@@ -1,0 +1,75 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-22.04, windows-latest]
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout API helper
+        uses: actions/checkout@v4
+        with:
+          repository: Obsidian-Jackal/warframe-api-helper
+          path: helper-src
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # On Windows, this natively defaults to MSVC, exactly what is needed!
+          toolchain: stable
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Build API Helper
+        working-directory: helper-src
+        run: cargo build --release
+
+      - name: Prepare Tauri Binaries Directory
+        run: mkdir -p src-tauri/data/bin
+
+      - name: Copy Helper Binary (Unix)
+        if: matrix.platform != 'windows-latest'
+        run: cp helper-src/target/release/warframe-api-helper src-tauri/data/bin/warframe-api-helper
+
+      - name: Copy Helper Binary (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: copy helper-src\target\release\warframe-api-helper.exe src-tauri\data\bin\warframe-api-helper.exe
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Build and Release Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Cephalon Kronos ${{ github.ref_name }}'
+          releaseBody: 'See the attached assets for the release binaries.'
+          releaseDraft: true
+          prerelease: false
