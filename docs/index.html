@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cephalon Kronos Warframe Companion</title>
+    <meta name="description"
+        content="An open-source Warframe desktop companion app featuring inventory tracking, foundry monitoring, relic tracking, live alerts, and more.">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="background-effects">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="logo">
+                <img src="icon.png" alt="Cephalon Kronos Logo" width="24" height="24">
+                <span>Cephalon Kronos</span>
+            </div>
+            <div class="nav-links">
+                <a href="#showcase">Features</a>
+                <a href="#wiki">FAQ</a>
+                <a href="https://github.com/glowseeker/cephalon-kronos" class="github-link" target="_blank">GitHub
+                    Repo</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-content">
+            <h1><span class="text-gradient">Cephalon Kronos</span></h1>
+            <p>An open-source, cross-platform companion app to track your inventory, relics and rivens, monitor foundry
+                progress and stay up to date with the worldstate. </p>
+            <div class="hero-actions">
+                <a href="https://github.com/glowseeker/cephalon-kronos/releases/latest" class="btn btn-primary">Download
+                    Latest Release</a>
+                <a href="#wiki" class="btn btn-secondary">Read the Wiki</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Showcase Carousel Section -->
+    <section id="showcase" class="showcase">
+        <h2><span class="text-gradient">Features</span></h2>
+        <div class="features-stack">
+            <div class="feature-row">
+                <div class="feature-content">
+                    <h3>Inventory</h3>
+                    <p>Comb through your automatically updated inventory with filters and track pending items in your
+                        foundry.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="screenshots/inventory.png" alt="Inventory Sync">
+                    <img src="screenshots/inventory2.png" alt="Inventory Sync">
+                    <img src="screenshots/inventory3.png" alt="Inventory Sync">
+                    <img src="screenshots/inventory4.png" alt="Inventory Sync">
+                </div>
+            </div>
+
+            <div class="feature-row reverse">
+                <div class="feature-content">
+                    <h3>Mastery Progress</h3>
+                    <p>Displays your mastery progress with categories and shows everything yet to be mastered.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="screenshots/mastery.png" alt="Mastery Progress">
+                    <img src="screenshots/mastery2.png" alt="Mastery Progress">
+                    <img src="screenshots/mastery3.png" alt="Mastery Progress">
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-content">
+                    <h3>Dashboard</h3>
+                    <p>Provides live updates on alerts and events, world timers, fissures and arbitrations.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="screenshots/dashboard.png" alt="Dashboard">
+                    <img src="screenshots/dashboard2.png" alt="Dashboard2">
+                </div>
+            </div>
+
+            <div class="feature-row reverse">
+                <div class="feature-content">
+                    <h3>Relic Tracker</h3>
+                    <p>Track your relics and refinement and search for their drops.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="screenshots/relics.png" alt="Relic tracker">
+                    <img src="screenshots/relics2.png" alt="Relic tracker">
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-content">
+                    <h3>Riven Tracker</h3>
+                    <p>Track your riven mods, inspect their stats and see challenges of veiled rivens.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="screenshots/riven.png" alt="Riven tracker">
+                    <img src="screenshots/riven2.png" alt="Riven tracker">
+                </div>
+            </div>
+
+            <div class="feature-row reverse">
+                <div class="feature-content">
+                    <h3>Markdown Notes</h3>
+                    <p>Write down notes, farming goals, strategies or paste in guides from elsewhere to make use of the
+                        markdown support.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="screenshots/notes.png" alt="Markdown Notes">
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-content">
+                    <h3>Maps</h3>
+                    <p>Check out the maps of all open worlds.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="screenshots/maps.png" alt="Maps">
+                </div>
+            </div>
+
+            <div class="feature-row reverse">
+                <div class="feature-content">
+                    <h3>Checklists</h3>
+                    <p>Track your progress on daily and weekly tasks.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="screenshots/checklist.png" alt="Checklists">
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-content">
+                    <h3>Theme Support</h3>
+                    <p>Choose between multiple color themes to match your preference.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="screenshots/themes.png" alt="Theme support">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Wiki Section -->
+    <section id="wiki" class="wiki">
+        <h2><span class="text-gradient">Frequently Asked Questions</span></h2>
+        <div class="wiki-container">
+            <div class="wiki-sidebar">
+                <button class="wiki-tab active" data-target="getting-started">Getting Started</button>
+                <button class="wiki-tab" data-target="privacy">Privacy & Security</button>
+                <button class="wiki-tab" data-target="troubleshooting">Troubleshooting</button>
+            </div>
+            <div class="wiki-content">
+                <div id="getting-started" class="wiki-panel active">
+                    <h3>Getting Started</h3>
+                    <ol>
+                        <li>Navigate to the <a href="https://github.com/glowseeker/cephalon-kronos/releases/latest"
+                                style="color:var(--accent);">releases</a> page.</li>
+                        <li>Download the appropriate binary for your OS.
+                            <br>(.exe for Windows, .deb/AppImage for Linux or .dmg for macOS).
+                        </li>
+                        <li>Create a folder for the binary (recommended).
+                        <li>Run the binary to launch the app.</li>
+                    </ol>
+                </div>
+
+                <div id="privacy" class="wiki-panel">
+                    <h3>Privacy & Security</h3>
+                    <p>Cephalon Kronos was made to provide functionality without compromising privacy. Because of this,
+                        it
+                        does not send any information over the internet.
+                    </p>
+                    <ul>
+                        <li>Does not require any account sign up.</li>
+                        <li>Does not modify game files.</li>
+                        <li><strong>Disclaimer:</strong> This application makes use of <a
+                                href="https://github.com/Obsidian-Jackal/warframe-api-helper"
+                                style="color:var(--accent);">warframe-api-helper</a> to fetch
+                            session credentials which are then used to download inventory data from the
+                            game servers. While it does not
+                            inject or alter memory, use it at your own discretion.</li>
+                    </ul>
+                </div>
+                <div id="troubleshooting" class="wiki-panel">
+                    <h3>Troubleshooting</h3>
+                    <p><strong>"My inventory is empty!"</strong>
+                        <br>This is expected at first startup. The application needs data to parse through, which means
+                        that you either need to initiate a manual scan via the settings, or turn on continuous
+                        monitoring.
+                    </p>
+                    <p><strong>"Do I have to turn on Live Monitoring?"</strong>
+                        <br>No, you do not have to turn on Live Monitoring. You can manually scan your inventory once
+                        via the
+                        settings. This will give you a momentary state of your inventory data, which the application
+                        will show (even if offline) until said data is refreshed by either another manual scan, or by
+                        turning on Live Monitoring.
+                    </p>
+                    <p><strong>"I found a bug!"</strong>
+                        <br>Great! Please report it on the <a
+                            href="https://github.com/glowseeker/cephalon-kronos/issues"
+                            style="color:var(--accent);">issues</a> page with as many details as possible.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    </section>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox-overlay">
+        <span class="lightbox-close">&times;</span>
+        <img src="" class="lightbox-img" alt="Enlarged view">
+    </div>
+    <footer>
+        <p>A passion project for Warframe by Tenno, for Tenno.
+            <br>Not affiliated with Digital Extremes.
+        </p>
+    </footer>
+
+    <script>
+        // Simple tabs interaction for Wiki
+        const tabs = document.querySelectorAll('.wiki-tab');
+        const panels = document.querySelectorAll('.wiki-panel');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                panels.forEach(p => p.classList.remove('active'));
+
+                tab.classList.add('active');
+                document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+            });
+        });
+
+        // Nested Stack Logic (Visual Deck of Cards)
+        document.querySelectorAll('.feature-image:not(.no-stack)').forEach(container => {
+            const images = container.querySelectorAll('img');
+            if (images.length > 1) {
+                // Wrap images so buttons strictly hug the geometry
+                container.innerHTML = '';
+                // Inner wrapper for clipping rounded corners
+                const inner = document.createElement('div');
+                inner.className = 'image-stack-inner';
+
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'relative';
+                wrapper.style.display = 'flex';
+                wrapper.style.alignItems = 'center';
+                wrapper.style.justifyContent = 'center';
+                wrapper.style.width = '100%';
+                wrapper.style.height = '100%';
+
+                images.forEach(img => inner.appendChild(img));
+                wrapper.appendChild(inner);
+                container.appendChild(wrapper);
+
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'stack-nav-btn prev';
+                prevBtn.innerHTML = '&#10094;';
+
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'stack-nav-btn next';
+                nextBtn.innerHTML = '&#10095;';
+
+                wrapper.appendChild(prevBtn);
+                wrapper.appendChild(nextBtn);
+
+                const layoutCards = () => {
+                    const currentImages = Array.from(inner.querySelectorAll('img'));
+                    currentImages.forEach((img, i) => {
+                        if (i === 0) {
+                            img.style.transform = 'scale(1)';
+                            img.style.zIndex = currentImages.length;
+                            img.style.opacity = '1';
+                            img.style.cursor = 'zoom-in';
+                        } else {
+                            img.style.transform = 'scale(0.98)';
+                            img.style.zIndex = 0;
+                            img.style.opacity = '0';
+                            img.style.cursor = 'default';
+                        }
+                    });
+                };
+
+                const nextCard = () => {
+                    const first = inner.querySelector('img');
+                    inner.appendChild(first); // Simpler move
+                    layoutCards();
+                };
+
+                const prevCard = () => {
+                    const imgs = inner.querySelectorAll('img');
+                    const last = imgs[imgs.length - 1];
+                    inner.insertBefore(last, inner.firstChild);
+                    layoutCards();
+                };
+
+                // Hit-zones for side clicking
+                const leftZone = document.createElement('div');
+                leftZone.className = 'hit-zone left';
+                const rightZone = document.createElement('div');
+                rightZone.className = 'hit-zone right';
+
+                wrapper.appendChild(leftZone);
+                wrapper.appendChild(rightZone);
+
+                leftZone.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    prevCard();
+                });
+
+                rightZone.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    nextCard();
+                });
+
+                nextBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    nextCard();
+                });
+
+                prevBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    prevCard();
+                });
+
+                // Lightbox Logic
+                const lightbox = document.getElementById('lightbox');
+                const lightboxImg = lightbox.querySelector('.lightbox-img');
+
+                wrapper.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'IMG' && e.target.style.opacity === '1') {
+                        lightboxImg.src = e.target.src;
+                        lightbox.classList.add('active');
+                    }
+                });
+
+                lightbox.addEventListener('click', () => {
+                    lightbox.classList.remove('active');
+                });
+
+
+                layoutCards();
+
+                layoutCards();
+            } else if (images.length === 1) {
+                images[0].style.transform = 'translate(0,0) scale(1) rotate(0)';
+                images[0].style.opacity = '1';
+                images[0].style.zIndex = '1';
+            }
+        });
+    </script>
+</body>
+
+</html>
