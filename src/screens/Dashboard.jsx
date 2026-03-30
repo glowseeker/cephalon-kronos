@@ -536,7 +536,7 @@ export default function Dashboard() {
               {choices.map((ch, ci) => {
                 const img = getCircuitImage(ch)
                 return (
-                  <div key={ci} className="bg-black/20 p-3 rounded flex flex-col items-center gap-2 text-center min-h-[90px] basis-[32%] flex-grow max-w-[32%]">
+                  <div key={ci} className="bg-black/20 p-3 rounded flex flex-col items-center gap-2 text-center min-h-[90px] w-full sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)]">
                     <div className="w-14 h-14 flex items-center justify-center">
                       {img ? (
                         <img
