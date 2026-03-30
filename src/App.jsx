@@ -1,3 +1,27 @@
+/**
+ * App.jsx
+ *
+ * Application entrypoint and shell.
+ *
+ * STRUCTURE
+ * ─────────────────────────────────────────
+ * <App>
+ *   <ThemeProvider>   - provides CSS variable overrides for the active colour theme
+ *   <MonitoringProvider> - manages Tauri IPC calls, worldstate polling, and parsed data
+ *     <AppContent>    - renders the sidebar + the currently selected screen
+ *
+ * ROUTING
+ * ─────────────────────────────────────────
+ * There is no client-side router.  Navigation is a simple `currentScreen` state
+ * string that selects from the SCREENS map.  All screens are lazy-loaded so
+ * they don't increase the initial bundle size.
+ *
+ * DATA FLOW
+ * ─────────────────────────────────────────
+ * MonitoringContext fetches exports and inventory through Tauri commands on the
+ * Rust backend, parses them with inventoryParser.js and worldstateParser.js,
+ * and exposes the results via React context.  Screens read from that context.
+ */
 import { useState, lazy, Suspense } from 'react'
 import { useMonitoring } from './contexts/MonitoringContext'
 import { formatLastUpdate } from './lib/warframeUtils'

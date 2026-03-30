@@ -1,3 +1,21 @@
+/**
+ * Maps.jsx
+ *
+ * A pannable and zoomable viewer for Warframe's open-world maps.
+ *
+ * DATA SOURCE
+ * ─────────────────────────────────────────
+ * - Images are served from the local filesystem via Tauri's `get_maps_path()`
+ *   and `convertFileSrc()`.
+ * - Map filenames are hardcoded in this file.
+ *
+ * FEATURES
+ * ─────────────────────────────────────────
+ * - Click-and-drag panning.
+ * - Mouse wheel zooming (clamped between 0.8x and 8x).
+ * - "Reset Transform" button to snap back to the center.
+ * - Hardware-accelerated transforms (translate + scale) for smooth performance.
+ */
 import { useRef, useEffect, useCallback, useState } from 'react'
 import { PageLayout, Card, Tabs } from '../components/UI'
 import { convertFileSrc, invoke } from '@tauri-apps/api/tauri'

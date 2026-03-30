@@ -1,3 +1,27 @@
+/**
+ * Dashboard.jsx
+ *
+ * The primary landing screen. Displays live worldstate data including fissures,
+ * open-world cycles, sorties, events, and the 1999 calendar.
+ *
+ * DATA SOURCES
+ * ─────────────────────────────────────────
+ * 1. MonitoringContext (useMonitoring):
+ *    - dict/suppDict: Localisation
+ *    - ERg/EC: Static game data (Regions, Challenges)
+ *    - spIncursions/arbys: Fetched by backend from browse.wf
+ * 2. Oracle API (fetch):
+ *    - worldState.json: Raw live game state
+ *    - location-bounties: Open-world bounty rotations
+ *    - bounty-cycle: Zariman/1999 faction state
+ *
+ * PROCESSING
+ * ─────────────────────────────────────────
+ * Raw worldstate JSON is passed to parseWorldstate() from worldstateParser.js.
+ * Cycle timers are computed locally in worldstateParser.js.
+ * Arbitration and Incursion logic (epoch-based rotation) is handled by local
+ * helpers in this file.
+ */
 import { useState, useEffect, useMemo } from 'react'
 import { PageLayout, Card, Button, CardHeader, Tabs, Modal } from '../components/UI'
 import {
@@ -48,7 +72,8 @@ function getCurrentArby(arbys, ERg, dict) {
   for (const line of lines) {
     const entry = parseArbyLine(line, ERg, dict)
     if (!entry || isNaN(entry.ts)) continue
-    if (entry.ts <= now) best = entry
+    const GRACE_PERIOD = 300000 // 5 minutes
+    if (entry.ts <= (now + GRACE_PERIOD)) best = entry
     else break
   }
   return best
@@ -397,10 +422,10 @@ export default function Dashboard() {
     const nw = worldstate?.nightwave
     if (!nw) return <p className="text-xs text-kronos-dim italic text-center py-4">Nightwave inactive…</p>
 
-    // Group by category based on XP
+    const categories = ['Daily', 'Weekly', 'Elite Weekly']
     const grouped = (nw.challenges || []).reduce((acc, c) => {
       let cat = 'Daily'
-      if (c.xp >= 7000 || c.isElite) cat = 'Elite Weekly'
+      if (c.isElite || c.xp >= 7000) cat = 'Elite Weekly'
       else if (c.xp >= 4500) cat = 'Weekly'
       if (!acc[cat]) acc[cat] = []
       acc[cat].push(c)
@@ -409,48 +434,70 @@ export default function Dashboard() {
 
     return (
       <div className="space-y-4">
-        <div className="flex justify-between items-center px-1">
-          <p className="text-[10px] font-bold text-kronos-accent uppercase">Season {nw.season} - Phase {nw.phase}</p>
-          <p className="text-[10px] text-kronos-dim font-mono">{timeRemaining(nw.expiry)} LEFT</p>
-        </div>
-
-        {/* Rewards Section */}
-        {nw.rewards?.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-4 custom-scrollbar">
-            {nw.rewards.map((r, ri) => (
-              <div key={ri} className="bg-kronos-panel/40 p-2 rounded flex-shrink-0 w-24 flex flex-col items-center gap-1 border border-white/5 group hover:border-kronos-accent/30 transition-all">
-                <div className="w-10 h-10 bg-black/20 rounded flex items-center justify-center relative overflow-hidden">
-                  {r.image ? (
-                    <img src={r.image} alt="" className="max-w-[120%] max-h-[120%] object-contain relative z-10 transition-transform group-hover:scale-110" />
-                  ) : (
-                    <Package size={16} className="text-kronos-accent opacity-50" />
-                  )}
-                </div>
-                <p className="text-[8px] font-bold text-center leading-[1.1] line-clamp-2 uppercase h-4 overflow-hidden" title={r.name}>{r.name}</p>
-                {r.itemCount > 1 && <span className="text-[8px] text-kronos-accent font-black">×{r.itemCount}</span>}
+        {/* Row 1: Status, Standing & Rewards */}
+        <div className="flex flex-col md:flex-row gap-6 p-4 bg-kronos-panel/20 rounded-lg border border-white/5">
+          <div className="space-y-2 flex-shrink-0">
+            <p className="text-[10px] font-black text-kronos-accent uppercase tracking-widest leading-none">Status • Season {nw.season}</p>
+            <div className="flex items-center gap-3">
+              <div className="px-3 py-1 bg-kronos-accent/10 border border-kronos-accent/30 rounded flex flex-col items-center">
+                <span className="text-[8px] font-black text-kronos-accent/70 uppercase leading-none mb-1">CURRENT RANK</span>
+                <span className="text-sm font-black text-kronos-accent leading-none">{nw.phase + 1}</span>
               </div>
-            ))}
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-kronos-text uppercase tracking-tighter">Nightwave Infiltration</p>
+                <p className="text-[10px] text-kronos-dim font-mono">{timeRemaining(nw.expiry)} REMAINING</p>
+              </div>
+            </div>
           </div>
-        )}
 
-        <div className="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-1">
-          {Object.entries(grouped).map(([cat, tasks]) => (
-            <div key={cat}>
-              <div className="flex items-center gap-2 mb-2 pl-1">
-                <span className="h-px flex-1 bg-kronos-panel/40"></span>
-                <p className="text-[9px] font-black text-kronos-dim uppercase tracking-widest">{cat}</p>
-                <span className="h-px flex-1 bg-kronos-panel/40"></span>
-              </div>
-              <div className="space-y-2">
-                {tasks.map((c, idx) => (
-                  <div key={idx} className="bg-kronos-panel/40 p-2.5 rounded border border-white/5 hover:border-kronos-accent/30 transition-all group">
-                    <div className="flex justify-between items-start gap-3 mb-1.5">
-                      <p className="text-[10px] font-bold text-kronos-accent uppercase leading-tight group-hover:text-white transition-colors">{c.name}</p>
-                      <span className="text-[9px] text-kronos-accent font-black uppercase bg-kronos-accent/10 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.1)]">{c.xp} XP</span>
+          {nw.rewards?.length > 0 && (
+            <div className="flex-1 min-w-0">
+              <p className="text-[9px] font-black text-kronos-dim uppercase mb-2 tracking-widest pl-1">Tier Rewards</p>
+              <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar scrollbar-hidden">
+                {nw.rewards.map((r, ri) => (
+                  <div key={ri} className="bg-black/20 p-1.5 rounded flex items-center gap-2 border border-white/5 min-w-[130px] group hover:border-kronos-accent/30 transition-all">
+                    <div className="w-8 h-8 rounded bg-black/40 flex items-center justify-center p-1 flex-shrink-0">
+                      <img src={r.image} alt="" className="max-w-full max-h-full object-contain" />
                     </div>
-                    <p className="text-[10px] text-kronos-text/80 leading-snug">{c.desc}</p>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-bold text-kronos-text uppercase truncate leading-none mb-1">{r.name}</p>
+                      <p className="text-[8px] text-kronos-accent font-black">RANK {ri + 1}</p>
+                    </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Row 2: 3-Column Challenges Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {categories.map(cat => (
+            <div key={cat} className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-white/5 pb-2">
+                <p className="text-[10px] font-black text-kronos-dim uppercase tracking-[0.2em]">{cat}</p>
+                <div className="h-px w-full bg-gradient-to-r from-kronos-dim/20 to-transparent"></div>
+                <span className="text-[10px] text-kronos-accent font-black">{(grouped[cat] || []).length}</span>
+              </div>
+              <div className="space-y-2 max-h-[450px] overflow-y-auto custom-scrollbar pr-1">
+                {(grouped[cat] || []).map((c, idx) => (
+                  <div key={idx} className="bg-kronos-panel/40 p-3 rounded border border-white/5 hover:border-kronos-accent/20 transition-all group">
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <p className="text-[11px] font-bold text-kronos-text uppercase leading-tight group-hover:text-kronos-accent transition-colors">{c.name}</p>
+                      <span className="text-[9px] text-kronos-accent font-black uppercase whitespace-nowrap bg-kronos-accent/5 px-2 py-0.5 rounded border border-kronos-accent/20">
+                        {c.xp.toLocaleString()} STANDING
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-kronos-dim/70 leading-relaxed mb-3 line-clamp-3">{c.desc}</p>
+                    <div className="flex justify-between items-center text-[9px] font-mono text-kronos-dim/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span>OPERATIONAL WINDOW</span>
+                      <span>{timeRemaining(c.expiry).split(',')[0]}</span>
+                    </div>
+                  </div>
+                ))}
+                {!(grouped[cat] || []).length && (
+                  <p className="text-[10px] text-kronos-dim/30 italic py-8 text-center border border-dashed border-white/5 rounded">All tasks synchronized.</p>
+                )}
               </div>
             </div>
           ))}
@@ -462,7 +509,6 @@ export default function Dashboard() {
   const renderCircuit = () => {
     if (!worldstate?.circuit?.length) return <p className="text-xs text-kronos-dim italic text-center py-4">No Circuit data…</p>
 
-    // Group and flatten choices by category
     const groups = worldstate.circuit.reduce((acc, c) => {
       if (!acc[c.category]) acc[c.category] = []
       acc[c.category].push(...c.choices)
@@ -488,104 +534,99 @@ export default function Dashboard() {
   }
 
   const render1999 = () => {
-    const cal = worldstate?.calendar1999?.[0]
+    const seasonsArr = worldstate?.calendar1999 || []
+    const now = Date.now()
+    // Find active season or default to first
+    const cal = seasonsArr.find(s => {
+      const start = new Date(s.activation).getTime()
+      const end = new Date(s.expiry).getTime()
+      return now >= start && now < end
+    }) || seasonsArr[0]
+
     if (!cal) return <p className="text-xs text-kronos-dim italic text-center py-4">No 1999 data…</p>
 
+    const EPOCH = 1735516800000
+    const weeksSince = Math.floor((now - EPOCH) / (7 * 24 * 3600 * 1000))
+    const seasonIndex = ((weeksSince % 4) + 4) % 4
+    const seasonNames = ['WINTER', 'SPRING', 'SUMMER', 'AUTUMN']
+    const activeSeasonName = seasonNames[seasonIndex]
+
+    const seasonalMonths = {
+      WINTER: ['JANUARY', 'FEBRUARY', 'MARCH'],
+      SPRING: ['APRIL', 'MAY', 'JUNE'],
+      SUMMER: ['JULY', 'AUGUST', 'SEPTEMBER'],
+      AUTUMN: ['OCTOBER', 'NOVEMBER', 'DECEMBER']
+    }
+    const currentMonths = seasonalMonths[activeSeasonName]
+
+    const selectedMonthName = calendarDate.toLocaleString('default', { month: 'long' }).toUpperCase()
+    const displayMonth = currentMonths.includes(selectedMonthName) ? selectedMonthName : currentMonths[0]
+
     const activationDate = new Date(cal.activation)
-    const expiryDate = new Date(cal.expiry)
-
-    // Normalize to first of month for navigation
-    const minMonth = new Date(activationDate.getFullYear(), activationDate.getMonth(), 1)
-    const maxMonth = new Date(expiryDate.getFullYear(), expiryDate.getMonth(), 1)
-
-    const year = calendarDate.getFullYear()
-    const month = calendarDate.getMonth()
-    const monthName = calendarDate.toLocaleString('default', { month: 'long' })
-
-    const canPrev = calendarDate > minMonth
-    const canNext = calendarDate < maxMonth
-
-    const prevMonth = () => canPrev && setCalendarDate(new Date(year, month - 1, 1))
-    const nextMonth = () => canNext && setCalendarDate(new Date(year, month + 1, 1))
-
-    // Filter days for the current displayed month that have events
-    // We determine the date for each "day" entry. 
-    // Usually "day 1" is activation. 
-    const activeDays = (cal.days || []).filter(d => {
+    const groupedDays = (cal.days || []).reduce((acc, d) => {
       const dDate = new Date(activationDate)
       dDate.setDate(activationDate.getDate() + (d.day - 1))
-      return dDate.getMonth() === month && dDate.getFullYear() === year && (d.events?.length > 0 || d.type === 'Birthday')
-    }).map(d => {
-      const dDate = new Date(activationDate)
-      dDate.setDate(activationDate.getDate() + (d.day - 1))
-      return { ...d, date: dDate }
-    })
+      const mName = dDate.toLocaleString('default', { month: 'long' }).toUpperCase()
+      if (!acc[mName]) acc[mName] = []
+      acc[mName].push({ ...d, date: dDate })
+      return acc
+    }, {})
 
     return (
-      <div className="space-y-3 mt-2">
-        <div className="flex justify-between items-center bg-kronos-panel/40 p-2 rounded border border-white/5">
-          <button
-            onClick={prevMonth}
-            disabled={!canPrev}
-            className={`p-1 rounded transition-colors ${canPrev ? 'hover:bg-kronos-accent/20 text-kronos-dim hover:text-kronos-accent' : 'opacity-20 cursor-not-allowed'}`}
-          >
-            <ChevronDown className="rotate-90" size={16} />
-          </button>
-          <div className="text-center">
-            <p className="text-[10px] font-black text-kronos-accent uppercase tracking-widest leading-none mb-1">{monthName} {year}</p>
-            <p className="text-[8px] text-kronos-dim uppercase font-bold tracking-tighter">{cal.season} - YEAR {cal.year}</p>
-          </div>
-          <button
-            onClick={nextMonth}
-            disabled={!canNext}
-            className={`p-1 rounded transition-colors ${canNext ? 'hover:bg-kronos-accent/20 text-kronos-dim hover:text-kronos-accent' : 'opacity-20 cursor-not-allowed'}`}
-          >
-            <ChevronDown className="-rotate-90" size={16} />
-          </button>
+      <div className="space-y-4 mt-1">
+        <div className="flex justify-between items-center px-1">
+          <p className="text-[10px] font-black text-kronos-accent uppercase tracking-[0.2em]">{activeSeasonName} • {cal.year}</p>
+          <p className="text-[9px] text-kronos-dim font-bold uppercase tracking-tighter">Temporal Shift: Monday 00:00 UTC</p>
         </div>
 
-        <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
-          {activeDays.length > 0 ? activeDays.map((d, idx) => (
-            <div key={idx} className={`p-2.5 rounded border ${d.type === 'Birthday' ? 'bg-kronos-accent/10 border-kronos-accent/30 shadow-[0_0_15px_rgba(var(--kronos-accent-rgb),0.1)]' : 'bg-kronos-panel/40 border-white/5'}`}>
-              <div className="flex justify-between items-center mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded bg-black/40 flex flex-col items-center justify-center border border-white/5">
-                    <span className="text-[8px] font-black text-kronos-accent leading-none">{d.date.toLocaleString('default', { month: 'short' }).toUpperCase()}</span>
-                    <span className="text-xs font-black text-white leading-none mt-0.5">{d.date.getDate()}</span>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-kronos-text uppercase leading-none">{d.type === 'Birthday' ? '🎂 Special Event' : `Day ${d.day}`}</p>
-                    <p className="text-[8px] text-kronos-dim uppercase font-bold mt-0.5">{d.date.toLocaleDateString(undefined, { weekday: 'long' })}</p>
-                  </div>
+        {/* Month Tabs */}
+        <div className="flex bg-kronos-panel/40 p-1 rounded-lg border border-white/5 gap-1 shadow-inner">
+          {currentMonths.map(m => (
+            <button
+              key={m}
+              onClick={() => {
+                const match = groupedDays[m]?.[0]?.date
+                if (match) setCalendarDate(new Date(match.getTime()))
+              }}
+              className={`flex-1 py-1.5 rounded text-[9px] font-black uppercase transition-all tracking-widest ${displayMonth === m ? 'bg-kronos-accent text-black shadow-[0_0_15px_rgba(var(--kronos-accent-rgb),0.3)]' : 'text-kronos-dim hover:text-kronos-text hover:bg-white/5'}`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[450px] overflow-y-auto custom-scrollbar pr-1">
+          {(groupedDays[displayMonth] || []).filter(d => d.events?.length > 0 || d.type === 'Birthday').map((d, idx) => (
+            <div key={idx} className={`p-3 rounded border ${d.type === 'Birthday' ? 'bg-kronos-accent/10 border-kronos-accent/30 shadow-[0_0_20px_rgba(var(--kronos-accent-rgb),0.05)]' : 'bg-kronos-panel/40 border-white/5'} transition-all hover:bg-kronos-panel/60`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded bg-black/40 flex flex-col items-center justify-center border border-white/5 flex-shrink-0">
+                  <span className="text-[9px] font-black text-kronos-accent leading-none uppercase">{displayMonth.slice(0, 3)}</span>
+                  <span className="text-sm font-black text-white leading-none mt-1">{d.date.getDate()}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold text-kronos-text uppercase leading-tight truncate">{d.type === 'Birthday' ? `🎂 ${d.name || 'Birthday'}` : d.name || `DAY ${d.day}`}</p>
+                  <p className="text-[9px] text-kronos-dim uppercase mt-0.5 font-bold">{d.date.toLocaleDateString(undefined, { weekday: 'long' })}</p>
                 </div>
               </div>
-
-              <div className="space-y-1.5">
-                {d.events?.map((ev, ei) => (
-                  <div key={ei} className="flex items-start gap-3 bg-black/30 p-2 rounded-sm border border-white/5 group">
-                    {ev.type === 'CET_REWARD' ? <ShoppingBag size={14} className="text-kronos-accent mt-0.5" /> :
-                      ev.type === 'CET_UPGRADE' ? <Zap size={14} className="text-yellow-400 mt-0.5" /> :
-                        <Target size={14} className="text-blue-400 mt-0.5" />}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[8px] font-black text-kronos-dim uppercase tracking-tighter leading-none mb-1">
-                        {ev.type === 'CET_CHALLENGE' ? 'Challenge' : ev.type === 'CET_REWARD' ? 'Reward' : 'Upgrade'}
-                      </p>
-                      <p className="text-[10px] text-kronos-text font-bold leading-tight group-hover:text-kronos-accent transition-colors">{ev.name}</p>
+              {d.events?.length > 0 && (
+                <div className="mt-4 space-y-1.5 border-t border-white/5 pt-3">
+                  {d.events.map((ev, ei) => (
+                    <div key={ei} className="px-2 py-1.5 bg-black/30 rounded text-[9px] text-kronos-text/80 border border-white/5 flex items-start gap-2">
+                      <span className="flex-1 leading-normal">{ev.name}</span>
+                      <span className="text-kronos-accent opacity-30 font-black uppercase text-[7px] flex-shrink-0">{ev.type.replace('CET_', '')}</span>
                     </div>
-                  </div>
-                ))}
-                {!d.events?.length && d.type === 'Birthday' && (
-                  <p className="text-[10px] text-kronos-accent font-bold italic pl-1">Birthday celebration available!</p>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )) : (
-            <p className="text-xs text-kronos-dim italic text-center py-8">No events in {monthName}</p>
+          ))}
+          {(!groupedDays[displayMonth] || groupedDays[displayMonth].filter(d => d.events?.length > 0 || d.type === 'Birthday').length === 0) && (
+            <div className="md:col-span-2 lg:col-span-3 py-16 flex flex-col items-center justify-center opacity-20">
+              <RefreshCw size={32} className="mb-4 animate-pulse" />
+              <p className="text-[10px] font-black uppercase tracking-[0.4em]">Temporal Gap</p>
+              <p className="text-[9px] italic mt-1">No significant logs recorded in this timeline.</p>
+            </div>
           )}
-        </div>
-
-        <div className="px-1 text-right">
-          <p className="text-[9px] text-kronos-dim font-mono uppercase">Season expires: {timeRemaining(cal.expiry)}</p>
         </div>
       </div>
     )
@@ -962,16 +1003,19 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── Col 1 ── */}
-        <div className="space-y-4">
-          {isVisible('alerts') && renderAlerts()}
-          {/* Nightwave */}
-          {isVisible('nightwave') && (
+        {/* Nightwave - Spans Full Width */}
+        {isVisible('nightwave') && (
+          <div className="lg:col-span-3">
             <Card glow className="p-3">
               <CardHeader icon={Moon} title="Nightwave" />
               {renderNightwave()}
             </Card>
-          )}
+          </div>
+        )}
+
+        {/* ── Col 1 ── */}
+        <div className="space-y-4">
+          {isVisible('alerts') && renderAlerts()}
 
           {/* World Timers */}
           {isVisible('timers') && timers.length > 0 && (
@@ -1248,9 +1292,18 @@ export default function Dashboard() {
               <div className="space-y-2">
                 {worldstate.news.slice(0, 3).map((item, idx) => (
                   <div key={idx} className="text-xs">
-                    <a href={item.link} target="_blank" rel="noreferrer" className="font-bold hover:text-kronos-accent transition-colors block leading-tight">
-                      {item.message}
-                    </a>
+                    {item.link ? (
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-bold hover:text-kronos-accent transition-colors block leading-tight"
+                      >
+                        {item.message}
+                      </a>
+                    ) : (
+                      <p className="font-bold leading-tight">{item.message}</p>
+                    )}
                     <p className="text-[10px] text-kronos-dim mt-0.5 font-mono">{timeSince(item.date)}</p>
                   </div>
                 ))}
@@ -1261,6 +1314,6 @@ export default function Dashboard() {
       </div>
       <DescendiaModal />
       <BaroModal />
-    </PageLayout>
+    </PageLayout >
   )
 }

@@ -1,3 +1,20 @@
+/**
+ * Notes.jsx
+ *
+ * A simplified Markdown note-taking tool for in-game goals and reminders.
+ *
+ * DATA STORAGE
+ * ─────────────────────────────────────────
+ * - Notes are stored as physical `.md` files in `src-tauri/data/user/notes/`.
+ * - File I/O (list, read, write, delete) is handled by the Rust backend
+ *   via Tauri IPC commands.
+ *
+ * FEATURES
+ * ─────────────────────────────────────────
+ * - Full MDX editor support with bold, italic, lists, and tables.
+ * - Real-time auto-saving (or manual save depending on config).
+ * - Click-to-rename filenames.
+ */
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { FileText, Plus, Trash, Edit2, Check, X } from 'lucide-react'
 import { PageLayout, Card, Button } from '../components/UI'

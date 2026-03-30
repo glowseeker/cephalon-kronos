@@ -1,3 +1,20 @@
+/**
+ * Relics.jsx
+ *
+ * Displays owned Void Relics and their reward pools.
+ *
+ * DATA FLOW
+ * ─────────────────────────────────────────
+ * 1. MonitoringContext provides the parsed inventory (including relics).
+ * 2. This file groups and filters the relics by Era (Lith, Meso, Neo, Axi, Requiem)
+ *    and refinement quality.
+ *
+ * FEATURES
+ * ─────────────────────────────────────────
+ * - Search by relic name or reward name (e.g., "Glaive prime").
+ * - Filter by Era and refinement status.
+ * - Displays all four refinement tiers for each relic in a single card.
+ */
 import { useState } from 'react'
 import { Search, AlertCircle } from 'lucide-react'
 import { PageLayout, Input, Card, Tabs } from '../components/UI'

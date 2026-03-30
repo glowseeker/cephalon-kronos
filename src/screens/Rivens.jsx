@@ -1,3 +1,19 @@
+/**
+ * Rivens.jsx
+ *
+ * Displays the user's Riven Mods with live stat calculation.
+ *
+ * DATA FLOW
+ * ─────────────────────────────────────────
+ * 1. MonitoringContext provides the parsed riven list (from inventoryParser.js).
+ * 2. This file filters the list based on Mod Type (Rifle, Pistol, etc.) and
+ *    Unveiled state.
+ *
+ * FEATURES
+ * ─────────────────────────────────────────
+ * - Stat scaling: Riven stats are displayed as they would appear at Max Rank.
+ * - Stat names are resolved from internal game codes to human-readable strings.
+ */
 import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { PageLayout, Input, Card, Tabs } from '../components/UI'

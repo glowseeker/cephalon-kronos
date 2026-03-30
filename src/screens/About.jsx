@@ -1,3 +1,14 @@
+/**
+ * About.jsx
+ *
+ * App information, credits, and legal disclaimer.
+ *
+ * ROLE
+ * ─────────────────────────────────────────
+ * Purely informational component. Displays versions, links to data sources
+ * (warframe-items, browse.wf, etc.), and a critical warning about the
+ * ban risk associated with memory-based extraction.
+ */
 import { AlertTriangle, Pyramid, Github, Box, Globe, Database, Layers, Palette, Terminal, BookOpen } from 'lucide-react'
 import { PageLayout, Card } from '../components/UI'
 
@@ -62,11 +73,11 @@ export default function About() {
               <h3 className="text-base font-semibold text-red-400 mb-2">Important Disclaimer</h3>
               <p className="text-kronos-text/90 text-sm leading-relaxed mb-2">
                 This app uses{' '}
-                <a href="https://github.com/Sainan/warframe-api-helper" className="text-kronos-accent hover:underline" target="_blank" rel="noopener noreferrer">warframe-api-helper</a>
-                {' '}to extract your AccountID and session nonce by scanning your running game's memory.
+                <a href="https://github.com/Obsidian-Jackal/warframe-api-helper" className="text-kronos-accent hover:underline" target="_blank" rel="noopener noreferrer">warframe-api-helper</a>
+                {' '}to extract your session tokens from game memory.
               </p>
               <ul className="text-kronos-text/80 text-xs space-y-0.5 mb-2 list-disc list-inside">
-                <li>I am not the developer of neither that fork nor the original project.</li>
+                <li>I am not the developer of the software linked above.</li>
                 <li>Digital Extremes has not approved this application.</li>
               </ul>
               <p className="text-red-400 font-medium text-xs">Use at your own risk - potential ban risk always exists.</p>
@@ -79,4 +90,3 @@ export default function About() {
     </PageLayout>
   )
 }
-

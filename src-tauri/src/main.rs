@@ -1,3 +1,4 @@
+// Hide the console window on Windows release builds.
 #![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
@@ -6,10 +7,13 @@
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
-use tauri::Manager;
 use std::fs;
 
 // ─── Path Resolution ──────────────────────────────────────────────────────────
+//
+// In dev builds, paths are resolved relative to the Cargo manifest directory so
+// that assets sit alongside the source tree.  In release builds they're resolved
+// relative to the executable so the installed app is self-contained.
 
 fn get_app_root() -> PathBuf {
     if cfg!(debug_assertions) {
@@ -21,11 +25,21 @@ fn get_app_root() -> PathBuf {
     }
 }
 
+/// Build an absolute path from a path relative to the app root.
 fn resolve_path(relative: &str) -> PathBuf {
     get_app_root().join(relative)
 }
 
 // ─── Export Management ────────────────────────────────────────────────────────
+//
+// JSON exports come from the warframe-public-export-plus mirror on GitHub and
+// are cached in data/export/.  They're refreshed every 24 hours.
+//
+// Supplementary dictionary fields come from oracle.browse.wf (used for item
+// name look-ups that aren't covered by the standard export files).
+//
+// TXT data files (arbitration/Steel Path data) come from browse.wf and are
+// cached for 6 hours because they change more often.
 
 const EXPORT_FILES: &[&str] = &[
     "ExportWarframes.json",
@@ -48,14 +62,49 @@ const EXPORT_FILES: &[&str] = &[
     "supp-dict-en.json",
 ];
 
-const BASE_URL: &str = "https://raw.githubusercontent.com/calamity-inc/warframe-public-export-plus/master";
+const BASE_URL: &str =
+    "https://raw.githubusercontent.com/calamity-inc/warframe-public-export-plus/master";
 
-// TXT data files from browse.wf - cached locally, refreshed every 6 hours
+// TXT files are optional - download failures are non-fatal.
 const TXT_FILES: &[(&str, &str)] = &[
-    ("arbys.txt",          "https://browse.wf/arbys.txt"),
-    ("sp-incursions.txt",  "https://browse.wf/sp-incursions.txt"),
+    ("arbys.txt",         "https://browse.wf/arbys.txt"),
+    ("sp-incursions.txt", "https://browse.wf/sp-incursions.txt"),
 ];
 
+// ─── Shared Download Helper ───────────────────────────────────────────────────
+
+/// Download a file from `url` and write it to `dest`.
+/// Returns `Ok(true)` on success, or an error string on failure.
+async fn download_file(client: &reqwest::Client, url: &str, dest: &std::path::Path) -> Result<bool, String> {
+    let resp = client.get(url).send().await.map_err(|e| e.to_string())?;
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {} for {}", resp.status(), url));
+    }
+    let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
+    fs::write(dest, bytes).map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
+/// Return the age in seconds of a file on disk, or `u64::MAX` if the metadata
+/// can't be read (treats unreadable files as needing a refresh).
+fn file_age_secs(path: &std::path::Path) -> u64 {
+    fs::metadata(path)
+        .ok()
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| SystemTime::now().duration_since(t).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(u64::MAX)
+}
+
+// ─── Tauri Commands ───────────────────────────────────────────────────────────
+//
+// All functions marked `#[tauri::command]` are callable from the frontend via
+// `invoke('command_name', args)`.  See MonitoringContext.jsx for the primary
+// call sites.
+
+/// Download or refresh all game data exports (JSON + TXT).
+/// Called by MonitoringContext on startup and on each monitoring cycle.
+/// JSON exports are refreshed every 24 h; TXT files every 6 h.
 #[tauri::command]
 async fn check_exports() -> Result<String, String> {
     let export_dir = resolve_path("data/export");
@@ -66,18 +115,10 @@ async fn check_exports() -> Result<String, String> {
     let client = reqwest::Client::new();
     let mut updated_count = 0u32;
 
-    // ── JSON exports (refresh every 24 h) ────────────────────────────────────
+    // JSON exports - refresh once per day
     for file_name in EXPORT_FILES {
         let path = export_dir.join(file_name);
-        let needs_update = if !path.exists() {
-            true
-        } else {
-            let meta = fs::metadata(&path).map_err(|e| e.to_string())?;
-            let age = SystemTime::now()
-                .duration_since(meta.modified().map_err(|e| e.to_string())?)
-                .unwrap_or_default();
-            age.as_secs() > 86_400
-        };
+        let needs_update = !path.exists() || file_age_secs(&path) > 86_400;
 
         if needs_update {
             let url = if *file_name == "supp-dict-en.json" {
@@ -85,41 +126,24 @@ async fn check_exports() -> Result<String, String> {
             } else {
                 format!("{}/{}", BASE_URL, file_name)
             };
-            
-            println!("Downloading {}…", url);
-            let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
-            if !resp.status().is_success() {
-                return Err(format!("Failed to download {}: status {}", file_name, resp.status()));
-            }
-            fs::write(&path, resp.bytes().await.map_err(|e| e.to_string())?)
-                .map_err(|e| e.to_string())?;
+            println!("Downloading {}", url);
+            download_file(&client, &url, &path).await.map_err(|e| {
+                format!("Failed to download {}: {}", file_name, e)
+            })?;
             updated_count += 1;
         }
     }
 
-    // ── TXT data files (refresh every 6 h) ───────────────────────────────────
+    // TXT data files - refresh every 6 hours; failures are non-fatal
     for (file_name, url) in TXT_FILES {
         let path = export_dir.join(file_name);
-        let needs_update = if !path.exists() {
-            true
-        } else {
-            let meta = fs::metadata(&path).map_err(|e| e.to_string())?;
-            let age = SystemTime::now()
-                .duration_since(meta.modified().map_err(|e| e.to_string())?)
-                .unwrap_or_default();
-            age.as_secs() > 21_600  // 6 hours
-        };
+        let needs_update = !path.exists() || file_age_secs(&path) > 21_600;
 
         if needs_update {
-            println!("Downloading {}…", url);
-            let resp = client.get(*url).send().await.map_err(|e| e.to_string())?;
-            if resp.status().is_success() {
-                fs::write(&path, resp.bytes().await.map_err(|e| e.to_string())?)
-                    .map_err(|e| e.to_string())?;
-                updated_count += 1;
-            } else {
-                // Non-fatal: txt files are optional enhancements
-                eprintln!("Warning: could not download {}: status {}", file_name, resp.status());
+            println!("Downloading {}", url);
+            match download_file(&client, url, &path).await {
+                Ok(_) => updated_count += 1,
+                Err(e) => eprintln!("Warning: could not download {}: {}", file_name, e),
             }
         }
     }
@@ -127,7 +151,9 @@ async fn check_exports() -> Result<String, String> {
     Ok(format!("Updated {} files", updated_count))
 }
 
-/// Load a cached txt file from data/export/ and return its contents.
+/// Read a cached TXT file from data/export/ and return its contents as a string.
+/// Returns an empty string if the file doesn't exist (e.g. first run offline).
+/// Called by the Dashboard to load arbitration/Steel Path data.
 #[tauri::command]
 async fn load_txt_file(name: String) -> Result<String, String> {
     let path = resolve_path("data/export").join(&name);
@@ -139,7 +165,14 @@ async fn load_txt_file(name: String) -> Result<String, String> {
 }
 
 // ─── Inventory Management ─────────────────────────────────────────────────────
+//
+// Inventory data is obtained by running the bundled warframe-api-helper binary,
+// which authenticates with Warframe's servers using the local game session.
+// The result is stored as data/user/inventory.json.
 
+/// Load the previously saved inventory JSON and its file modification timestamp.
+/// Returns `None` if no inventory has been fetched yet (fresh install).
+/// Called by MonitoringContext on startup to restore the last known state.
 #[tauri::command]
 async fn load_cached_inventory() -> Result<Option<(Value, u64)>, String> {
     let path = resolve_path("data/user/inventory.json");
@@ -164,6 +197,9 @@ async fn load_cached_inventory() -> Result<Option<(Value, u64)>, String> {
     Ok(Some((json, timestamp)))
 }
 
+/// Run the warframe-api-helper binary to fetch a fresh inventory from the game
+/// servers, save it to data/user/inventory.json, and return the parsed JSON.
+/// Called by MonitoringContext on manual scan and on each monitoring tick.
 #[tauri::command]
 async fn call_api_helper() -> Result<Value, String> {
     let bin_path = resolve_path("data/bin/warframe-api-helper");
@@ -174,6 +210,7 @@ async fn call_api_helper() -> Result<Value, String> {
         fs::create_dir_all(&inv_dir).map_err(|e| e.to_string())?;
     }
 
+    // Make the binary executable on Unix platforms.
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -186,7 +223,7 @@ async fn call_api_helper() -> Result<Value, String> {
 
     let output = std::process::Command::new(&bin_path)
         .arg(format!("--output={}", inv_path.to_string_lossy()))
-        .current_dir(&inv_dir) // All helper files (JSON and .dat) will land here
+        .current_dir(&inv_dir) // helper writes session .dat files here
         .output()
         .map_err(|e| format!("Failed to launch warframe-api-helper: {e}"))?;
 
@@ -201,6 +238,9 @@ async fn call_api_helper() -> Result<Value, String> {
         .map_err(|e| format!("Failed to parse updated inventory.json: {e}"))
 }
 
+/// Load all JSON export files into a single JSON object keyed by file stem
+/// (e.g. `{ "ExportWeapons": [...], "ExportWarframes": [...], ... }`).
+/// Called by MonitoringContext once on startup; passed to inventoryParser.js.
 #[tauri::command]
 async fn load_all_exports() -> Result<Value, String> {
     let export_dir = resolve_path("data/export");
@@ -219,7 +259,11 @@ async fn load_all_exports() -> Result<Value, String> {
 }
 
 // ─── Notes Management ─────────────────────────────────────────────────────────
+//
+// Notes are stored as individual Markdown files under data/user/notes/.
+// The Notes screen calls these commands directly via Tauri invoke.
 
+/// Return a sorted list of all note filenames (*.md) in data/user/notes/.
 #[tauri::command]
 async fn list_notes() -> Result<Vec<String>, String> {
     let notes_dir = resolve_path("data/user/notes");
@@ -239,6 +283,8 @@ async fn list_notes() -> Result<Vec<String>, String> {
     Ok(notes)
 }
 
+/// Read the contents of a single note file.
+/// Returns an empty string if the file doesn't exist.
 #[tauri::command]
 async fn read_note(filename: String) -> Result<String, String> {
     let path = resolve_path("data/user/notes").join(filename);
@@ -249,6 +295,7 @@ async fn read_note(filename: String) -> Result<String, String> {
     }
 }
 
+/// Write content to a note file, creating it if it doesn't exist.
 #[tauri::command]
 async fn save_note(filename: String, content: String) -> Result<(), String> {
     let notes_dir = resolve_path("data/user/notes");
@@ -258,6 +305,7 @@ async fn save_note(filename: String, content: String) -> Result<(), String> {
     fs::write(notes_dir.join(filename), content).map_err(|e| e.to_string())
 }
 
+/// Delete a note file.  No-op if it doesn't exist.
 #[tauri::command]
 async fn delete_note(filename: String) -> Result<(), String> {
     let path = resolve_path("data/user/notes").join(filename);
@@ -268,6 +316,8 @@ async fn delete_note(filename: String) -> Result<(), String> {
     }
 }
 
+/// Open the data/ directory in the OS file browser.
+/// Called from the Settings screen.
 #[tauri::command]
 async fn open_data_folder() -> Result<(), String> {
     let path = resolve_path("data");
@@ -280,7 +330,10 @@ async fn open_data_folder() -> Result<(), String> {
     Ok(())
 }
 
-// ─── Media Management ─────────────────────────────────────────────────────────
+// ─── Media Assets ─────────────────────────────────────────────────────────────
+//
+// Map images and mastery rank icons are downloaded on demand from the GitHub
+// repo and cached permanently (no re-download once present).
 
 const MAP_FILES: &[&str] = &[
     "PlainsofEidolon_4k_Map.png",
@@ -289,6 +342,8 @@ const MAP_FILES: &[&str] = &[
     "Duviri_map_with_caves.png",
 ];
 
+// Rank names up to 30 are suffixed in filenames (e.g. Rank01Initiate.png).
+// Ranks 31+ use a plain numeric filename (e.g. Rank31.png).
 const RANK_NAMES: &[&str] = &[
     "Unranked", "Initiate", "SilverInitiate", "GoldInitiate",
     "Novice", "SilverNovice", "GoldNovice",
@@ -302,30 +357,34 @@ const RANK_NAMES: &[&str] = &[
     "Master", "MiddleMaster", "GrandMaster"
 ];
 
+/// Download any map or mastery icon assets that aren't already cached.
+/// Called by MonitoringContext on startup.  Failures are non-fatal per asset.
 #[tauri::command]
 async fn check_media_assets() -> Result<String, String> {
     let client = reqwest::Client::new();
     let mut downloaded = 0u32;
     let base_url = "https://raw.githubusercontent.com/glowseeker/cephalon-kronos/main/src-tauri/data/export/master";
 
-    // Maps
+    // Download open-world maps
     let maps_dir = resolve_path("data/export/maps");
-    if !maps_dir.exists() { fs::create_dir_all(&maps_dir).map_err(|e| e.to_string())?; }
+    if !maps_dir.exists() {
+        fs::create_dir_all(&maps_dir).map_err(|e| e.to_string())?;
+    }
     for map in MAP_FILES {
         let path = maps_dir.join(map);
         if !path.exists() {
             let url = format!("{}/maps/{}", base_url, map);
-            let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
-            if resp.status().is_success() {
-                fs::write(&path, resp.bytes().await.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+            if download_file(&client, &url, &path).await.is_ok() {
                 downloaded += 1;
             }
         }
     }
 
-    // Mastery Icons
+    // Download mastery rank icons (ranks 0-40)
     let icons_dir = resolve_path("data/export/masteryicons");
-    if !icons_dir.exists() { fs::create_dir_all(&icons_dir).map_err(|e| e.to_string())?; }
+    if !icons_dir.exists() {
+        fs::create_dir_all(&icons_dir).map_err(|e| e.to_string())?;
+    }
     for rank in 0..=40 {
         let filename = if rank <= 30 {
             format!("Rank{:02}{}.png", rank, RANK_NAMES[rank])
@@ -335,9 +394,7 @@ async fn check_media_assets() -> Result<String, String> {
         let path = icons_dir.join(&filename);
         if !path.exists() {
             let url = format!("{}/masteryicons/{}", base_url, filename);
-            let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
-            if resp.status().is_success() {
-                fs::write(&path, resp.bytes().await.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+            if download_file(&client, &url, &path).await.is_ok() {
                 downloaded += 1;
             }
         }
@@ -346,15 +403,28 @@ async fn check_media_assets() -> Result<String, String> {
     Ok(format!("Downloaded {} media assets", downloaded))
 }
 
+/// Return the absolute path to the mastery icons directory.
+/// Used by the Mastery screen to construct file:// image URLs.
 #[tauri::command]
 fn get_mastery_icons_path() -> String {
     resolve_path("data/export/masteryicons").to_string_lossy().to_string()
 }
 
+/// Return the absolute path to the maps directory.
+/// Used by the Maps screen to construct file:// image URLs.
 #[tauri::command]
 fn get_maps_path() -> String {
     resolve_path("data/export/maps").to_string_lossy().to_string()
 }
+
+/// Return the absolute path to the assets directory.
+/// Used to display decorative images in the UI.
+#[tauri::command]
+fn get_assets_path() -> String {
+    resolve_path("data/export/assets").to_string_lossy().to_string()
+}
+
+// ─── Entry Point ──────────────────────────────────────────────────────────────
 
 fn main() {
     tauri::Builder::default()
@@ -372,6 +442,7 @@ fn main() {
             open_data_folder,
             get_mastery_icons_path,
             get_maps_path,
+            get_assets_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

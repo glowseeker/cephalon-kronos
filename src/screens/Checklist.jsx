@@ -1,3 +1,21 @@
+/**
+ * Checklist.jsx
+ *
+ * A personal task tracker for daily and weekly Warframe activities.
+ *
+ * DATA STORAGE
+ * ─────────────────────────────────────────
+ * - Task definitions are hardcoded in the `tasks` array.
+ * - Completion status and visibility preferences are persisted to
+ *   `localStorage`.
+ *
+ * FEATURES
+ * ─────────────────────────────────────────
+ * - Separate sections for Daily and Weekly resets.
+ * - Progress counters for both categories.
+ * - Ability to hide/show individual tasks.
+ * - Manual reset buttons for each category.
+ */
 import { useState, useEffect } from 'react'
 import { Check, Circle, RotateCcw, Eye, EyeOff } from 'lucide-react'
 import { PageLayout, Card, Button} from '../components/UI'

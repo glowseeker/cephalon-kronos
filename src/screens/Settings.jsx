@@ -1,3 +1,17 @@
+/**
+ * Settings.jsx
+ *
+ * Interface for global application configuration and monitoring control.
+ *
+ * RESPONSIBILITIES
+ * ─────────────────────────────────────────
+ * 1. Theme Management (via ThemeContext): Allows switching between predefined
+ *    Warframe-themed colour palettes.
+ * 2. Monitoring Control (via MonitoringContext): Starts/stops the worldstate
+ *    polling and inventory scan process.
+ * 3. Status Display: Shows real-time backend connection status and last
+ *    update timestamps.
+ */
 import { useState } from 'react'
 import { Wifi, WifiOff, RefreshCw, Palette } from 'lucide-react'
 import { PageLayout, Card, Button } from '../components/UI'
