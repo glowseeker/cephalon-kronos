@@ -181,6 +181,11 @@
 }
 
 @layer utilities {
+  .custom-scrollbar {
+    overscroll-behavior: contain;
+    touch-action: pan-x;
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     height: 4px;
     width: 12px;

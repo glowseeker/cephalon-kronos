@@ -1255,6 +1255,18 @@ export function parseInventory(raw, exports) {
   const reactorCount = miscItems.find(i => i.ItemType === '/Lotus/Types/Items/MiscItems/OrokinReactor')?.ItemCount ?? 0;
   const catalystCount = miscItems.find(i => i.ItemType === '/Lotus/Types/Items/MiscItems/OrokinCatalyst')?.ItemCount ?? 0;
 
+  // Nightwave standing - find the current season affiliation
+  let nightwaveStanding = 0
+  let nightwaveTitle = 0
+  const affiliations = raw.Affiliations ?? []
+  for (const aff of affiliations) {
+    if (aff.Tag && aff.Tag.includes('Intermission')) {
+      nightwaveStanding = aff.Standing ?? 0
+      nightwaveTitle = aff.Title ?? 0
+      break
+    }
+  }
+
   return {
     account: {
       mastery_rank: playerLevel,
@@ -1268,7 +1280,9 @@ export function parseInventory(raw, exports) {
       stance_forma: stanceFormaCount,
       umbra_forma: umbraFormaCount,
       orokin_reactor: reactorCount,
-      orokin_catalyst: catalystCount
+      orokin_catalyst: catalystCount,
+      nightwave_standing: nightwaveStanding,
+      nightwave_title: nightwaveTitle
     },
     warframes,
     weapons: weaponsRaw, // Compatibility

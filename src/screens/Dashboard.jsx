@@ -142,6 +142,7 @@ export default function Dashboard() {
   const {
     exportData, spIncursions, arbys,
     dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, arbyTiers,
+    rawInventory, ES, ENWRawRewards, ExportImages,
   } = useMonitoring()
   const [worldstate, setWorldstate] = useState(null)
   const [locationBounties, setLocationBounties] = useState(null)
@@ -184,7 +185,7 @@ export default function Dashboard() {
       ])
 
       if (wsOracle) {
-        const parsed = parseWorldstate(wsOracle, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle: cycle })
+        const parsed = parseWorldstate(wsOracle, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle: cycle, ES, ENWRawRewards, ExportImages })
         setWorldstate(parsed)
       }
       if (loc) setLocationBounties(loc)
@@ -425,6 +426,15 @@ export default function Dashboard() {
     const nw = worldstate?.nightwave
     if (!nw) return <p className="text-xs text-kronos-dim italic text-center py-4">Nightwave inactive…</p>
 
+    const affiliationTag = nw.affiliationTag || ''
+    const affiliations = rawInventory?.Affiliations || []
+    const nwAffiliation = affiliations.find(a => a.Tag === affiliationTag)
+    const nwStandingTotal = nwAffiliation?.Standing ?? 0
+    const currentRank = nwAffiliation?.Title ?? nw.phase ?? 0
+    const miscItems = rawInventory?.MiscItems || []
+    const credCount = miscItems.find(i => i.ItemType === nw.credType)?.ItemCount ?? 0
+    const STANDING_PER_LEVEL = 10000
+    const standingInLevel = Math.max(0, nwStandingTotal - (currentRank * STANDING_PER_LEVEL))
     const categories = ['Daily', 'Weekly', 'Elite Weekly']
     const grouped = (nw.challenges || []).reduce((acc, c) => {
       let cat = 'Daily'
@@ -435,75 +445,100 @@ export default function Dashboard() {
       return acc
     }, {})
 
+    const rewardTiers = nw.rewards || []
+    const progressPercent = Math.min(100, (standingInLevel / STANDING_PER_LEVEL) * 100)
+
     return (
-      <div className="space-y-4">
-        {/* Row 1: Status, Standing & Rewards */}
-        <div className="flex flex-col md:flex-row gap-6 p-4 bg-kronos-panel/20 rounded-lg border border-white/5">
-          <div className="space-y-2 flex-shrink-0">
-            <p className="text-[10px] font-black text-kronos-accent uppercase tracking-widest leading-none">Status • Season {nw.season}</p>
-            <div className="flex items-center gap-3">
-              <div className="px-3 py-1 bg-kronos-accent/10 border border-kronos-accent/30 rounded flex flex-col items-center">
-                <span className="text-[8px] font-black text-kronos-accent/70 uppercase leading-none mb-1">CURRENT RANK</span>
-                <span className="text-sm font-black text-kronos-accent leading-none">{nw.phase + 1}</span>
+      <div className="space-y-3">
+        {/* Top section: Status + Rewards in 2 columns */}
+        <div className="flex gap-3">
+          {/* Left: Status info */}
+          <div className="w-1/4 bg-kronos-panel/40 p-3 rounded-lg border border-white/5 flex flex-col">
+            <p className="text-sm font-bold text-kronos-accent uppercase tracking-tight text-center mb-3">{nw.name}</p>
+            <div className="flex-1 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] text-kronos-dim uppercase">Rank</span>
+                <span className="text-[14px] font-black text-kronos-accent">{currentRank}</span>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-bold text-kronos-text uppercase tracking-tighter">Nightwave Infiltration</p>
-                <p className="text-[10px] text-kronos-dim font-mono">{timeRemaining(nw.expiry)} REMAINING</p>
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] text-kronos-dim uppercase">Ends</span>
+                <span className="text-[14px] text-kronos-text">{timeRemaining(nw.expiry)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] text-kronos-dim uppercase">Creds</span>
+                <span className="text-[14px] font-bold text-kronos-text">{credCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] text-kronos-dim uppercase">Standing</span>
+                <span className="text-[14px] font-black text-kronos-accent">{standingInLevel.toLocaleString()} / {STANDING_PER_LEVEL.toLocaleString()}</span>
+              </div>
+              <div className="relative h-5 bg-black/40 rounded overflow-hidden">
+                <div
+                  className="absolute top-0 left-0 bottom-0 bg-kronos-accent"
+                  style={{ width: `${progressPercent}%` }}
+                />
+                <div className="absolute inset-0 flex items-center justify-between px-2">
+                  <span className="text-[10px] font-black text-black">{currentRank}</span>
+                  <span className="text-[10px] font-black text-white">{currentRank + 1}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {nw.rewards?.length > 0 && (
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-black text-kronos-dim uppercase mb-2 tracking-widest pl-1">Tier Rewards</p>
-              <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar scrollbar-hidden">
-                {nw.rewards.map((r, ri) => (
-                  <div key={ri} className="bg-black/20 p-1.5 rounded flex items-center gap-2 border border-white/5 min-w-[130px] group hover:border-kronos-accent/30 transition-all">
-                    <div className="w-8 h-8 rounded bg-black/40 flex items-center justify-center p-1 flex-shrink-0">
-                      <img src={r.image} alt="" className="max-w-full max-h-full object-contain" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[9px] font-bold text-kronos-text uppercase truncate leading-none mb-1">{r.name}</p>
-                      <p className="text-[8px] text-kronos-accent font-black">RANK {ri + 1}</p>
-                    </div>
-                  </div>
-                ))}
+          {/* Right: Rewards scrollable */}
+          {rewardTiers.length > 0 && (
+            <div className="flex-1 bg-kronos-panel/20 p-3 rounded-lg border border-white/5 overflow-hidden">
+              <div
+                className="h-[220px] overflow-x-auto custom-scrollbar"
+                onWheel={e => {
+                  e.stopPropagation()
+                  e.currentTarget.scrollLeft += e.deltaY
+                }}
+              >
+                <div className="flex gap-6 items-stretch pb-2 h-full">
+                  {rewardTiers.map((r, ri) => {
+                    const isUnlocked = ri < currentRank
+                    const isCurrent = ri === currentRank
+                    return (
+                      <div
+                        key={ri}
+                        className={`relative flex-shrink-0 transition-all flex flex-col items-center ${isCurrent ? 'ring-2 ring-kronos-accent rounded p-1 mt-1' : ''}`}
+                      >
+                        <span className={`text-[9px] font-black uppercase mb-1 ${isCurrent ? 'text-kronos-accent' : 'text-kronos-dim/60'}`}>Rank {ri + 1}</span>
+                        <div className="w-36 h-full flex items-center justify-center">
+                          <img
+                            src={r.image}
+                            alt={r.name}
+                            className={`max-w-full max-h-full object-contain ${isUnlocked ? 'grayscale opacity-60' : ''}`}
+                            onError={e => { e.target.style.display = 'none'; e.target.onerror = null }}
+                          />
+                        </div>
+                        <p className="text-[9px] font-bold text-kronos-text uppercase leading-tight text-center mt-2 max-w-[120px] whitespace-normal break-words">{r.name}</p>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Row 2: 3-Column Challenges Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {categories.map(cat => (
-            <div key={cat} className="space-y-3">
-              <div className="flex items-center gap-2 border-b border-white/5 pb-2">
-                <p className="text-[10px] font-black text-kronos-dim uppercase tracking-[0.2em]">{cat}</p>
-                <div className="h-px w-full bg-gradient-to-r from-kronos-dim/20 to-transparent"></div>
-                <span className="text-[10px] text-kronos-accent font-black">{(grouped[cat] || []).length}</span>
+        {/* Challenges Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          {categories.flatMap(cat =>
+            (grouped[cat] || []).map((c, idx) => (
+              <div key={`${cat}-${idx}`} className="bg-kronos-panel/40 p-2 rounded border border-white/5 hover:border-kronos-accent/20 transition-all">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${cat === 'Elite Weekly' ? 'bg-yellow-500/20 text-yellow-400' : cat === 'Weekly' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
+                    {cat}
+                  </span>
+                  <span className="text-[10px] text-kronos-accent font-black">{c.xp.toLocaleString()} XP</span>
+                </div>
+                <p className="text-sm font-bold text-kronos-text leading-tight mb-1.5">{c.name}</p>
+                <p className="text-xs text-kronos-dim/80 leading-relaxed">{c.desc}</p>
               </div>
-              <div className="space-y-2 max-h-[450px] overflow-y-auto custom-scrollbar pr-1">
-                {(grouped[cat] || []).map((c, idx) => (
-                  <div key={idx} className="bg-kronos-panel/40 p-3 rounded border border-white/5 hover:border-kronos-accent/20 transition-all group">
-                    <div className="flex justify-between items-start gap-2 mb-2">
-                      <p className="text-[11px] font-bold text-kronos-text uppercase leading-tight group-hover:text-kronos-accent transition-colors">{c.name}</p>
-                      <span className="text-[9px] text-kronos-accent font-black uppercase whitespace-nowrap bg-kronos-accent/5 px-2 py-0.5 rounded border border-kronos-accent/20">
-                        {c.xp.toLocaleString()} STANDING
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-kronos-dim/70 leading-relaxed mb-3 line-clamp-3">{c.desc}</p>
-                    <div className="flex justify-between items-center text-[9px] font-mono text-kronos-dim/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span>OPERATIONAL WINDOW</span>
-                      <span>{timeRemaining(c.expiry).split(',')[0]}</span>
-                    </div>
-                  </div>
-                ))}
-                {!(grouped[cat] || []).length && (
-                  <p className="text-[10px] text-kronos-dim/30 italic py-8 text-center border border-dashed border-white/5 rounded">All tasks synchronized.</p>
-                )}
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     )

@@ -175,9 +175,11 @@ const CONQUEST_OVERRIDES = {
  *   - ENW             ExportNightwave: Nightwave reward list
  * @returns {object} Structured data consumed by Dashboard.jsx, or null if raw is falsy.
  */
-export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENW }) {
+export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ExportImages }) {
   if (!raw) return null
 
+  const nightwaveRewards = ENWRawRewards || []
+  const imagesMap = ExportImages || {}
   const archMap = buildArchimedeaMap(dict || {}, suppDict || {})
 
   const clean = (s) => {
@@ -398,12 +400,34 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
       phase: raw.SeasonInfo.Phase,
       params: raw.SeasonInfo.Params,
       affiliationTag: raw.SeasonInfo.AffiliationTag,
-      rewards: (ENW || []).map(r => ({
-        name: r.name ? (dict[r.name] || dict['/' + r.name] || r.name) : 'Reward',
-        uniqueName: r.uniqueName,
-        itemCount: r.itemCount,
-        image: EI[r.uniqueName] || null
-      })),
+      credType: (() => {
+        const credReward = nightwaveRewards.find(r => r.name?.includes('Nora') && r.name?.includes('Cred'))
+        return credReward?.uniqueName || null
+      })(),
+      name: (() => {
+        const credReward = nightwaveRewards.find(r => r.name?.includes('Nora') && r.name?.includes('Cred'))
+        if (credReward) {
+          const credName = dict[credReward.name] || credReward.name || ''
+          const match = credName.match(/:\s*(.+?)\s*Cred$/m)
+          if (match) return match[1].trim()
+        }
+        return ES?.[raw.SeasonInfo.AffiliationTag]?.name ? (dict[ES[raw.SeasonInfo.AffiliationTag].name] || 'Nightwave') : 'Nightwave'
+      })(),
+      rewards: nightwaveRewards.slice(0, 30).map((r, idx) => {
+        const iconPath = r.icon || null
+        const eiImage = EI[r.uniqueName] || null
+        const exportImageEntry = imagesMap[iconPath] || {}
+        const contentHash = exportImageEntry.contentHash
+        const highQualityUrl = contentHash ? `https://content.warframe.com/PublicExport${iconPath}!${contentHash}` : null
+        const browseWfUrl = iconPath ? `https://browse.wf${iconPath}` : null
+        return {
+          name: r.name ? (dict[r.name] || dict['/' + r.name] || r.name) : 'Reward',
+          uniqueName: r.uniqueName,
+          itemCount: r.itemCount,
+          image: highQualityUrl || eiImage || browseWfUrl || null,
+          iconPath: iconPath
+        }
+      }),
       challenges: (raw.SeasonInfo.ActiveChallenges || []).map(c => {
         const challengeEntry = EC?.[c.Challenge] || {}
         const standing = challengeEntry.standing || c.xpAmount || c.XP || 0

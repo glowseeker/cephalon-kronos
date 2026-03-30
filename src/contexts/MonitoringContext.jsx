@@ -82,6 +82,8 @@ export function MonitoringProvider({ children }) {
 
   const ES = useMemo(() => exportData?.ExportSyndicates ?? {}, [exportData])
   const ENW = useMemo(() => toMap(exportData?.ExportNightwave, 'rewards'), [exportData])
+  const ENWRawRewards = useMemo(() => exportData?.ExportNightwave?.rewards || [], [exportData])
+  const ExportImages = useMemo(() => exportData?.ExportImages ?? {}, [exportData])
 
   const { EI, nameToImage, uniqueNameToName } = useMemo(() => {
     if (!exportData || !dict) return { EI: {}, nameToImage: {}, uniqueNameToName: {} }
@@ -246,7 +248,7 @@ export function MonitoringProvider({ children }) {
   return (
     <MonitoringContext.Provider value={{
       exportData, spIncursions, arbys,
-      dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENW, arbyTiers: ARBY_TIERS,
+      dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENW, ENWRawRewards, ExportImages, arbyTiers: ARBY_TIERS,
       isMonitoring, lastUpdate, rawInventory, inventoryData, statusText,
       startMonitoring, stopMonitoring, manualRefresh, callApiHelper,
     }}>
