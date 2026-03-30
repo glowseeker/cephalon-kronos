@@ -151,7 +151,8 @@ function buildArchimedeaMap(dict, suppDict) {
 const CONQUEST_OVERRIDES = {
   'undersupplied': 'maxammo',
   'dullblades': 'combocountchance',
-  'magnetichounds': 'condition_magnetichounds'
+  'magnetichounds': 'condition_magnetichounds',
+  'empblackhole': 'condition_magnetichounds'
 }
 
 // ─── Main Parser ───────────────────────────────────────────────────────────

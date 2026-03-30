@@ -78,8 +78,6 @@ export const GeneralOverrides = {
   'SORTIE_BOSS_NIRA': 'Nira',
   'SORTIE_BOSS_BOREAL': 'Boreal',
   'SORTIE_BOSS_NIHIL': 'Nihil',
-  // Deep Archimedea overrides
-  'EMPBlackHole': 'Alluring Arcocanids',
 
   // Sortie modifiers
   'SORTIE_MODIFIER_POISON': 'Toxin',

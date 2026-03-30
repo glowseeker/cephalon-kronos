@@ -362,54 +362,57 @@ export default function Dashboard() {
       <div className="space-y-4 mt-2">
         <div className="space-y-1.5">
           {data.missions.map((m, idx) => (
-            <div key={idx} className="bg-kronos-panel/40 p-2.5 rounded">
+            <div key={idx} className="bg-kronos-panel/40 p-3 rounded-lg text-center w-full">
               {/* Mission type + deviation single line */}
-              <p className="text-[11px] font-black uppercase mb-1.5 leading-tight">
+              <p className="text-[12px] font-black uppercase mb-2 leading-tight tracking-wide">
                 <span className="text-kronos-accent">
                   {m.missionType}
                 </span>
                 {m.deviation && (
                   <>
-                    <span className="text-kronos-dim/50 font-normal mx-1.5">-</span>
-                    <span className="relative group/devtip font-normal normal-case text-kronos-text/70 cursor-help">
+                    <span className="text-kronos-dim/50 font-normal mx-2">-</span>
+                    <span className="relative group/devtip font-bold normal-case text-kronos-text cursor-help">
                       {m.deviation.name}
-                      <span className="absolute bottom-full left-0 mb-2 w-52 p-2.5 bg-kronos-panel rounded text-[10px] opacity-0 group-hover/devtip:opacity-100 transition-opacity z-50 shadow-[0_0_20px_rgba(0,0,0,0.7)] pointer-events-none block font-normal">
-                        <span className="font-bold text-kronos-accent uppercase block mb-1">{m.deviation.name}</span>
-                        <span className="text-kronos-text/80 leading-snug block">{m.deviation.description}</span>
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-kronos-panel rounded-lg text-[12px] opacity-0 group-hover/devtip:opacity-100 transition-opacity z-50 shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-white/5 pointer-events-none block font-normal text-left">
+                        <span className="font-bold text-kronos-accent uppercase block mb-1.5 border-b border-white/5 pb-1">{m.deviation.name}</span>
+                        <span className="text-kronos-text leading-relaxed block">{m.deviation.description}</span>
                       </span>
                     </span>
                   </>
                 )}
               </p>
-              {/* Risks - plain text chips, tooltip on hover with drop shadow only */}
-              <div className="flex flex-wrap gap-1.5">
+              {/* Risks - 2-column grid for better space usage */}
+              <div className="grid grid-cols-2 gap-1.5">
                 {m.risks?.map((r, ri) => (
-                  <span key={ri} className="relative group/risktip text-[9px] text-kronos-dim bg-black/20 px-1.5 py-0.5 rounded cursor-help">
-                    {r.name}
-                    <span className="absolute bottom-full left-0 mb-2 w-52 p-2.5 bg-kronos-panel rounded text-[10px] opacity-0 group-hover/risktip:opacity-100 transition-opacity z-50 shadow-[0_0_20px_rgba(0,0,0,0.7)] pointer-events-none block">
-                      <span className="font-bold text-kronos-accent uppercase block mb-1">{r.name}</span>
-                      <span className="text-kronos-text/80 leading-snug block">{r.description}</span>
+                  <div
+                    key={ri}
+                    className={`relative group/risktip text-[12px] text-kronos-dim bg-black/30 px-3 py-1.5 rounded-md cursor-help border border-white/5 hover:border-kronos-accent/30 transition-colors ${m.risks.length === 3 && ri === 2 ? 'col-span-2' : ''}`}
+                  >
+                    <span className="font-bold text-kronos-text/90 uppercase tracking-tight">{r.name}</span>
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-kronos-panel rounded-lg text-[12px] opacity-0 group-hover/risktip:opacity-100 transition-opacity z-50 shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-white/5 pointer-events-none block text-left">
+                      <span className="font-bold text-kronos-accent uppercase block mb-1.5 border-b border-white/5 pb-1">{r.name}</span>
+                      <span className="text-kronos-text leading-relaxed block">{r.description}</span>
                     </span>
-                  </span>
+                  </div>
                 ))}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Personal Modifiers - 2-col grid, plain text, tooltip with drop shadow */}
+        {/* Personal Modifiers - 2-column grid */}
         {data.personalModifiers?.length > 0 && (
-          <div>
-            <p className="text-[10px] text-kronos-dim uppercase font-bold mb-2 tracking-widest text-center">Personal Modifiers</p>
+          <div className="pt-2 border-t border-white/5">
+            <p className="text-[10px] text-kronos-dim uppercase font-bold mb-3 tracking-widest text-center">Personal Modifiers</p>
             <div className="grid grid-cols-2 gap-1.5">
               {data.personalModifiers.map((pm, pi) => (
-                <span key={pi} className="relative group/pmtip text-[10px] text-kronos-text text-center p-1.5 cursor-help block">
-                  {pm.name}
-                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-2.5 bg-kronos-panel rounded text-[10px] opacity-0 group-hover/pmtip:opacity-100 transition-opacity z-50 shadow-[0_0_20px_rgba(0,0,0,0.7)] pointer-events-none block text-left">
-                    <span className="font-bold text-kronos-accent uppercase block mb-1">{pm.name}</span>
-                    <span className="text-kronos-text/80 leading-snug block">{pm.description}</span>
+                <div key={pi} className="relative group/pmtip text-[11px] text-kronos-text text-center p-2.5 cursor-help block bg-black/20 rounded-lg border border-white/5 hover:border-kronos-accent/30 transition-colors">
+                  <span className="font-bold uppercase tracking-wide">{pm.name}</span>
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-kronos-panel rounded-lg text-[12px] opacity-0 group-hover/pmtip:opacity-100 transition-opacity z-50 shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-white/5 pointer-events-none block text-left font-normal">
+                    <span className="font-bold text-kronos-accent uppercase block mb-1.5 border-b border-white/5 pb-1">{pm.name}</span>
+                    <span className="text-kronos-text leading-relaxed block">{pm.description}</span>
                   </span>
-                </span>
+                </div>
               ))}
             </div>
           </div>
