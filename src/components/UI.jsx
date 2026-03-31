@@ -184,6 +184,36 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl'
   )
 }
 
+// Toggle Component
+export function Toggle({ checked, onChange, label, description }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="flex items-center justify-between w-full text-left group"
+    >
+      <div>
+        {label && <span className="text-sm font-medium">{label}</span>}
+        {description && <p className="text-xs text-kronos-dim mt-0.5">{description}</p>}
+      </div>
+      <div
+        className={`
+          relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0
+          ${checked ? 'bg-kronos-accent' : 'bg-white/10'}
+        `}
+      >
+        <span
+          className={`
+            absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200
+            ${checked ? 'translate-x-5' : 'translate-x-0'}
+          `}
+        />
+      </div>
+    </button>
+  )
+}
+
 // Stat Card Component
 export function StatCard({ icon: Icon, label, value, subtext }) {
   return (

@@ -68,7 +68,7 @@ const NAV_ITEMS = [
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const { isMonitoring, lastUpdate } = useMonitoring()
+  const { isMonitoring, lastUpdate, monitorResult } = useMonitoring()
 
   const screens = {
     dashboard: <Dashboard />,
@@ -137,14 +137,18 @@ function AppContent() {
           </div>
           <div
             className={`w-3 h-3 rounded-full transition-all duration-300 relative group
-              ${isMonitoring
+              ${monitorResult === 'success'
                 ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
-                : 'bg-gray-600'
+                : monitorResult === 'error'
+                  ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+                  : 'bg-gray-600'
               }
             `}
           >
             <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 glass-panel rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[9999] glow-border">
-              <span className="text-sm font-medium">{isMonitoring ? 'Monitoring' : 'Not Monitoring'}</span>
+              <span className="text-sm font-medium">
+                {monitorResult === 'success' ? 'Monitoring' : monitorResult === 'error' ? 'Connection Error' : 'Not Monitoring'}
+              </span>
             </div>
           </div>
         </div>

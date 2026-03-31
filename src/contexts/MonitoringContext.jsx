@@ -46,6 +46,8 @@ const MonitoringContext = createContext(null)
 export function MonitoringProvider({ children }) {
   const [exportData, setExportData] = useState(null)
   const [isMonitoring, setIsMonitoring] = useState(false)
+  const [monitorResult, setMonitorResult] = useState('idle') // 'idle' | 'success' | 'error'
+  const [autoStart, setAutoStartState] = useState(localStorage.getItem('autoStartMonitoring') === 'true')
   const [lastUpdate, setLastUpdate] = useState(localStorage.getItem('lastUpdate') || null)
   const [rawInventory, setRawInventory] = useState(null)
   const [inventoryData, setInventoryData] = useState(undefined)
@@ -55,6 +57,14 @@ export function MonitoringProvider({ children }) {
   const [arbys, setArbys] = useState(null)
   const intervalRef = useRef(null)
   const busyRef = useRef(false)
+  const autoStartRef = useRef(autoStart)
+
+  const setAutoStart = useCallback((val) => {
+    const v = !!val
+    setAutoStartState(v)
+    autoStartRef.current = v
+    localStorage.setItem('autoStartMonitoring', String(v))
+  }, [])
 
   // ── Derived lookup maps ──────────────────────────────────────────────────────
   // All computed once when exportData loads; consumers just destructure from context.
@@ -234,11 +244,14 @@ export function MonitoringProvider({ children }) {
       if (raw) {
         applyRaw(raw, Date.now())
         setStatusText(`Updated - ${new Date().toLocaleTimeString()}`)
+        setMonitorResult('success')
       } else {
         setStatusText('Helper returned no data')
+        setMonitorResult('error')
       }
     } catch (err) {
       setStatusText(`Error: ${String(err)}`)
+      setMonitorResult('error')
       throw err
     } finally {
       busyRef.current = false
@@ -264,9 +277,19 @@ export function MonitoringProvider({ children }) {
     intervalRef.current = setInterval(() => callApiHelper().catch(() => { }), intervalMs)
   }, [isMonitoring, callApiHelper])
 
+  // Auto-start monitoring once on launch if the user preference is enabled
+  const autoStartFiredRef = useRef(false)
+  useEffect(() => {
+    if (autoStartRef.current && exportData && !isMonitoring && !autoStartFiredRef.current) {
+      autoStartFiredRef.current = true
+      startMonitoring()
+    }
+  }, [exportData, isMonitoring, startMonitoring])
+
   const stopMonitoring = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
     setIsMonitoring(false)
+    setMonitorResult('idle')
     setStatusText('Monitoring stopped')
   }, [])
 
@@ -274,7 +297,7 @@ export function MonitoringProvider({ children }) {
     <MonitoringContext.Provider value={{
       exportData, spIncursions, arbys,
       dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENW, ENWRawRewards, ExportImages, ExportTextIcons, arbyTiers: ARBY_TIERS,
-      isMonitoring, lastUpdate, rawInventory, inventoryData, worldState, setWorldState, statusText,
+      isMonitoring, monitorResult, autoStart, setAutoStart, lastUpdate, rawInventory, inventoryData, worldState, setWorldState, statusText,
       startMonitoring, stopMonitoring, manualRefresh, callApiHelper,
     }}>
       {children}

@@ -14,14 +14,14 @@
  */
 import { useState } from 'react'
 import { Wifi, WifiOff, RefreshCw, Palette } from 'lucide-react'
-import { PageLayout, Card, Button } from '../components/UI'
+import { PageLayout, Card, Button, Toggle } from '../components/UI'
 import { useTheme } from '../contexts/ThemeContext'
 import { useMonitoring } from '../contexts/MonitoringContext'
 import { formatLastUpdate } from '../lib/warframeUtils'
 
 export default function SettingsScreen() {
   const { theme, setTheme, themes } = useTheme()
-  const { isMonitoring, startMonitoring, stopMonitoring, manualRefresh, lastUpdate, statusText } = useMonitoring()
+  const { isMonitoring, startMonitoring, stopMonitoring, manualRefresh, lastUpdate, statusText, autoStart, setAutoStart, monitorResult } = useMonitoring()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -85,8 +85,10 @@ export default function SettingsScreen() {
 
           {/* Connection status badge */}
           <div className="flex items-center gap-3 mb-6">
-            {isMonitoring ? (
+            {monitorResult === 'success' ? (
               <><Wifi className="text-green-500" size={24} /><span className="text-green-500 font-medium">Active</span></>
+            ) : monitorResult === 'error' ? (
+              <><WifiOff className="text-red-500" size={24} /><span className="text-red-500 font-medium">Error</span></>
             ) : (
               <><WifiOff className="text-zinc-500" size={24} /><span className="text-zinc-500 font-medium">Offline</span></>
             )}
@@ -102,6 +104,14 @@ export default function SettingsScreen() {
                 <li>• You must be logged in</li>
                 <li>• JSON output path must be reachable</li>
               </ul>
+              <div className="mt-4 pt-4 border-t border-white/5">
+                <Toggle
+                  checked={autoStart}
+                  onChange={setAutoStart}
+                  label="Auto-start on launch"
+                  description="Start monitoring automatically when the app opens"
+                />
+              </div>
             </Card>
 
             {/* Status */}
