@@ -489,26 +489,36 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
       type: c.Type,
       personalModifiers: (c.Variables || []).map(v => {
         const lookup = (CONQUEST_OVERRIDES[v.toLowerCase()] || v).toLowerCase()
+        let rawDesc = archMap[lookup + '_desc'] || archMap[lookup + '_description'] || archMap[lookup] || null
+        if (rawDesc) {
+          if (lookup === 'shielddelay') rawDesc = rawDesc.split('|val|').join('500')
+          else if (lookup === 'timedilation') rawDesc = rawDesc.split('|val|').join('50')
+          else if (rawDesc.includes('|val|')) rawDesc = null
+        }
         return {
           name: archMap[lookup] ?? resolvePriority(v),
-          description: archMap[lookup + '_desc'] || archMap[lookup + '_description'] || archMap[lookup] || null
+          description: rawDesc
         }
       }),
       missions: (c.Missions || []).map(m => {
         const diff = m.difficulties?.find(d => d.type === 'CD_HARD') || m.difficulties?.find(d => d.type === 'CD_NORMAL') || m.difficulties?.[0];
         const devLookup = diff?.deviation ? (CONQUEST_OVERRIDES[diff.deviation.toLowerCase()] || diff.deviation).toLowerCase() : null;
+        const devRawDesc = devLookup ? (archMap[devLookup + '_desc'] || archMap[devLookup + '_description'] || archMap[devLookup] || null) : null
+        const devDescription = devRawDesc && !devRawDesc.includes('|val|') ? devRawDesc : null
         return {
           missionType: resolveMissionType(m.missionType, dict, ERg),
           faction: resolveNode(m.faction, dict, ERg),
           deviation: diff?.deviation ? {
             name: archMap[devLookup] ?? resolvePriority(diff.deviation),
-            description: archMap[devLookup + '_desc'] || archMap[devLookup + '_description'] || archMap[devLookup] || null
+            description: devDescription
           } : null,
           risks: (diff?.risks || []).map(r => {
             const rLookup = (CONQUEST_OVERRIDES[r.toLowerCase()] || r).toLowerCase()
+            const rRawDesc = archMap[rLookup + '_desc'] || archMap[rLookup + '_description'] || archMap[rLookup] || null
+            const rDescription = rRawDesc && !rRawDesc.includes('|val|') ? rRawDesc : null
             return {
               name: archMap[rLookup] ?? resolvePriority(r),
-              description: archMap[rLookup + '_desc'] || archMap[rLookup + '_description'] || archMap[rLookup] || null
+              description: rDescription
             }
           })
         };
