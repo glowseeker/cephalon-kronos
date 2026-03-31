@@ -324,24 +324,42 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
     calendar1999: (raw.KnownCalendarSeasons || raw.KnownCalendarSeason || []).map(s => ({
       season: s.Season,
       year: s.YearIteration,
-      expiry: s.Expiry,
-      activation: s.Activation,
+      expiry: s.Expiry?.$date?.$numberLong ? new Date(parseInt(s.Expiry.$date.$numberLong, 10)) : new Date(s.Expiry),
+      activation: s.Activation?.$date?.$numberLong ? new Date(parseInt(s.Activation.$date.$numberLong, 10)) : new Date(s.Activation),
       days: (s.Days || []).map(d => {
         const events = d.events || d.Events || [];
-        const parsedEvents = events.map(ev => {
+        let parsedEvents = events.map(ev => {
           let name = '';
+          let description = '';
           let type = ev.type || ev.Type || '';
 
           if (type === 'CET_CHALLENGE') {
             name = resolveChallenge(ev.challenge || ev.Challenge, dict, EC);
+            description = resolveChallengeDesc(ev.challenge || ev.Challenge, dict, EC, ERg);
           } else if (type === 'CET_REWARD') {
-            name = resolveRewardText(ev.reward || ev.Reward, dict, ERg, uniqueNameToName);
+            name = resolveItemName(ev.reward || ev.Reward, dict, uniqueNameToName);
           } else if (type === 'CET_UPGRADE') {
             name = resolveItemName(ev.upgrade || ev.Upgrade, dict, uniqueNameToName);
+            description = resolveChallengeDesc(ev.upgrade || ev.Upgrade, dict, EC, ERg);
+          } else if (type === 'CET_BIRTHDAY') {
+            name = ev.name || ev.Name || 'Unknown';
           }
 
-          return { type, name, raw: ev };
+          return { type, name, description, raw: ev };
         });
+
+        // If no events, check if this is a birthday day based on day number
+        if (parsedEvents.length === 0) {
+          const birthdayMap = {
+            306: 'Eleanor', // Nov 2
+            307: 'Arthur',   // Nov 3
+            338: 'Quincy',   // Dec 4
+            355: 'Velimir'   // Dec 21
+          };
+          if (birthdayMap[d.day]) {
+            parsedEvents = [{ type: 'CET_BIRTHDAY', name: birthdayMap[d.day], raw: {} }];
+          }
+        }
 
         // Fallback for legacy structure if any
         let legacyChallenge = d.Challenge ? resolveChallenge(d.Challenge, dict, EC) : (d.challenge ? resolveChallenge(d.challenge, dict, EC) : null);
@@ -349,7 +367,7 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
 
         return {
           day: d.day,
-          type: d.type || d.Type, // Might be 'Birthday'
+          type: d.type || d.Type,
           events: parsedEvents,
           challenge: legacyChallenge,
           reward: legacyReward
