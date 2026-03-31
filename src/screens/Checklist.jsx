@@ -25,41 +25,37 @@ import { useMonitoring } from '../contexts/MonitoringContext'
 import { convertFileSrc, invoke } from '@tauri-apps/api/tauri'
 
 const tasks = [
-  // Daily Resets
-  { id: 'sortie', label: 'Sortie', reset: 'daily', hidden: false },
-  { id: 'craft_forma', label: 'Craft Forma / Collect', reset: 'daily', hidden: false },
-  { id: 'factions', label: 'Faction Syndicates', reset: 'daily', hidden: false },
-  { id: 'focus', label: 'Focus Cap', reset: 'daily', hidden: false },
-  { id: 'steel_path', label: 'Steel Path Incursions', reset: 'daily', hidden: false },
-  { id: 'acrithis', label: 'Acrithis Daily', reset: 'daily', hidden: false },
-  { id: 'ticker', label: 'Ticker Crew', reset: 'daily', hidden: false },
-  { id: 'marie', label: 'Marie Shop', reset: 'daily', hidden: false },
-
-  // Weekly Resets
-  { id: 'nightwave', label: 'Nightwave Missions', reset: 'weekly', hidden: false },
-  { id: 'nightwave_spend', label: 'Nightwave Creds', reset: 'weekly', hidden: false },
-  { id: 'ayatan', label: "Maroo's Ayatan Hunt", reset: 'weekly', hidden: false },
-  { id: 'clem', label: "Help Clem", reset: 'weekly', hidden: false },
-  { id: 'narmer', label: 'Break Narmer', reset: 'weekly', hidden: false },
-  { id: 'archon', label: 'Archon Hunt', reset: 'weekly', hidden: false },
-  { id: 'circuit', label: 'Duviri Circuit', reset: 'weekly', hidden: false },
-  { id: 'circuit_sp', label: 'Duviri Circuit SP', reset: 'weekly', hidden: false },
-  { id: 'pulses', label: 'Search Pulses', reset: 'weekly', hidden: false },
-  { id: 'calendar', label: '1999 Calendar', reset: 'weekly', hidden: false },
-  { id: 'invigorations', label: 'Helminth Invigoration', reset: 'weekly', hidden: false },
-  { id: 'descendia', label: 'Descendia', reset: 'weekly', hidden: false },
-  { id: 'descendia_sp', label: 'Descendia SP', reset: 'weekly', hidden: false },
-  { id: 'paladino', label: 'Paladino (Riven)', reset: 'weekly', hidden: false },
-  { id: 'yonta', label: 'Archimedian Yonta', reset: 'weekly', hidden: false },
-  { id: 'acridies', label: 'Acrithis Weekly', reset: 'weekly', hidden: false },
-  { id: 'teshin', label: 'Teshin Shop', reset: 'weekly', hidden: false },
-  { id: 'bird3', label: 'Bird 3 (Shard)', reset: 'weekly', hidden: false },
-
-  // Other (Barzo Ki'Teer weekend + 8h timers)
-  { id: 'baro', label: 'Baro Ki\'Teer', reset: 'other', hidden: false },
-  { id: 'grandmother', label: 'Grandmother Tokens', reset: 'other', hidden: false },
-  { id: 'voidplumes', label: 'Yonta Voidplumes', reset: 'other', hidden: false },
-  { id: 'voca', label: 'Loid Voca', reset: 'other', hidden: false },
+  { id: 'baro', label: 'Baro Ki\'Teer', reset: 'baro' },
+  { id: 'sortie', label: 'Sortie', reset: 'daily' },
+  { id: 'foundry', label: 'Check Foundry', reset: 'daily' },
+  { id: 'syndicates', label: 'Syndicate Standing', reset: 'daily' },
+  { id: 'focus', label: 'Daily Focus Cap', reset: 'daily' },
+  { id: 'steel_path', label: 'Steel Path Incursions', reset: 'daily' },
+  { id: 'acrithis_daily', label: 'Acrithis Daily', reset: 'daily' },
+  { id: 'ticker', label: 'Ticker\'s Railjack Crew', reset: 'daily' },
+  { id: 'marie', label: 'Marie\'s Shop', reset: 'daily' },
+  { id: 'grandmother', label: 'Grandmother\'s Tokens', reset: 'other' },
+  { id: 'yonta_daily', label: 'Yonta: Daily Voidplumes', reset: 'other' },
+  { id: 'voca', label: 'Loid: Voca', reset: 'other' },
+  { id: 'nightwave', label: 'Nightwave Missions', reset: 'weekly' },
+  { id: 'nightwave_spend', label: 'Nightwave Shop', reset: 'weekly' },
+  { id: 'ayatan', label: "Maroo's Ayatan Hunt", reset: 'weekly' },
+  { id: 'clem', label: "Help Clem", reset: 'weekly' },
+  { id: 'narmer', label: 'Help Kahl: Break Narmer', reset: 'weekly' },
+  { id: 'archon', label: 'Archon Hunt', reset: 'weekly' },
+  { id: 'circuit', label: 'Duviri Circuit', reset: 'weekly' },
+  { id: 'circuit_sp', label: 'Duviri Circuit SP', reset: 'weekly' },
+  { id: 'pulses', label: 'Pulses: Netracell & Archimedea', reset: 'weekly' },
+  { id: 'calendar', label: '1999 Calendar', reset: 'weekly' },
+  { id: 'invigorations', label: 'Helminth Invigoration', reset: 'weekly' },
+  { id: 'descendia', label: 'Descendia', reset: 'weekly' },
+  { id: 'descendia_sp', label: 'Descendia SP', reset: 'weekly' },
+  { id: 'palladino', label: 'Palladino\'s Shop', reset: 'weekly' },
+  { id: 'yonta_weekly', label: 'Yonta: Weekly Shop', reset: 'weekly' },
+  { id: 'acrithis_weekly', label: 'Acrithis Weekly', reset: 'weekly' },
+  { id: 'teshin', label: 'Teshin Shop', reset: 'weekly' },
+  { id: 'bird3', label: 'Bird 3 Shop', reset: 'weekly' },
+  { id: 'nightcap', label: 'Nightcap Shop', reset: 'weekly' },
 ]
 
 const AFFILIATION_TAGS = {
@@ -162,34 +158,74 @@ const standings = [
   { id: 'conclave', label: 'Conclave', tag: 'conclave' },
 ]
 
-const TaskCard = ({ task, completed, onToggle }) => {
+const formatTimeLeft = (ms) => {
+  if (!ms || ms <= 0 || isNaN(ms)) return 'Now'
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))
+  if (days > 0) return `${days}d ${hours}h`
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}
+
+const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextResetTime }) => {
+  const resetLabels = { daily: 'Daily', weekly: 'Weekly', biweekly: 'Biweekly', other: '8h', baro: 'Trader' }
+  const getIntervalMs = (resetType) => {
+    if (resetType === 'daily') return 24 * 60 * 60 * 1000
+    if (resetType === 'weekly') return 7 * 24 * 60 * 60 * 1000
+    if (resetType === 'biweekly') return 14 * 24 * 60 * 60 * 1000
+    if (resetType === 'other') return 8 * 60 * 60 * 1000
+    if (resetType === 'baro') return 14 * 24 * 60 * 60 * 1000
+    return 24 * 60 * 60 * 1000
+  }
+  const intervalMs = getIntervalMs(task.reset)
+  const displayTime = completed && nextResetTime
+    ? `next: ${formatTimeLeft(nextResetTime + intervalMs - Date.now())}`
+    : timeLeft
   return (
     <div
-      className={`p-3 rounded-lg border transition-all cursor-pointer ${completed
+      className={`p-3 rounded-lg border transition-all ${completed
         ? 'bg-kronos-accent/10 border-kronos-accent/30'
-        : 'bg-kronos-panel/40 border-white/5 hover:border-white/20'
+        : hidden
+          ? 'opacity-30 border-white/5'
+          : 'bg-kronos-panel/40 border-white/5 hover:border-white/20'
         }`}
-      onClick={onToggle}
     >
-      <div className="flex items-center gap-3">
-        <div className="flex-shrink-0">
-          {completed ? (
-            <Check className="text-kronos-accent" size={18} />
-          ) : (
-            <Circle className="text-kronos-dim" size={18} />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <span className={`text-[14px] ${completed ? 'line-through text-kronos-dim' : ''}`}>
-            {task.label}
+      <div className="flex items-center justify-between mb-1">
+        <span className={`text-[14px] ${completed ? 'line-through text-kronos-dim' : ''}`}>
+          {task.label}
+        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-kronos-accent/20 text-kronos-accent">
+            {resetLabels[task.reset]}
           </span>
+          <button
+            onClick={onHide}
+            className="p-1 rounded hover:bg-white/10"
+            title={hidden ? 'Show' : 'Hide'}
+          >
+            {hidden ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
         </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-[12px] text-kronos-dim">{displayTime}</span>
+        <button
+          onClick={onToggle}
+          className="p-1 rounded hover:bg-white/10"
+        >
+          {completed ? (
+            <Check className="text-kronos-accent" size={16} />
+          ) : (
+            <Circle className="text-kronos-dim" size={16} />
+          )}
+        </button>
       </div>
     </div>
   )
 }
 
-const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap, hasStanding, iconUrl, localIconUrl }) => {
+const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap, hasStanding, iconUrl, localIconUrl, supportedSyndicate }) => {
   const rank = affiliation?.Title ?? 0
   const tagKey = standing.tag || standing.color
   const config = SYNDICATE_CONFIG[tagKey] || { bg: '#1a1a2e', accent: '#a0a0a0' }
@@ -197,6 +233,7 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
   const progress = isNegative
     ? Math.min(100, Math.max(0, (Math.abs(rankCap) - Math.abs(earnedStanding)) / Math.abs(rankCap) * 100))
     : Math.min(100, (earnedStanding / rankCap) * 100)
+  const isPledged = supportedSyndicate === AFFILIATION_TAGS[standing.tag]
 
   if (!hasStanding) {
     return (
@@ -205,7 +242,7 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
           <div className="flex items-center gap-2">
             {iconUrl && <img src={iconUrl} alt="" className="w-8 h-8 object-contain" />}
             {localIconUrl && <img src={localIconUrl} alt="" className="w-8 h-8 object-contain" />}
-            <span className="text-[12px]" style={{ color: config.accent }}>{standing.label}</span>
+            <span className="text-[12px]" style={{ color: config.accent }}>{standing.label}{isPledged ? ' (Pledged)' : ''}</span>
           </div>
           {rank !== 0 && (
             <span className="text-[12px] opacity-60">Rank {rank}</span>
@@ -221,7 +258,7 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
         <div className="flex items-center gap-2">
           {iconUrl && <img src={iconUrl} alt="" className="w-8 h-8 object-contain" />}
           {localIconUrl && <img src={localIconUrl} alt="" className="w-8 h-8 object-contain" />}
-          <span className="text-[12px] text-kronos-text" style={{ color: config.accent }}>{standing.label}</span>
+          <span className="text-[12px] text-kronos-text" style={{ color: config.accent }}>{standing.label}{isPledged ? ' (Pledged)' : ''}</span>
         </div>
         {rank !== 0 && (
           <span className="text-[12px] opacity-60">Rank {rank}</span>
@@ -244,14 +281,30 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
 }
 
 export default function Checklist() {
-  const { inventoryData, ExportTextIcons } = useMonitoring()
-  const [completed, setCompleted] = useState({})
-  const [showHiddenDaily, setShowHiddenDaily] = useState(false)
-  const [showHiddenWeekly, setShowHiddenWeekly] = useState(false)
-  const [showHiddenOther, setShowHiddenOther] = useState(false)
-  const [hiddenMap, setHiddenMap] = useState({})
+  const { inventoryData, ExportTextIcons, worldState } = useMonitoring()
+  const supportedSyndicate = inventoryData?.SupportedSyndicate || null
+
+  const [completed, setCompleted] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('checklist_completed') || '{}')
+    } catch { return {} }
+  })
+  const [hiddenMap, setHiddenMap] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('checklist_hidden') || '{}')
+    } catch { return {} }
+  })
+  const [showHiddenTasks, setShowHiddenTasks] = useState(false)
   const [cdnBase, setCdnBase] = useState('')
   const [assetsPath, setAssetsPath] = useState('')
+
+  useEffect(() => {
+    localStorage.setItem('checklist_completed', JSON.stringify(completed))
+  }, [completed])
+
+  useEffect(() => {
+    localStorage.setItem('checklist_hidden', JSON.stringify(hiddenMap))
+  }, [hiddenMap])
 
   useEffect(() => {
     invoke('get_cdn_base_url').then(setCdnBase).catch(() => { })
@@ -266,6 +319,90 @@ export default function Checklist() {
   const affiliations = inventoryData?.Affiliations || []
   const focusXP = inventoryData?.FocusXP || {}
   const dailyFocus = inventoryData?.DailyFocus || 0
+  const [now, setNow] = useState(Date.now())
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const getNextReset = (taskId, resetType) => {
+    if (taskId === 'baro' && worldState?.voidTrader) {
+      const vt = worldState.voidTrader
+      if (vt.active && vt.expiryMs) {
+        return vt.expiryMs
+      }
+      if (!vt.active && vt.activationMs) {
+        return vt.activationMs
+      }
+      return 0
+    }
+    if (taskId === 'sortie' && worldState?.sortie?.expiry) {
+      const expiry = worldState.sortie.expiry
+      if (expiry instanceof Date && !isNaN(expiry.getTime())) return expiry.getTime()
+      return 0
+    }
+    if (taskId === 'steel_path' && worldState?.incursions?.expiry) {
+      const expiry = worldState.incursions.expiry
+      if (expiry instanceof Date && !isNaN(expiry.getTime())) return expiry.getTime()
+      return 0
+    }
+    if (taskId === 'archon' && worldState?.archonHunt?.expiry) {
+      const expiry = worldState.archonHunt.expiry
+      if (expiry instanceof Date && !isNaN(expiry.getTime())) return expiry.getTime()
+      return 0
+    }
+    if (taskId === 'nightwave' && worldState?.nightwave?.expiry) {
+      const expiry = worldState.nightwave.expiry
+      if (expiry instanceof Date && !isNaN(expiry.getTime())) return expiry.getTime()
+      return 0
+    }
+    if (resetType === 'daily') {
+      const now = new Date()
+      const tomorrow = new Date(now)
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+      tomorrow.setUTCHours(0, 0, 0, 0)
+      return tomorrow.getTime()
+    }
+    if (resetType === 'weekly') {
+      const now = new Date()
+      const nextSunday = new Date(now)
+      nextSunday.setUTCDate(nextSunday.getUTCDate() + (7 - nextSunday.getUTCDay()) % 7)
+      nextSunday.setUTCHours(0, 0, 0, 0)
+      if (nextSunday.getTime() <= now.getTime()) {
+        nextSunday.setUTCDate(nextSunday.getUTCDate() + 7)
+      }
+      return nextSunday.getTime()
+    }
+    if (resetType === 'biweekly') {
+      const now = new Date()
+      const next = new Date(now)
+      next.setUTCHours(0, 0, 0, 0)
+      const dayOfCycle = Math.floor((next.getTime() - 1709251200000) / (14 * 24 * 60 * 60 * 1000))
+      const nextCycle = new Date(1709251200000 + (dayOfCycle + 1) * 14 * 24 * 60 * 60 * 1000)
+      return nextCycle.getTime()
+    }
+    if (resetType === 'other') {
+      const now = new Date()
+      const next = new Date(now)
+      next.setUTCHours(next.getUTCHours() + 8 - (next.getUTCHours() % 8), 0, 0, 0)
+      if (next.getTime() <= now.getTime()) {
+        next.setUTCHours(next.getUTCHours() + 8)
+      }
+      return next.getTime()
+    }
+    return 0
+  }
+
+  const formatTimeLeft = (ms) => {
+    if (!ms || ms <= 0 || isNaN(ms)) return 'Now'
+    const days = Math.floor(ms / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60))
+    if (days > 0) return `${days}d ${hours}h`
+    if (hours > 0) return `${hours}h ${minutes}m`
+    return `${minutes}m`
+  }
 
   const getIconUrl = (iconKey) => {
     if (!iconKey || !ExportTextIcons || !cdnBase) return null
@@ -354,62 +491,25 @@ export default function Checklist() {
     setHiddenMap(prev => ({ ...prev, [taskId]: !prev[taskId] }))
   }
 
-  const dailyTasks = tasks.filter(t => t.reset === 'daily')
-  const weeklyTasks = tasks.filter(t => t.reset === 'weekly')
-  const otherTasks = tasks.filter(t => t.reset === 'other')
+  const allTasks = tasks.map(task => {
+    const taskReset = getNextReset(task.id, task.reset)
+    const isCompleted = completed[task.id]
+    const sortReset = isCompleted ? taskReset : taskReset - now
+    return {
+      ...task,
+      sortReset,
+      nextReset: taskReset,
+      nextResetTime: taskReset,
+      timeLeft: formatTimeLeft(taskReset - now)
+    }
+  }).sort((a, b) => a.sortReset - b.sortReset)
 
-  const getVisible = (taskList, showHidden) => taskList.filter(t => showHidden || !hiddenMap[t.id])
-
-  const dailyCompleted = getVisible(dailyTasks, showHiddenDaily).filter(t => completed[t.id]).length
-  const weeklyCompleted = getVisible(weeklyTasks, showHiddenWeekly).filter(t => completed[t.id]).length
-  const otherCompleted = getVisible(otherTasks, showHiddenOther).filter(t => completed[t.id]).length
-
-  const Section = ({ title, colorDot, taskList, showHidden, setShowHidden, completedCount }) => (
-    <div>
-      <div className="bg-kronos-panel/40 rounded-lg p-3 border border-white/5 flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <span className={`w-2 h-2 rounded-full ${colorDot}`} />
-          <span className="text-[14px] font-semibold text-kronos-text">{title}</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-[18px] font-bold text-kronos-accent">
-            {completedCount}/{getVisible(taskList, showHidden).length}
-          </span>
-          <button
-            onClick={() => setShowHidden(!showHidden)}
-            className="p-1.5 rounded hover:bg-white/10 transition-colors"
-          >
-            {showHidden ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        {taskList.map(task => {
-          if (!showHidden && hiddenMap[task.id]) return null
-          return (
-            <div key={task.id} className="relative group">
-              <TaskCard
-                task={task}
-                completed={completed[task.id] || false}
-                onToggle={() => toggleTask(task.id)}
-              />
-              <button
-                onClick={() => toggleHidden(task.id)}
-                className="absolute top-1 right-1 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-black/50 transition-all"
-              >
-                {hiddenMap[task.id] ? <Eye size={14} /> : <EyeOff size={14} />}
-              </button>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
+  const visibleTasks = allTasks.filter(t => showHiddenTasks || !hiddenMap[t.id])
+  const completedTasks = visibleTasks.filter(t => completed[t.id]).length
 
   return (
     <PageLayout title="Checklist" subtitle="Track daily and weekly activities">
-      {/* Standings Section - Full Width */}
+      {/* Focus Section - Full Width */}
       <div className="mb-6">
         <div className="rounded-lg p-3 border flex items-center justify-between mb-3" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.3)' }}>
           <div className="flex items-center gap-3">
@@ -463,41 +563,49 @@ export default function Checklist() {
                 hasStanding={hasStanding}
                 iconUrl={iconUrl}
                 localIconUrl={localIconUrl}
+                supportedSyndicate={supportedSyndicate}
               />
             )
           })}
         </div>
       </div>
 
-      {/* Daily / Weekly Row */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <Section
-          title="Daily"
-          colorDot="bg-blue-400"
-          taskList={dailyTasks}
-          showHidden={showHiddenDaily}
-          setShowHidden={setShowHiddenDaily}
-          completedCount={dailyCompleted}
-        />
-        <Section
-          title="Weekly"
-          colorDot="bg-purple-400"
-          taskList={weeklyTasks}
-          showHidden={showHiddenWeekly}
-          setShowHidden={setShowHiddenWeekly}
-          completedCount={weeklyCompleted}
-        />
-      </div>
+      {/* Tasks Section - Single Grid */}
+      <div className="mb-6">
+        <div className="bg-kronos-panel/40 rounded-lg p-3 border border-white/5 flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-kronos-accent" />
+            <span className="text-[14px] font-semibold text-kronos-text">Tasks</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[18px] font-bold text-kronos-accent">
+              {completedTasks}/{visibleTasks.length}
+            </span>
+            <button
+              onClick={() => setShowHiddenTasks(!showHiddenTasks)}
+              className="p-1.5 rounded hover:bg-white/10 transition-colors"
+            >
+              {showHiddenTasks ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+        </div>
 
-      {/* Other Section - Baro + 8h timers */}
-      <Section
-        title="Other"
-        colorDot="bg-amber-400"
-        taskList={otherTasks}
-        showHidden={showHiddenOther}
-        setShowHidden={setShowHiddenOther}
-        completedCount={otherCompleted}
-      />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+          {visibleTasks.map(task => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              completed={completed[task.id] || false}
+              hidden={hiddenMap[task.id] || false}
+              onToggle={() => toggleTask(task.id)}
+              onHide={() => toggleHidden(task.id)}
+              timeLeft={task.timeLeft}
+              nextResetTime={task.nextResetTime}
+            />
+          ))}
+        </div>
+      </div>
     </PageLayout>
   )
 }
+

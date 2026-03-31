@@ -234,7 +234,12 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
     incursions: raw.Incursions?.[0] ? {
       id: raw.Incursions[0]._id?.$oid || raw.Incursions[0]._id,
       activation: raw.Incursions[0].Activation,
-      expiry: raw.Incursions[0].Expiry,
+      expiry: (() => {
+        const e = raw.Incursions[0].Expiry
+        if (!e) return null
+        if (typeof e === 'object' && e?.$date?.$numberLong) return new Date(parseInt(e.$date.$numberLong, 10))
+        return new Date(e)
+      })(),
     } : null,
     steelPath: raw.SteelPath || null,
 
@@ -390,7 +395,12 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
     sortie: raw.Sorties?.[0] ? {
       id: raw.Sorties[0]._id?.$oid || raw.Sorties[0]._id,
       activation: raw.Sorties[0].Activation,
-      expiry: raw.Sorties[0].Expiry,
+      expiry: (() => {
+        const e = raw.Sorties[0].Expiry
+        if (!e) return null
+        if (typeof e === 'object' && e?.$date?.$numberLong) return new Date(parseInt(e.$date.$numberLong, 10))
+        return new Date(e)
+      })(),
       boss: resolveNode(raw.Sorties[0].Boss, dict, ERg),
       variants: (raw.Sorties[0].Variants || []).map(v => ({
         missionType: resolveMissionType(v.missionType, dict, ERg),
@@ -402,7 +412,12 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
     archonHunt: raw.LiteSorties?.[0] ? {
       id: raw.LiteSorties[0]._id?.$oid || raw.LiteSorties[0]._id,
       activation: raw.LiteSorties[0].Activation,
-      expiry: raw.LiteSorties[0].Expiry,
+      expiry: (() => {
+        const e = raw.LiteSorties[0].Expiry
+        if (!e) return null
+        if (typeof e === 'object' && e?.$date?.$numberLong) return new Date(parseInt(e.$date.$numberLong, 10))
+        return new Date(e)
+      })(),
       boss: resolveNode(raw.LiteSorties[0].Boss, dict, ERg),
       missions: (raw.LiteSorties[0].Missions || []).map(m => ({
         type: resolveMissionType(m.missionType, dict, ERg),
@@ -413,7 +428,12 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
     nightwave: raw.SeasonInfo ? {
       id: raw.SeasonInfo._id?.$oid || raw.SeasonInfo._id,
       activation: raw.SeasonInfo.Activation,
-      expiry: raw.SeasonInfo.Expiry,
+      expiry: (() => {
+        const e = raw.SeasonInfo.Expiry
+        if (!e) return null
+        if (typeof e === 'object' && e?.$date?.$numberLong) return new Date(parseInt(e.$date.$numberLong, 10))
+        return new Date(e)
+      })(),
       season: raw.SeasonInfo.Season,
       phase: raw.SeasonInfo.Phase,
       params: raw.SeasonInfo.Params,
@@ -575,7 +595,9 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
       return {
         node: resolveNode(t.Node, dict, ERg),
         activation: t.Activation,
+        activationMs: actMs,
         expiry: t.Expiry,
+        expiryMs: expMs,
         active: actMs > 0 && Date.now() >= actMs && (expMs === 0 || Date.now() < expMs),
         inventory: (t.Manifest || []).map(item => ({
           item: resolveItemName(item.ItemType, dict, uniqueNameToName),

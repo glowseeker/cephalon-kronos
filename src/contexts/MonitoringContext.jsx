@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { invoke } from '@tauri-apps/api/tauri'
 import { parseInventory } from '../lib/inventoryParser'
+import { parseWorldstate } from '../lib/worldstateParser'
+
+const ORACLE_API = 'https://oracle.browse.wf/worldState.json'
 
 // ── Pure helper: array/object → keyed map ─────────────────────────────────────
 function toMap(data, key) {
@@ -46,6 +49,7 @@ export function MonitoringProvider({ children }) {
   const [lastUpdate, setLastUpdate] = useState(localStorage.getItem('lastUpdate') || null)
   const [rawInventory, setRawInventory] = useState(null)
   const [inventoryData, setInventoryData] = useState(undefined)
+  const [worldState, setWorldState] = useState(null)
   const [statusText, setStatusText] = useState('Initializing…')
   const [spIncursions, setSpIncursions] = useState(null)
   const [arbys, setArbys] = useState(null)
@@ -186,6 +190,26 @@ export function MonitoringProvider({ children }) {
     })()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const fetchWorldstate = useCallback(async () => {
+    try {
+      const ws = await fetch(ORACLE_API).then(r => r.ok ? r.json() : null)
+      if (ws && dict && suppDict && EC && ERg && EI) {
+        const parsed = parseWorldstate(ws, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages })
+        setWorldState(parsed)
+      }
+    } catch (err) {
+      console.warn('Worldstate fetch failed:', err)
+    }
+  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages])
+
+  useEffect(() => {
+    if (Object.keys(dict || {}).length > 0) {
+      fetchWorldstate()
+      const iv = setInterval(fetchWorldstate, 60000)
+      return () => clearInterval(iv)
+    }
+  }, [fetchWorldstate, dict])
+
   useEffect(() => {
     if (rawInventory && exportData && inventoryData === undefined) {
       applyRaw(rawInventory, lastUpdate, exportData)
@@ -250,7 +274,7 @@ export function MonitoringProvider({ children }) {
     <MonitoringContext.Provider value={{
       exportData, spIncursions, arbys,
       dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENW, ENWRawRewards, ExportImages, ExportTextIcons, arbyTiers: ARBY_TIERS,
-      isMonitoring, lastUpdate, rawInventory, inventoryData, statusText,
+      isMonitoring, lastUpdate, rawInventory, inventoryData, worldState, setWorldState, statusText,
       startMonitoring, stopMonitoring, manualRefresh, callApiHelper,
     }}>
       {children}

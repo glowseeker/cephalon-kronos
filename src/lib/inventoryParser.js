@@ -1285,6 +1285,7 @@ export function parseInventory(raw, exports) {
       nightwave_title: nightwaveTitle
     },
     Affiliations: raw.Affiliations ?? [],
+    SupportedSyndicate: raw.SupportedSyndicate ?? null,
     DailyFocus: raw.DailyFocus ?? 0,
     FocusXP: raw.FocusXP ?? {},
     warframes,
