@@ -59,6 +59,7 @@ const EXPORT_FILES: &[&str] = &[
     "ExportCustoms.json",
     "ExportGear.json",
     "ExportImages.json",
+    "ExportTextIcons.json",
     "dict.en.json",
     "supp-dict-en.json",
 ];
@@ -425,6 +426,12 @@ fn get_assets_path() -> String {
     resolve_path("data/export/assets").to_string_lossy().to_string()
 }
 
+/// Return the Warframe image CDN base URL for loading syndicate/focus icons.
+#[tauri::command]
+fn get_cdn_base_url() -> String {
+    "https://browse.wf".to_string()
+}
+
 // ─── Entry Point ──────────────────────────────────────────────────────────────
 
 fn main() {
@@ -444,6 +451,7 @@ fn main() {
             get_mastery_icons_path,
             get_maps_path,
             get_assets_path,
+            get_cdn_base_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1278,12 +1278,15 @@ export function parseInventory(raw, exports) {
       forma: formaCount,
       aura_forma: auraFormaCount,
       stance_forma: stanceFormaCount,
-      umbra_forma: umbraFormaCount,
+      umbra_forma: stanceFormaCount,
       orokin_reactor: reactorCount,
       orokin_catalyst: catalystCount,
       nightwave_standing: nightwaveStanding,
       nightwave_title: nightwaveTitle
     },
+    Affiliations: raw.Affiliations ?? [],
+    DailyFocus: raw.DailyFocus ?? 0,
+    FocusXP: raw.FocusXP ?? {},
     warframes,
     weapons: weaponsRaw, // Compatibility
     primary, secondary, melee, kitguns, zaws,
