@@ -22,7 +22,6 @@ jobs:
         with:
           repository: Obsidian-Jackal/warframe-api-helper
           path: helper-src
-          token: ${{ secrets.HELPER_PAT }}
 
       - name: Install Node.js
         uses: actions/setup-node@v4
