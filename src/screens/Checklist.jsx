@@ -18,7 +18,7 @@
  * - Ability to hide/show individual tasks.
  * - Auto-resets based on time (daily/weekly).
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Check, Circle, Eye, EyeOff } from 'lucide-react'
 import { PageLayout } from '../components/UI'
 import { useMonitoring } from '../contexts/MonitoringContext'
@@ -80,34 +80,137 @@ const AFFILIATION_TAGS = {
   event: 'EventSyndicate',
 }
 
-const NO_STANDING_SYNDICATES = []
 const NO_RANK_SYNDICATES = ['simaris']
 
-const SYNDICATE_CONFIG = {
-  steel: { bg: '#2C3F46', accent: '#f9bc93', iconKey: 'MERIDIAN' },
-  perrin: { bg: '#3D4963', accent: '#92dbff', iconKey: 'PERRIN' },
-  arbiters: { bg: '#374045', accent: '#cfe1e4', iconKey: 'HEXIS' },
-  suda: { bg: '#3D375D', accent: '#fbfed0', iconKey: 'SUDA' },
-  veil: { bg: '#3D1839', accent: '#fe8a88', iconKey: 'REDVEIL' },
-  newloka: { bg: '#2A3C2E', accent: '#c2ffbf', iconKey: 'LOKA' },
-  conclave: { bg: '#1a1a1a', accent: '#ffffff', iconKey: 'CONCLAVE' },
-  simaris: { bg: '#5F3C0D', accent: '#ebd18f', iconKey: 'SIMARIS' },
-  ostron: { bg: '#B74624', accent: '#e8ddaf', localIcon: 'FactionOstron.png' },
-  quills: { bg: '#b43419', accent: '#F7FACB', localIcon: 'FactionQuills.png' },
-  solaris: { bg: '#5F3C0D', accent: '#e8ddaf', localIcon: 'FactionSolarisUnited.png' },
-  vox: { bg: '#4A2B18', accent: '#F2E5A7', localIcon: 'FactionVoxSolaris.png' },
-  ventkids: { bg: '#2D1B4E', accent: '#FFF58F', iconKey: 'VENTKIDS' },
-  entrati: { bg: '#4E5360', accent: '#FFC12F', localIcon: 'FactionEntrati.png' },
-  necraloid: { bg: '#333334', accent: '#BA9E5E', localIcon: 'FactionNecraloid.png' },
-  cavia: { bg: '#282624', accent: '#A5A394', localIcon: 'FactionCavia.png' },
-  holdfasts: { bg: '#21242e', accent: '#a9b5cc', localIcon: 'FactionHoldfasts.png' },
-  hex: { bg: '#556033', accent: '#171b0e', localIcon: 'FactionHex.png' },
+// Maps shorthand tag → ExportSyndicates key
+const TAG_TO_EXPORT_KEY = {
+  steel: 'SteelMeridianSyndicate',
+  perrin: 'PerrinSyndicate',
+  arbiters: 'ArbitersSyndicate',
+  suda: 'CephalonSudaSyndicate',
+  veil: 'RedVeilSyndicate',
+  newloka: 'NewLokaSyndicate',
+  conclave: 'ConclaveSyndicate',
+  simaris: 'LibrarySyndicate',
+  ostron: 'CetusSyndicate',
+  quills: 'QuillsSyndicate',
+  solaris: 'SolarisSyndicate',
+  vox: 'VoxSyndicate',
+  ventkids: 'VentKidsSyndicate',
+  entrati: 'EntratiSyndicate',
+  necraloid: 'NecraloidSyndicate',
+  cavia: 'EntratiLabSyndicate',
+  holdfasts: 'ZarimanSyndicate',
+  hex: 'HexSyndicate',
+}
+
+const toHex = (val) => '#' + val.slice(4).toLowerCase()
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return { r, g, b }
+}
+
+function rgbToHex({ r, g, b }) {
+  return '#' + [r, g, b].map(c => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0')).join('')
+}
+
+function relativeLuminance({ r, g, b }) {
+  const [rs, gs, bs] = [r, g, b].map(c => {
+    const s = c / 255
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+  })
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs
+}
+
+function contrastRatio(hex1, hex2) {
+  const l1 = relativeLuminance(hexToRgb(hex1))
+  const l2 = relativeLuminance(hexToRgb(hex2))
+  const lighter = Math.max(l1, l2)
+  const darker = Math.min(l1, l2)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+function darkenBgForContrast(bg, fg, minRatio = 3.5) {
+  if (contrastRatio(bg, fg) >= minRatio) return bg
+  let rgb = hexToRgb(bg)
+  const fgLum = relativeLuminance(hexToRgb(fg))
+  // If fg is dark, lighten bg; if fg is light, darken bg
+  const step = fgLum > 0.2 ? -8 : 8
+  for (let i = 0; i < 30; i++) {
+    rgb = { r: rgb.r + step, g: rgb.g + step, b: rgb.b + step }
+    const candidate = rgbToHex(rgb)
+    if (contrastRatio(candidate, fg) >= minRatio) return candidate
+  }
+  return rgbToHex(rgb)
+}
+
+// Icons that can't be loaded from ExportTextIcons (no matching iconKey) use local PNGs
+const LOCAL_ICONS = {
+  ostron: 'FactionOstron.png',
+  quills: 'FactionQuills.png',
+  solaris: 'FactionSolarisUnited.png',
+  vox: 'FactionVoxSolaris.png',
+  entrati: 'FactionEntrati.png',
+  necraloid: 'FactionNecraloid.png',
+  cavia: 'FactionCavia.png',
+  holdfasts: 'FactionHoldfasts.png',
+  hex: 'FactionHex.png',
+}
+
+// Icons that load from ExportTextIcons via CDN
+const CDN_ICONS = {
+  steel: 'MERIDIAN',
+  perrin: 'PERRIN',
+  arbiters: 'HEXIS',
+  suda: 'SUDA',
+  veil: 'REDVEIL',
+  newloka: 'LOKA',
+  conclave: 'CONCLAVE',
+  simaris: 'SIMARIS',
+  ventkids: 'VENTKIDS',
+}
+
+// Non-syndicate entries that need manual config (focus schools etc.)
+const EXTRA_CONFIG = {
   focus: { accent: 'var(--color-accent)', iconKey: 'FOCUS' },
   zenurik: { accent: 'var(--color-accent)', iconKey: 'ZENURIK_CLEAN' },
   naramon: { accent: 'var(--color-accent)', iconKey: 'NARAMON_CLEAN' },
   vazarin: { accent: 'var(--color-accent)', iconKey: 'VAZARIN_CLEAN' },
   madurai: { accent: 'var(--color-accent)', iconKey: 'MADURAI_CLEAN' },
   unairu: { accent: 'var(--color-accent)', iconKey: 'UNAIRU_CLEAN' },
+}
+
+function buildSyndicateConfig(exportSyndicates) {
+  const config = { ...EXTRA_CONFIG }
+  // Build exportKey → tag reverse map for alignment lookups
+  const exportKeyToTag = {}
+  for (const [tag, exportKey] of Object.entries(TAG_TO_EXPORT_KEY)) {
+    exportKeyToTag[exportKey] = tag
+  }
+  for (const [tag, exportKey] of Object.entries(TAG_TO_EXPORT_KEY)) {
+    const data = exportSyndicates?.[exportKey]
+    let bg = data?.backgroundColour?.value ? toHex(data.backgroundColour.value) : '#1a1a2e'
+    const accent = data?.colour?.value ? toHex(data.colour.value) : '#a0a0a0'
+    bg = darkenBgForContrast(bg, accent)
+    // Parse alignments → { ally_tag: true, enemy_tag: true }
+    const allies = {}
+    const enemies = {}
+    if (data?.alignments) {
+      for (const [otherKey, value] of Object.entries(data.alignments)) {
+        const otherTag = exportKeyToTag[otherKey]
+        if (!otherTag) continue
+        if (value > 0) allies[otherTag] = true
+        else if (value < 0) enemies[otherTag] = true
+      }
+    }
+    config[tag] = { bg, accent, allies, enemies }
+    if (LOCAL_ICONS[tag]) config[tag].localIcon = LOCAL_ICONS[tag]
+    if (CDN_ICONS[tag]) config[tag].iconKey = CDN_ICONS[tag]
+  }
+  return config
 }
 
 const FOCUS_SCHOOLS = [
@@ -225,64 +328,136 @@ const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextRes
   )
 }
 
-const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap, hasStanding, iconUrl, localIconUrl, supportedSyndicate }) => {
+const ColorFilters = ({ config }) => {
+  const colors = [...new Set(Object.values(config).map(c => c.accent).filter(c => c && !c.startsWith('var')))]
+  return (
+    <svg width="0" height="0" style={{ position: 'absolute' }}>
+      <defs>
+        {colors.map(color => {
+          const { r, g, b } = hexToRgb(color)
+          const rn = (r / 255).toFixed(4)
+          const gn = (g / 255).toFixed(4)
+          const bn = (b / 255).toFixed(4)
+          const id = 'cf-' + color.slice(1)
+          return (
+            <filter key={id} id={id} colorInterpolationFilters="sRGB">
+              <feColorMatrix type="matrix" values="0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0.2126 0.7152 0.0722 0 0  0 0 0 1 0" result="lum" />
+              <feColorMatrix type="matrix" in="lum" values={`${rn} 0 0 0 0  ${gn} 0 0 0 0  ${bn} 0 0 0 0  0 0 0 1 0`} />
+            </filter>
+          )
+        })}
+      </defs>
+    </svg>
+  )
+}
+
+const TintedIcon = ({ src, size = 'w-8 h-8', accent }) => {
+  if (accent?.startsWith?.('var')) {
+    return <img src={src} alt="" className={`${size} object-contain flex-shrink-0`} style={{ filter: 'brightness(0) invert(1)' }} />
+  }
+  const filterId = accent ? `url(#cf-${accent.slice(1)})` : undefined
+  return (
+    <img
+      src={src}
+      alt=""
+      className={`${size} object-contain flex-shrink-0`}
+      style={{ filter: filterId }}
+    />
+  )
+}
+const FACTION_TAGS = new Set(['steel', 'perrin', 'arbiters', 'suda', 'veil', 'newloka'])
+
+const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap, iconUrl, localIconUrl, supportedSyndicate, syndicateConfig, hoveredTag, onHover }) => {
   const rank = affiliation?.Title ?? 0
   const tagKey = standing.tag || standing.color
-  const config = SYNDICATE_CONFIG[tagKey] || { bg: '#1a1a2e', accent: '#a0a0a0' }
+  const config = syndicateConfig[tagKey] || { bg: '#1a1a2e', accent: '#a0a0a0' }
   const isNegative = rank < 0
   const progress = isNegative
     ? Math.min(100, Math.max(0, (Math.abs(rankCap) - Math.abs(earnedStanding)) / Math.abs(rankCap) * 100))
     : Math.min(100, (earnedStanding / rankCap) * 100)
   const isPledged = supportedSyndicate === AFFILIATION_TAGS[standing.tag]
+  const isFaction = FACTION_TAGS.has(tagKey)
+  const isAlly = hoveredTag && config.allies?.[hoveredTag]
+  const isEnemy = hoveredTag && config.enemies?.[hoveredTag]
+  const isDimmed = hoveredTag && tagKey !== hoveredTag && !isAlly && !isEnemy
+  const overlayBadge = isAlly ? '+' : isEnemy ? '−' : null
+  const hoverBg = isAlly ? '#166534' : isEnemy ? '#991b1b' : null
+  const iconSrc = iconUrl || localIconUrl
 
-  if (!hasStanding) {
-    return (
-      <div className="rounded-lg p-2 border" style={{ backgroundColor: config.bg, borderColor: 'rgba(var(--color-accent-rgb), 0.2)' }}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {iconUrl && <img src={iconUrl} alt="" className="w-8 h-8 object-contain" />}
-            {localIconUrl && <img src={localIconUrl} alt="" className="w-8 h-8 object-contain" />}
-            <span className="text-[12px]" style={{ color: config.accent }}>{standing.label}{isPledged ? ' (Pledged)' : ''}</span>
-          </div>
-          {rank !== 0 && (
-            <span className="text-[12px] opacity-60">Rank {rank}</span>
-          )}
-        </div>
-      </div>
-    )
-  }
+  const handleMouseEnter = () => { if (isFaction) onHover?.(tagKey) }
+  const handleMouseLeave = () => { if (isFaction) onHover?.(null) }
 
   return (
-    <div className="rounded-lg p-2 border" style={{ backgroundColor: config.bg, borderColor: 'rgba(var(--color-accent-rgb), 0.2)' }}>
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          {iconUrl && <img src={iconUrl} alt="" className="w-8 h-8 object-contain" />}
-          {localIconUrl && <img src={localIconUrl} alt="" className="w-8 h-8 object-contain" />}
-          <span className="text-[12px] text-kronos-text" style={{ color: config.accent }}>{standing.label}{isPledged ? ' (Pledged)' : ''}</span>
+    <div
+      className="rounded-lg border relative overflow-hidden transition-all duration-200 flex min-w-[280px]"
+      style={{
+        backgroundColor: hoverBg || config.bg,
+        borderColor: config.accent + '44',
+        opacity: isDimmed ? 0.3 : 1,
+      }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {overlayBadge && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+          <span className="text-[150px] font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">{overlayBadge}</span>
         </div>
-        {rank !== 0 && (
-          <span className="text-[12px] opacity-60">Rank {rank}</span>
-        )}
-      </div>
-      <div className="h-1 bg-black/40 rounded-full overflow-hidden mb-1">
+      )}
+
+      {/* Icon column — full card height, tinted with accent */}
+      {iconSrc && (
         <div
-          className="h-full transition-all"
-          style={{ width: `${progress}%`, backgroundColor: config.accent }}
-        />
-      </div>
-      <div className="flex items-center gap-1">
-        <span className="text-[14px] font-mono" style={{ color: config.accent }}>
+          className="w-24 flex-shrink-0 flex items-center justify-center p-2"
+          style={{ backgroundColor: config.accent + '22', borderRight: `1px solid ${config.accent}44` }}
+        >
+          <TintedIcon src={iconSrc} accent={config.accent} size="w-20 h-20" />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex-1 min-w-0 p-3 flex flex-col gap-1.5">
+        {/* Row 1: Name — Rank X */}
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-[13px] font-bold truncate" style={{ color: config.accent }}>
+            {standing.label}{isPledged ? ' ★' : ''}
+          </span>
+          {rank !== 0 && (
+            <span className="text-[11px] flex-shrink-0 font-mono" style={{ color: config.accent, opacity: 0.6 }}>
+              Rank {rank}
+            </span>
+          )}
+        </div>
+
+        {/* Row 2: Progress bar */}
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}>
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${progress}%`, backgroundColor: config.accent }}
+          />
+        </div>
+
+        {/* Row 3: total / max */}
+        <span className="text-[12px] font-mono" style={{ color: config.accent, opacity: 0.8 }}>
           {earnedStanding.toLocaleString()}
+          <span style={{ opacity: 0.5 }}> / {rankCap.toLocaleString()}</span>
         </span>
-        <span className="text-[10px] opacity-60">/ {rankCap.toLocaleString()}</span>
+
+        {/* Row 4: daily remaining */}
+        {dailyCap > 0 && (
+          <span className="text-[11px] font-mono" style={{ color: config.accent, opacity: 0.5 }}>
+            Daily: {dailyCap.toLocaleString()}
+          </span>
+        )}
       </div>
     </div>
   )
 }
 
 export default function Checklist() {
-  const { inventoryData, ExportTextIcons, worldState } = useMonitoring()
+  const { inventoryData, ExportTextIcons, worldState, ES } = useMonitoring()
   const supportedSyndicate = inventoryData?.SupportedSyndicate || null
+  const SYNDICATE_CONFIG = useMemo(() => buildSyndicateConfig(ES), [ES])
+  const [hoveredTag, setHoveredTag] = useState(null)
 
   const [completed, setCompleted] = useState(() => {
     try {
@@ -447,27 +622,24 @@ export default function Checklist() {
 
   const getStandingData = (standing) => {
     if (standing.id === 'focus_total') {
-      return { earned: 0, cap: 0, daily: getFocusDailyCap(), hasStanding: true, isFocusTotal: true }
+      return { earned: 0, cap: 0, daily: getFocusDailyCap(), isFocusTotal: true }
     }
     if (standing.focusKey) {
       const earned = focusXP?.[standing.focusKey] || 0
-      return { earned, cap: 0, daily: 0, hasStanding: true, isFocusSchool: true }
-    }
-    if (NO_STANDING_SYNDICATES.includes(standing.tag)) {
-      return { earned: 0, cap: 0, daily: 0, hasStanding: false }
+      return { earned, cap: 0, daily: 0, isFocusSchool: true }
     }
     const aff = getAffiliation(standing.tag)
     if (aff) {
       const total = aff.Standing ?? 0
       if (NO_RANK_SYNDICATES.includes(standing.tag)) {
-        return { earned: total, cap: 125000, daily: getDailyCap(), hasStanding: true }
+        return { earned: total, cap: 125000, daily: getDailyCap() }
       }
       const rank = aff.Title ?? 0
       const earned = getEarnedStanding(total, rank)
       const cap = getRankCap(rank)
-      return { earned, cap, daily: getDailyCap(), hasStanding: true }
+      return { earned, cap, daily: getDailyCap() }
     }
-    return { earned: 0, cap: 24000, daily: getDailyCap(), hasStanding: true }
+    return { earned: 0, cap: 24000, daily: getDailyCap() }
   }
 
   useEffect(() => {
@@ -502,7 +674,9 @@ export default function Checklist() {
   const completedTasks = visibleTasks.filter(t => completed[t.id]).length
 
   return (
-    <PageLayout title="Checklist" subtitle="Track daily and weekly activities">
+    <>
+      <ColorFilters config={SYNDICATE_CONFIG} />
+      <PageLayout title="Checklist" subtitle="Track daily and weekly activities">
       {/* Focus Section - Full Width */}
       <div className="mb-6">
         <div className="rounded-lg p-3 border flex items-center justify-between mb-3" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.3)' }}>
@@ -516,14 +690,21 @@ export default function Checklist() {
             const { earned } = getStandingData(standing)
             const config = SYNDICATE_CONFIG[standing.color] || { accent: '#a0a0a0' }
             const iconUrl = getIconUrl(config.iconKey)
+            const dailyCap = standing.id === 'focus_total' ? getFocusDailyCap() : 0
+            const cap = standing.id === 'focus_total' ? getFocusDailyCap() : 0
+            const progress = cap > 0 ? Math.min(100, (dailyFocus / cap) * 100) : 0
             return (
-              <div key={standing.id} className="rounded-lg p-2 border" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.2)' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  {iconUrl && <img src={iconUrl} alt="" className="w-7 h-7 object-contain" />}
-                  <span className="text-[14px]" style={{ color: config.accent }}>{standing.label}</span>
-                </div>
-                <div className="text-[14px] font-mono" style={{ color: config.accent }}>
-                  {standing.id === 'focus_total' ? `${dailyFocus.toLocaleString()} left` : earned.toLocaleString()}
+              <div key={standing.id} className="rounded-lg border overflow-hidden flex" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.2)' }}>
+                {iconUrl && (
+                  <div className="w-14 flex-shrink-0 flex items-center justify-center p-1.5" style={{ borderRight: '1px solid rgba(var(--color-accent-rgb), 0.15)' }}>
+                    <TintedIcon src={iconUrl} accent={config.accent} size="w-10 h-10" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0 p-2 flex flex-col gap-1">
+                  <span className="text-[12px] font-medium truncate" style={{ color: config.accent }}>{standing.label}</span>
+                  <span className="text-[14px] font-mono" style={{ color: config.accent }}>
+                    {standing.id === 'focus_total' ? `${dailyFocus.toLocaleString()} left` : earned.toLocaleString()}
+                  </span>
                 </div>
               </div>
             )
@@ -539,9 +720,9 @@ export default function Checklist() {
             <span className="text-[14px] font-semibold text-kronos-text">Standings</span>
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
           {standings.filter(s => !s.id.startsWith('focus') && !s.focusKey).map(standing => {
-            const { earned, cap, daily, hasStanding } = getStandingData(standing)
+            const { earned, cap, daily } = getStandingData(standing)
             const affiliation = getAffiliation(standing.tag)
             const config = SYNDICATE_CONFIG[standing.tag] || { bg: '#1a1a2e', accent: '#a0a0a0', iconKey: null }
             const iconUrl = getIconUrl(config.iconKey)
@@ -554,10 +735,12 @@ export default function Checklist() {
                 earnedStanding={earned}
                 rankCap={cap}
                 dailyCap={daily}
-                hasStanding={hasStanding}
                 iconUrl={iconUrl}
                 localIconUrl={localIconUrl}
                 supportedSyndicate={supportedSyndicate}
+                syndicateConfig={SYNDICATE_CONFIG}
+                hoveredTag={hoveredTag}
+                onHover={setHoveredTag}
               />
             )
           })}
@@ -600,6 +783,6 @@ export default function Checklist() {
         </div>
       </div>
     </PageLayout>
+    </>
   )
 }
-
