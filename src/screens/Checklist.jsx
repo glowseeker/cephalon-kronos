@@ -418,11 +418,11 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
       <div className="flex-1 min-w-0 p-3 flex flex-col gap-1.5">
         {/* Row 1: Name — Rank X */}
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[13px] font-bold truncate" style={{ color: config.accent }}>
+          <span className="text-[13px] font-mono font-bold truncate" style={{ color: config.accent }}>
             {standing.label}{isPledged ? ' ★' : ''}
           </span>
           {rank !== 0 && (
-            <span className="text-[11px] flex-shrink-0 font-mono" style={{ color: config.accent, opacity: 0.6 }}>
+            <span className="text-[11px] flex-shrink-0 font-mono font-bold" style={{ color: config.accent, opacity: 0.6 }}>
               Rank {rank}
             </span>
           )}
@@ -437,14 +437,14 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
         </div>
 
         {/* Row 3: total / max */}
-        <span className="text-[12px] font-mono" style={{ color: config.accent, opacity: 0.8 }}>
+        <span className="text-[12px] font-mono font-bold" style={{ color: config.accent, opacity: 0.8 }}>
           {earnedStanding.toLocaleString()}
           <span style={{ opacity: 0.5 }}> / {rankCap.toLocaleString()}</span>
         </span>
 
         {/* Row 4: daily remaining */}
         {dailyCap > 0 && (
-          <span className="text-[11px] font-mono" style={{ color: config.accent, opacity: 0.5 }}>
+          <span className="text-[11px] font-mono font-bold" style={{ color: config.accent, opacity: 0.5 }}>
             Daily: {dailyCap.toLocaleString()}
           </span>
         )}
@@ -677,112 +677,112 @@ export default function Checklist() {
     <>
       <ColorFilters config={SYNDICATE_CONFIG} />
       <PageLayout title="Checklist" subtitle="Track daily and weekly activities">
-      {/* Focus Section - Full Width */}
-      <div className="mb-6">
-        <div className="rounded-lg p-3 border flex items-center justify-between mb-3" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.3)' }}>
-          <div className="flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-kronos-accent" />
-            <span className="text-[14px] font-semibold text-kronos-text">Focus</span>
+        {/* Focus Section - Full Width */}
+        <div className="mb-6">
+          <div className="rounded-lg p-3 border flex items-center justify-between mb-3" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.3)' }}>
+            <div className="flex items-center gap-3">
+              <span className="w-2 h-2 rounded-full bg-kronos-accent" />
+              <span className="text-[14px] font-semibold text-kronos-text">Focus</span>
+            </div>
           </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
-          {standings.filter(s => s.id === 'focus_total' || s.focusKey).map(standing => {
-            const { earned } = getStandingData(standing)
-            const config = SYNDICATE_CONFIG[standing.color] || { accent: '#a0a0a0' }
-            const iconUrl = getIconUrl(config.iconKey)
-            const dailyCap = standing.id === 'focus_total' ? getFocusDailyCap() : 0
-            const cap = standing.id === 'focus_total' ? getFocusDailyCap() : 0
-            const progress = cap > 0 ? Math.min(100, (dailyFocus / cap) * 100) : 0
-            return (
-              <div key={standing.id} className="rounded-lg border overflow-hidden flex" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.2)' }}>
-                {iconUrl && (
-                  <div className="w-14 flex-shrink-0 flex items-center justify-center p-1.5" style={{ borderRight: '1px solid rgba(var(--color-accent-rgb), 0.15)' }}>
-                    <TintedIcon src={iconUrl} accent={config.accent} size="w-10 h-10" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+            {standings.filter(s => s.id === 'focus_total' || s.focusKey).map(standing => {
+              const { earned } = getStandingData(standing)
+              const config = SYNDICATE_CONFIG[standing.color] || { accent: '#a0a0a0' }
+              const iconUrl = getIconUrl(config.iconKey)
+              const dailyCap = standing.id === 'focus_total' ? getFocusDailyCap() : 0
+              const cap = standing.id === 'focus_total' ? getFocusDailyCap() : 0
+              const progress = cap > 0 ? Math.min(100, (dailyFocus / cap) * 100) : 0
+              return (
+                <div key={standing.id} className="rounded-lg border overflow-hidden flex" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.2)' }}>
+                  {iconUrl && (
+                    <div className="w-14 flex-shrink-0 flex items-center justify-center p-1.5" style={{ borderRight: '1px solid rgba(var(--color-accent-rgb), 0.15)' }}>
+                      <TintedIcon src={iconUrl} accent={config.accent} size="w-10 h-10" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 p-2 flex flex-col gap-1">
+                    <span className="text-[12px] font-medium truncate" style={{ color: config.accent }}>{standing.label}</span>
+                    <span className="text-[14px] font-mono" style={{ color: config.accent }}>
+                      {standing.id === 'focus_total' ? `${dailyFocus.toLocaleString()} left` : earned.toLocaleString()}
+                    </span>
                   </div>
-                )}
-                <div className="flex-1 min-w-0 p-2 flex flex-col gap-1">
-                  <span className="text-[12px] font-medium truncate" style={{ color: config.accent }}>{standing.label}</span>
-                  <span className="text-[14px] font-mono" style={{ color: config.accent }}>
-                    {standing.id === 'focus_total' ? `${dailyFocus.toLocaleString()} left` : earned.toLocaleString()}
-                  </span>
                 </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Standings Section */}
-      <div className="mb-6">
-        <div className="rounded-lg p-3 border flex items-center justify-between mb-3" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.3)' }}>
-          <div className="flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-kronos-accent" />
-            <span className="text-[14px] font-semibold text-kronos-text">Standings</span>
+              )
+            })}
           </div>
         </div>
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-          {standings.filter(s => !s.id.startsWith('focus') && !s.focusKey).map(standing => {
-            const { earned, cap, daily } = getStandingData(standing)
-            const affiliation = getAffiliation(standing.tag)
-            const config = SYNDICATE_CONFIG[standing.tag] || { bg: '#1a1a2e', accent: '#a0a0a0', iconKey: null }
-            const iconUrl = getIconUrl(config.iconKey)
-            const localIconUrl = getLocalIconUrl(config.iconKey, config.localIcon)
-            return (
-              <StandingCard
-                key={standing.id}
-                standing={standing}
-                affiliation={affiliation}
-                earnedStanding={earned}
-                rankCap={cap}
-                dailyCap={daily}
-                iconUrl={iconUrl}
-                localIconUrl={localIconUrl}
-                supportedSyndicate={supportedSyndicate}
-                syndicateConfig={SYNDICATE_CONFIG}
-                hoveredTag={hoveredTag}
-                onHover={setHoveredTag}
+
+        {/* Standings Section */}
+        <div className="mb-6">
+          <div className="rounded-lg p-3 border flex items-center justify-between mb-3" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.3)' }}>
+            <div className="flex items-center gap-3">
+              <span className="w-2 h-2 rounded-full bg-kronos-accent" />
+              <span className="text-[14px] font-semibold text-kronos-text">Standings</span>
+            </div>
+          </div>
+          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+            {standings.filter(s => !s.id.startsWith('focus') && !s.focusKey).map(standing => {
+              const { earned, cap, daily } = getStandingData(standing)
+              const affiliation = getAffiliation(standing.tag)
+              const config = SYNDICATE_CONFIG[standing.tag] || { bg: '#1a1a2e', accent: '#a0a0a0', iconKey: null }
+              const iconUrl = getIconUrl(config.iconKey)
+              const localIconUrl = getLocalIconUrl(config.iconKey, config.localIcon)
+              return (
+                <StandingCard
+                  key={standing.id}
+                  standing={standing}
+                  affiliation={affiliation}
+                  earnedStanding={earned}
+                  rankCap={cap}
+                  dailyCap={daily}
+                  iconUrl={iconUrl}
+                  localIconUrl={localIconUrl}
+                  supportedSyndicate={supportedSyndicate}
+                  syndicateConfig={SYNDICATE_CONFIG}
+                  hoveredTag={hoveredTag}
+                  onHover={setHoveredTag}
+                />
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Tasks Section - Single Grid */}
+        <div className="mb-6">
+          <div className="bg-kronos-panel/40 rounded-lg p-3 border border-white/5 flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <span className="w-2 h-2 rounded-full bg-kronos-accent" />
+              <span className="text-[14px] font-semibold text-kronos-text">Tasks</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[18px] font-bold text-kronos-accent">
+                {completedTasks}/{visibleTasks.length}
+              </span>
+              <button
+                onClick={() => setShowHiddenTasks(!showHiddenTasks)}
+                className="p-1.5 rounded hover:bg-white/10 transition-colors"
+              >
+                {showHiddenTasks ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            {visibleTasks.map(task => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                completed={completed[task.id] || false}
+                hidden={hiddenMap[task.id] || false}
+                onToggle={() => toggleTask(task.id)}
+                onHide={() => toggleHidden(task.id)}
+                timeLeft={task.timeLeft}
+                nextResetTime={task.nextResetTime}
               />
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Tasks Section - Single Grid */}
-      <div className="mb-6">
-        <div className="bg-kronos-panel/40 rounded-lg p-3 border border-white/5 flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-kronos-accent" />
-            <span className="text-[14px] font-semibold text-kronos-text">Tasks</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-[18px] font-bold text-kronos-accent">
-              {completedTasks}/{visibleTasks.length}
-            </span>
-            <button
-              onClick={() => setShowHiddenTasks(!showHiddenTasks)}
-              className="p-1.5 rounded hover:bg-white/10 transition-colors"
-            >
-              {showHiddenTasks ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
+            ))}
           </div>
         </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-          {visibleTasks.map(task => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              completed={completed[task.id] || false}
-              hidden={hiddenMap[task.id] || false}
-              onToggle={() => toggleTask(task.id)}
-              onHide={() => toggleHidden(task.id)}
-              timeLeft={task.timeLeft}
-              nextResetTime={task.nextResetTime}
-            />
-          ))}
-        </div>
-      </div>
-    </PageLayout>
+      </PageLayout>
     </>
   )
 }
