@@ -96,7 +96,7 @@ const SYNDICATE_CONFIG = {
   quills: { bg: '#b43419', accent: '#F7FACB', localIcon: 'FactionQuills.png' },
   solaris: { bg: '#5F3C0D', accent: '#e8ddaf', localIcon: 'FactionSolarisUnited.png' },
   vox: { bg: '#4A2B18', accent: '#F2E5A7', localIcon: 'FactionVoxSolaris.png' },
-  ventkids: { bg: '#B97EF9', accent: '#FFF58F', iconKey: 'VENTKIDS' },
+  ventkids: { bg: '#2D1B4E', accent: '#FFF58F', iconKey: 'VENTKIDS' },
   entrati: { bg: '#4E5360', accent: '#FFC12F', localIcon: 'FactionEntrati.png' },
   necraloid: { bg: '#333334', accent: '#BA9E5E', localIcon: 'FactionNecraloid.png' },
   cavia: { bg: '#282624', accent: '#A5A394', localIcon: 'FactionCavia.png' },
