@@ -36,16 +36,16 @@ import {
 import { ThemeProvider } from './contexts/ThemeContext'
 import { MonitoringProvider } from './contexts/MonitoringContext'
 
-const Dashboard      = lazy(() => import('./screens/Dashboard'))
-const Inventory      = lazy(() => import('./screens/Inventory'))
-const Mastery        = lazy(() => import('./screens/Mastery'))
-const Notes          = lazy(() => import('./screens/Notes'))
-const Maps           = lazy(() => import('./screens/Maps'))
-const Checklist      = lazy(() => import('./screens/Checklist'))
+const Dashboard = lazy(() => import('./screens/Dashboard'))
+const Inventory = lazy(() => import('./screens/Inventory'))
+const Mastery = lazy(() => import('./screens/Mastery'))
+const Notes = lazy(() => import('./screens/Notes'))
+const Maps = lazy(() => import('./screens/Maps'))
+const Checklist = lazy(() => import('./screens/Checklist'))
 const SettingsScreen = lazy(() => import('./screens/Settings'))
-const About          = lazy(() => import('./screens/About'))
-const Rivens         = lazy(() => import('./screens/Rivens'))
-const Relics         = lazy(() => import('./screens/Relics'))
+const About = lazy(() => import('./screens/About'))
+const Rivens = lazy(() => import('./screens/Rivens'))
+const Relics = lazy(() => import('./screens/Relics'))
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -103,7 +103,7 @@ function AppContent() {
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={`
-                  w-12 h-12 rounded-lg flex items-center justify-center
+                  w-16 h-16 rounded-lg flex items-center justify-center
                   transition-all duration-200 relative group
                   ${isActive
                     ? 'bg-kronos-accent/20 text-kronos-accent glow-border'
@@ -112,9 +112,9 @@ function AppContent() {
                 `}
               >
                 {isImg ? (
-                  <img src={item.icon} alt={item.label} className="w-5 h-5 object-contain" />
+                  <img src={item.icon} alt={item.label} className="w-8 h-8 object-contain" />
                 ) : (
-                  <item.icon size={20} />
+                  <item.icon size={25} />
                 )}
 
                 {/* Tooltip */}
