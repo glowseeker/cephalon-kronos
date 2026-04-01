@@ -22,7 +22,7 @@ import { useState, useEffect } from 'react'
 import { Check, Circle, Eye, EyeOff } from 'lucide-react'
 import { PageLayout } from '../components/UI'
 import { useMonitoring } from '../contexts/MonitoringContext'
-import { convertFileSrc, invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/tauri'
 
 const tasks = [
   { id: 'baro', label: 'Baro Ki\'Teer', reset: 'baro' },
@@ -296,7 +296,6 @@ export default function Checklist() {
   })
   const [showHiddenTasks, setShowHiddenTasks] = useState(false)
   const [cdnBase, setCdnBase] = useState('')
-  const [assetsPath, setAssetsPath] = useState('')
 
   useEffect(() => {
     localStorage.setItem('checklist_completed', JSON.stringify(completed))
@@ -308,11 +307,6 @@ export default function Checklist() {
 
   useEffect(() => {
     invoke('get_cdn_base_url').then(setCdnBase).catch(() => { })
-    invoke('get_assets_path').then(path => {
-      if (path) {
-        setAssetsPath(convertFileSrc(path))
-      }
-    }).catch(() => { })
   }, [])
 
   const masteryRank = inventoryData?.account?.mastery_rank || 16
@@ -414,8 +408,8 @@ export default function Checklist() {
   }
 
   const getLocalIconUrl = (iconKey, localIcon) => {
-    if (!localIcon || !assetsPath) return null
-    return assetsPath + '/' + localIcon
+    if (!localIcon) return null
+    return '/' + localIcon
   }
 
   const getAffiliation = (tagKey) => {

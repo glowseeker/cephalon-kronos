@@ -9,7 +9,7 @@
  * (warframe-items, browse.wf, etc.), and a critical warning about the
  * ban risk associated with memory-based extraction.
  */
-import { AlertTriangle, Pyramid, Github, Box, Globe, Database, Layers, Palette, Terminal, BookOpen } from 'lucide-react'
+import { AlertTriangle, Github, Box, Globe, Database, Layers, Palette, Terminal, BookOpen } from 'lucide-react'
 import { PageLayout, Card } from '../components/UI'
 
 const CREDITS = [
@@ -27,8 +27,12 @@ export default function About() {
         {/* App Info */}
         <Card glow>
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center glow-border flex-shrink-0">
-              <Pyramid size={36} strokeWidth={1.75} className="text-kronos-accent" />
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img
+                src="/IconKronos.png"
+                alt="Cephalon Kronos"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <h2 className="text-2xl font-bold">Cephalon Kronos</h2>

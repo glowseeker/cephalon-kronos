@@ -27,15 +27,10 @@ import { useMonitoring } from './contexts/MonitoringContext'
 import { formatLastUpdate } from './lib/warframeUtils'
 import {
   LayoutDashboard,
-  Package,
-  Trophy,
-  SquarePen,
   Map,
   ClipboardList,
   Settings,
-  Info,
-  Pyramid,
-  Book
+  Info
 } from 'lucide-react'
 
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -54,16 +49,15 @@ const Relics         = lazy(() => import('./screens/Relics'))
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { id: 'inventory', icon: Package, label: 'Inventory' },
-  { id: 'rivens', icon: Book, label: 'Rivens' },
-  { id: 'relics', icon: Pyramid, label: 'Relics' },
-  { id: 'mastery', icon: Trophy, label: 'Mastery' },
-  { id: 'notes', icon: SquarePen, label: 'Notes' },
+  { id: 'inventory', icon: '/IconInventory.png', label: 'Inventory' },
+  { id: 'rivens', icon: '/IconRiven.png', label: 'Rivens' },
+  { id: 'relics', icon: '/IconRelic.png', label: 'Relics' },
+  { id: 'mastery', icon: '/IconMastery.png', label: 'Mastery' },
+  { id: 'notes', icon: '/IconNotes.png', label: 'Notes' },
   { id: 'maps', icon: Map, label: 'Maps' },
   { id: 'checklist', icon: ClipboardList, label: 'Checklist' },
   { id: 'settings', icon: Settings, label: 'Settings' },
   { id: 'about', icon: Info, label: 'About' },
-
 ]
 
 function AppContent() {
@@ -89,11 +83,11 @@ function AppContent() {
       <nav className="glass-panel w-20 border-r flex flex-col items-center py-6 gap-4">
         {/* Logo */}
         <div className="mb-4">
-          <div className="w-12 h-12 from-kronos-accent to-kronos-accent-secondary rounded-lg flex items-center justify-center glow-border">
-            <Pyramid
-              size={36}
-              strokeWidth={1.75}
-              className="text-kronos-accent"
+          <div className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden">
+            <img
+              src="/IconKronos.png"
+              alt="Cephalon Kronos"
+              className="w-full h-full object-contain"
             />
           </div>
         </div>
@@ -101,8 +95,8 @@ function AppContent() {
         {/* Nav Items */}
         <div className="flex-1 flex flex-col gap-2">
           {NAV_ITEMS.map((item) => {
-            const Icon = item.icon
             const isActive = activeTab === item.id
+            const isImg = typeof item.icon === 'string'
 
             return (
               <button
@@ -117,7 +111,11 @@ function AppContent() {
                   }
                 `}
               >
-                <Icon size={20} />
+                {isImg ? (
+                  <img src={item.icon} alt={item.label} className="w-5 h-5 object-contain" />
+                ) : (
+                  <item.icon size={20} />
+                )}
 
                 {/* Tooltip */}
                 <div className="absolute left-full ml-3 px-3 py-2 glass-panel rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[9999] glow-border">

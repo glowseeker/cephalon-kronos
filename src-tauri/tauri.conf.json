@@ -27,7 +27,7 @@
      "targets": "all",
      "identifier": "com.glowseeker.cephalonkronos",
      "icon": [
-       "icons/icon.png"
+       "data/export/assets/IconKronos.png"
      ],
      "resources": [
       "data/bin/*",

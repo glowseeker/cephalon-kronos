@@ -18,7 +18,7 @@
  * - Real-time search by item name or unique name.
  */
 import { useState, useMemo, useEffect } from 'react'
-import { Search, Filter, ArrowUpDown, AlertCircle, CheckCircle2, Box, Zap, Gem, Clock, Pyramid, X } from 'lucide-react'
+import { Search, Filter, ArrowUpDown, AlertCircle, CheckCircle2, Box, Zap, Gem, Clock, X } from 'lucide-react'
 import { PageLayout, Card, Input, Button, Tabs } from '../components/UI'
 import { useMonitoring } from '../contexts/MonitoringContext'
 import { formatLastUpdate } from '../lib/warframeUtils'
@@ -282,7 +282,7 @@ export default function Inventory() {
             <Filter size={20} className={showFilterSortPanel ? 'text-kronos-accent' : ''} />
           </Button>
           <Button variant="secondary" onClick={() => setShowFoundry(true)} className="relative">
-            <Pyramid size={20} className={showFoundry ? 'text-kronos-accent' : ''} />
+            <img src="/IconFoundry.png" alt="Foundry" className="w-6 h-6 object-contain" />
             {inventoryData?.foundry?.filter(i => i.ready).length > 0 && (
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-kronos-bg" />
             )}

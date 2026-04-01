@@ -79,12 +79,10 @@ export default function Mastery() {
   const { inventoryData } = useMonitoring()
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [iconsPath, setIconsPath] = useState('');
-  const [assetsPath, setAssetsPath] = useState('');
   const [hideNonMastery, setHideNonMastery] = useState(false)
 
   useEffect(() => {
     invoke('get_mastery_icons_path').then(setIconsPath).catch(console.error);
-    invoke('get_assets_path').then(setAssetsPath).catch(console.error);
   }, []);
 
   if (!inventoryData) {
@@ -293,7 +291,7 @@ export default function Mastery() {
               {/* Teshin Image on the right - transparent png */}
               <div className="relative w-full md:w-[45%] h-80 md:h-[450px] overflow-visible">
                 <img
-                  src={assetsPath ? convertFileSrc(`${assetsPath}/teshin.png`) : ''}
+                  src="/teshin.png"
                   alt="Teshin"
                   className="absolute bottom-0 right-0 w-full h-full object-contain object-bottom pointer-events-none"
                 />
