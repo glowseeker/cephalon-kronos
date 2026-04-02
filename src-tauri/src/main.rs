@@ -14,8 +14,9 @@ use std::fs;
 // In dev builds, paths are resolved relative to the Cargo manifest directory so
 // that assets sit alongside the source tree.  In release builds they're resolved
 // relative to the executable so the installed app is self-contained.
-// When running from an AppImage, the mount point is read-only, so writable data
-// goes to ~/.config/cephalon-kronos/ instead.
+// When running from an AppImage, the mounted FS is read-only, but the APPIMAGE
+// env var points to the real file — we use its parent dir for writable data so
+// everything stays in one portable folder.
 
 fn get_app_root() -> PathBuf {
     if cfg!(debug_assertions) {
@@ -27,27 +28,37 @@ fn get_app_root() -> PathBuf {
     }
 }
 
-/// Returns the writable data root. For AppImage this is ~/.config/cephalon-kronos/.
-/// For normal installs this is the same as the app root.
+/// Returns the writable data root.
+/// Portable on all platforms — data always lives next to the app.
+/// - AppImage: directory containing the .AppImage file
+/// - macOS .app: directory containing the .app bundle
+/// - Everything else: directory containing the binary
 fn get_data_root() -> PathBuf {
-    // Detect AppImage via APPIMAGE env var
-    if std::env::var("APPIMAGE").is_ok() {
-        let config_dir = std::env::var("XDG_CONFIG_HOME")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                std::env::var("HOME")
-                    .map(|h| PathBuf::from(h).join(".config"))
-                    .unwrap_or_else(|_| PathBuf::from("/tmp"))
-            });
-        let data_dir = config_dir.join("cephalon-kronos");
-        // Ensure directory exists
-        if !data_dir.exists() {
-            let _ = fs::create_dir_all(&data_dir);
-        }
-        data_dir
-    } else {
-        get_app_root()
+    // Detect AppImage via APPIMAGE env var — it points to the real .AppImage path
+    if let Ok(appimage_path) = std::env::var("APPIMAGE") {
+        return PathBuf::from(appimage_path)
+            .parent()
+            .unwrap_or(Path::new("."))
+            .to_path_buf();
     }
+
+    // On macOS inside a .app bundle, the binary is at .app/Contents/MacOS/binary
+    // We want data next to the .app, not inside it
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(exe) = std::env::current_exe() {
+            let path_str = exe.to_string_lossy();
+            if let Some(app_pos) = path_str.find(".app/") {
+                // Go up from .app/Contents/MacOS/binary to the directory containing the .app
+                let app_path = PathBuf::from(&path_str[..app_pos + 4]); // include ".app"
+                if let Some(parent) = app_path.parent() {
+                    return parent.to_path_buf();
+                }
+            }
+        }
+    }
+
+    get_app_root()
 }
 
 /// Build an absolute path from a path relative to the writable data root.
