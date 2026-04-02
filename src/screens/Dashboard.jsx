@@ -140,7 +140,7 @@ function GradeBadge({ grade, className = "" }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const {
-    exportData, spIncursions, arbys,
+    exportData, spIncursions, arbys, descendiaDescs,
     dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, arbyTiers,
     rawInventory, ES, ENWRawRewards, ExportImages,
   } = useMonitoring()
@@ -164,6 +164,7 @@ export default function Dashboard() {
       return saved ? JSON.parse(saved) : []
     } catch { return [] }
   })
+  const [descendiaTab, setDescendiaTab] = useState('normal')
 
   useEffect(() => {
     localStorage.setItem('dashboard_hidden_cards', JSON.stringify(hiddenCards))
@@ -838,21 +839,79 @@ export default function Dashboard() {
     const current = worldstate.descendia[0]
 
     return (
-      <div className="space-y-2 mt-2">
-        <div className="text-right px-1">
-          <p className="text-[10px] text-kronos-dim font-mono uppercase">{timeRemaining(current.expiry)} REMAINING</p>
+      <div className="mt-2">
+        <div className="mb-2">
+          <Tabs tabs={[{ id: 'normal', label: 'Normal' }, { id: 'steelpath', label: 'Steel Path' }]} activeTab={descendiaTab} onChange={setDescendiaTab} fullWidth />
         </div>
-        <div className="space-y-1.5 max-h-60 overflow-y-auto custom-scrollbar pr-1">
-          {current.stages.map((s, idx) => (
-            <div key={idx} className="bg-kronos-panel/40 p-2 rounded flex justify-between items-center gap-2">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold text-kronos-text uppercase truncate">{s.name}</p>
-                <p className="text-[9px] text-kronos-dim truncate uppercase">{s.level}</p>
+        <div className="space-y-1 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
+          {current.stages.map((s) => {
+            const penanceDesc = descendiaDescs.penance[s.penanceRaw] || null
+            const missionDesc = descendiaDescs.missionType[s.missionTypeRaw] || null
+            const isSpecial = s.isMarie || s.isLyon || s.isBoss
+
+            if (s.isMarie) {
+              return (
+                <div key={s.index} className="p-2 rounded bg-kronos-accent/15 border border-kronos-accent/25 flex items-center gap-2">
+                  <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold text-kronos-accent uppercase">Marie&apos;s Sanctuary</p>
+                    <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penance}</p>
+                  </div>
+                  <span className="text-[8px] font-black text-kronos-accent bg-kronos-accent/15 px-1.5 py-0.5 rounded flex-shrink-0">CP</span>
+                </div>
+              )
+            }
+            if (s.isLyon) {
+              return (
+                <div key={s.index} className="p-2 rounded bg-kronos-accent/15 border border-kronos-accent/25 flex items-center gap-2">
+                  <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold text-kronos-accent uppercase">Lyon&apos;s Sanctuary</p>
+                    <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penance}</p>
+                  </div>
+                  <span className="text-[8px] font-black text-kronos-accent bg-kronos-accent/15 px-1.5 py-0.5 rounded flex-shrink-0">CP</span>
+                </div>
+              )
+            }
+            if (s.isBoss) {
+              return (
+                <div key={s.index} className="p-2 rounded bg-kronos-accent/15 border border-kronos-accent/25 flex items-center gap-2">
+                  <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold text-kronos-accent uppercase">Roathe&apos;s Oblivion</p>
+                    <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penance}</p>
+                  </div>
+                  <span className="text-[8px] font-black text-kronos-accent bg-kronos-accent/15 px-1.5 py-0.5 rounded flex-shrink-0">CP</span>
+                </div>
+              )
+            }
+
+            return (
+              <div key={s.index} className="p-1.5 rounded bg-kronos-panel/30 flex items-center gap-1.5">
+                <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
+                <div className="relative group/desc flex-1 min-w-0 p-1 rounded bg-kronos-panel/40 cursor-help">
+                  <p className="text-[10px] font-bold text-kronos-text uppercase truncate">{s.missionType}</p>
+                  {missionDesc && (
+                    <div className="absolute left-0 bottom-full mb-1 w-64 p-3 bg-kronos-panel rounded-lg text-[11px] opacity-0 group-hover/desc:opacity-100 transition-opacity z-50 shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-white/5 pointer-events-none">
+                      <p className="text-kronos-accent font-bold mb-1">{s.missionType}</p>
+                      <p className="text-kronos-text/80">{missionDesc}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="relative group/desc2 flex-1 min-w-0 p-1 rounded bg-kronos-panel/20 cursor-help">
+                  <p className="text-[10px] text-kronos-dim uppercase truncate">{s.penance}</p>
+                  {penanceDesc && (
+                    <div className="absolute right-0 bottom-full mb-1 w-64 p-3 bg-kronos-panel rounded-lg text-[11px] opacity-0 group-hover/desc2:opacity-100 transition-opacity z-50 shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-white/5 pointer-events-none">
+                      <p className="text-kronos-accent font-bold mb-1">{s.penance}</p>
+                      <p className="text-kronos-text/80">{penanceDesc}</p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <span className="text-[9px] font-black text-kronos-accent uppercase bg-kronos-accent/10 px-1.5 py-0.5 rounded flex-shrink-0">STAGE {idx + 1}</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
+        <p className="text-[10px] text-kronos-dim font-mono mt-2 text-right">{timeRemaining(current.expiry)} REMAINING</p>
       </div>
     )
   }
@@ -887,13 +946,15 @@ export default function Dashboard() {
 
                 {isExpanded && (
                   <div className="px-3 pb-3 space-y-1.5 animate-in slide-in-from-top-2 duration-200">
-                    {set.stages.map((s, idx) => (
-                      <div key={idx} className="bg-black/20 p-2 rounded flex justify-between items-center gap-2">
+                    {set.stages.map((s) => (
+                      <div key={s.index} className={`p-2 rounded flex justify-between items-center gap-2 ${s.isCheckpoint ? 'bg-kronos-accent/10 border border-kronos-accent/20' : 'bg-black/20'}`}>
                         <div className="min-w-0">
-                          <p className="text-[10px] font-bold text-kronos-text uppercase truncate">{s.name}</p>
-                          <p className="text-[9px] text-kronos-dim truncate uppercase">{s.level}</p>
+                          <p className="text-[10px] font-bold text-kronos-text uppercase truncate">{s.missionType}{s.isBoss ? ' - Roathe' : ''}</p>
+                          <p className="text-[9px] text-kronos-dim truncate uppercase">{s.penance}</p>
                         </div>
-                        <span className="text-[8px] font-black text-kronos-accent uppercase bg-kronos-accent/10 px-1.5 py-0.5 rounded flex-shrink-0">STAGE {idx + 1}</span>
+                        <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${s.isCheckpoint ? 'text-kronos-accent bg-kronos-accent/20' : 'text-kronos-dim bg-kronos-panel/40'}`}>
+                          {s.isCheckpoint ? `CHECKPOINT ${s.index}` : `INF. ${s.index}`}
+                        </span>
                       </div>
                     ))}
                   </div>

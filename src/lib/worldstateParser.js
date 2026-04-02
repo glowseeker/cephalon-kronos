@@ -385,11 +385,25 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
       id: d._id?.$oid || d._id,
       activation: d.Activation,
       expiry: d.Expiry,
-      stages: (d.Challenges || []).map(c => ({
-        type: c.Type,
-        name: resolveNode(c.Challenge, dict, ERg),
-        level: resolveNode(c.Level, dict, ERg)
-      }))
+      randSeed: d.RandSeed,
+      stages: (d.Challenges || []).map(c => {
+        const levelName = (c.Level || '').split('/').at(-1)?.replace(/\.level$/i, '') || ''
+        return {
+          index: c.Index,
+          missionType: resolveMissionType(c.Type, dict, ERg),
+          missionTypeRaw: c.Type,
+          penance: resolveNode(c.Challenge, dict, ERg),
+          penanceRaw: c.Challenge,
+          arena: levelName,
+          level: resolveNode(c.Level, dict, ERg),
+          specs: c.Specs || [],
+          auras: c.Auras || [],
+          isCheckpoint: c.Index === 7 || c.Index === 14 || c.Index === 21,
+          isBoss: c.Index === 21,
+          isMarie: c.Index === 7,
+          isLyon: c.Index === 14,
+        }
+      })
     })),
 
     sortie: raw.Sorties?.[0] ? {

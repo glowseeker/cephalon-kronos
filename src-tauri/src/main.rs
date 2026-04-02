@@ -14,6 +14,8 @@ use std::fs;
 // In dev builds, paths are resolved relative to the Cargo manifest directory so
 // that assets sit alongside the source tree.  In release builds they're resolved
 // relative to the executable so the installed app is self-contained.
+// When running from an AppImage, the mount point is read-only, so writable data
+// goes to ~/.config/cephalon-kronos/ instead.
 
 fn get_app_root() -> PathBuf {
     if cfg!(debug_assertions) {
@@ -25,8 +27,37 @@ fn get_app_root() -> PathBuf {
     }
 }
 
-/// Build an absolute path from a path relative to the app root.
+/// Returns the writable data root. For AppImage this is ~/.config/cephalon-kronos/.
+/// For normal installs this is the same as the app root.
+fn get_data_root() -> PathBuf {
+    // Detect AppImage via APPIMAGE env var
+    if std::env::var("APPIMAGE").is_ok() {
+        let config_dir = std::env::var("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| {
+                std::env::var("HOME")
+                    .map(|h| PathBuf::from(h).join(".config"))
+                    .unwrap_or_else(|_| PathBuf::from("/tmp"))
+            });
+        let data_dir = config_dir.join("cephalon-kronos");
+        // Ensure directory exists
+        if !data_dir.exists() {
+            let _ = fs::create_dir_all(&data_dir);
+        }
+        data_dir
+    } else {
+        get_app_root()
+    }
+}
+
+/// Build an absolute path from a path relative to the writable data root.
 fn resolve_path(relative: &str) -> PathBuf {
+    get_data_root().join(relative)
+}
+
+/// Build an absolute path from a path relative to the bundled app root.
+/// Used as fallback when writable data root doesn't have the file yet (e.g. AppImage first run).
+fn resolve_bundled_path(relative: &str) -> PathBuf {
     get_app_root().join(relative)
 }
 
@@ -158,9 +189,14 @@ async fn check_exports() -> Result<String, String> {
 /// Called by the Dashboard to load arbitration/Steel Path data.
 #[tauri::command]
 async fn load_txt_file(name: String) -> Result<String, String> {
+    // Try writable location first, fall back to bundled
     let path = resolve_path("data/export").join(&name);
     if path.exists() {
-        fs::read_to_string(&path).map_err(|e| e.to_string())
+        return fs::read_to_string(&path).map_err(|e| e.to_string());
+    }
+    let bundled = resolve_bundled_path("data/export").join(&name);
+    if bundled.exists() {
+        fs::read_to_string(&bundled).map_err(|e| e.to_string())
     } else {
         Ok(String::new())
     }
@@ -204,7 +240,13 @@ async fn load_cached_inventory() -> Result<Option<(Value, u64)>, String> {
 /// Called by MonitoringContext on manual scan and on each monitoring tick.
 #[tauri::command]
 async fn call_api_helper() -> Result<Value, String> {
-    let bin_path = resolve_path("data/bin/warframe-api-helper");
+    // Binary is always bundled - check writable location first, fall back to bundled
+    let writable_bin = resolve_path("data/bin/warframe-api-helper");
+    let bin_path = if writable_bin.exists() {
+        writable_bin
+    } else {
+        resolve_bundled_path("data/bin/warframe-api-helper")
+    };
     let inv_dir = resolve_path("data/user");
     let inv_path = inv_dir.join("inventory.json");
 
@@ -246,16 +288,22 @@ async fn call_api_helper() -> Result<Value, String> {
 #[tauri::command]
 async fn load_all_exports() -> Result<Value, String> {
     let export_dir = resolve_path("data/export");
+    let bundled_dir = resolve_bundled_path("data/export");
     let mut result = serde_json::Map::new();
 
     for file_name in EXPORT_FILES {
+        // Try writable location first, fall back to bundled
         let path = export_dir.join(file_name);
-        if path.exists() {
-            let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-            let json: Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
-            let key = file_name.trim_end_matches(".json");
-            result.insert(key.to_string(), json);
-        }
+        let path = if path.exists() {
+            path
+        } else {
+            let bundled = bundled_dir.join(file_name);
+            if bundled.exists() { bundled } else { continue }
+        };
+        let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        let json: Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
+        let key = file_name.trim_end_matches(".json");
+        result.insert(key.to_string(), json);
     }
     Ok(Value::Object(result))
 }
