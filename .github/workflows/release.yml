@@ -109,10 +109,28 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
+      - name: Verify icons (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: |
+          echo "=== Icon files ==="
+          ls -la src-tauri/icons/icon.ico
+          file src-tauri/icons/icon.ico
+          echo ""
+          echo "=== tauri.conf.json icon section ==="
+          grep -A 10 '"icon"' src-tauri/tauri.conf.json
+          echo ""
+          echo "=== CLI version ==="
+          npx tauri --version
+          echo ""
+          echo "=== Rust version ==="
+          rustc --version
+
       - name: Build and Release Tauri app
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v0.5.25
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUST_BACKTRACE: full
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Cephalon Kronos ${{ github.ref_name }}'
