@@ -51,6 +51,7 @@ pnpm tauri build
 
 ## Known Issues
 
+- Descendia levels / modifiers aren't parsed yet.
 - App awaiting day-to-day testing.
 
 ## Planned Features
