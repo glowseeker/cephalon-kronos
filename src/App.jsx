@@ -25,14 +25,6 @@
 import { useState, lazy, Suspense } from 'react'
 import { useMonitoring } from './contexts/MonitoringContext'
 import { formatLastUpdate } from './lib/warframeUtils'
-import {
-  LayoutDashboard,
-  Map,
-  ClipboardList,
-  Settings,
-  Info
-} from 'lucide-react'
-
 import { ThemeProvider } from './contexts/ThemeContext'
 import { MonitoringProvider } from './contexts/MonitoringContext'
 
@@ -48,16 +40,16 @@ const Rivens = lazy(() => import('./screens/Rivens'))
 const Relics = lazy(() => import('./screens/Relics'))
 
 const NAV_ITEMS = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { id: 'dashboard', icon: '/IconDashboard.png', label: 'Dashboard' },
   { id: 'inventory', icon: '/IconInventory.png', label: 'Inventory' },
   { id: 'rivens', icon: '/IconRiven.png', label: 'Rivens' },
   { id: 'relics', icon: '/IconRelic.png', label: 'Relics' },
   { id: 'mastery', icon: '/IconMastery.png', label: 'Mastery' },
   { id: 'notes', icon: '/IconNotes.png', label: 'Notes' },
-  { id: 'maps', icon: Map, label: 'Maps' },
-  { id: 'checklist', icon: ClipboardList, label: 'Checklist' },
-  { id: 'settings', icon: Settings, label: 'Settings' },
-  { id: 'about', icon: Info, label: 'About' },
+  { id: 'maps', icon: '/IconMap.png', label: 'Maps' },
+  { id: 'checklist', icon: '/IconChecklist.png', label: 'Checklist' },
+  { id: 'settings', icon: '/IconSettings.png', label: 'Settings' },
+  { id: 'about', icon: '/IconInfo.png', label: 'About' },
 ]
 
 function AppContent() {
@@ -93,7 +85,7 @@ function AppContent() {
         </div>
 
         {/* Nav Items */}
-        <div className="flex-1 flex flex-col gap-2">
+        <div className="flex-1 flex flex-col justify-evenly">
           {NAV_ITEMS.map((item) => {
             const isActive = activeTab === item.id
             const isImg = typeof item.icon === 'string'
@@ -103,18 +95,31 @@ function AppContent() {
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={`
-                  w-16 h-16 rounded-lg flex items-center justify-center
-                  transition-all duration-200 relative group
+                  w-full h-12 flex items-center justify-center
+                  transition-all duration-200 relative group overflow-hidden
                   ${isActive
-                    ? 'bg-kronos-accent/20 text-kronos-accent glow-border'
-                    : 'text-kronos-dim hover:text-kronos-text hover:bg-kronos-panel/60'
+                    ? 'text-kronos-accent'
+                    : 'hover:bg-kronos-panel/60'
                   }
                 `}
               >
                 {isImg ? (
-                  <img src={item.icon} alt={item.label} className="w-8 h-8 object-contain" />
+                  <div
+                    className="w-8 h-8 flex-shrink-0 transition-colors duration-200"
+                    style={{
+                      backgroundColor: isActive ? 'var(--kronos-accent, #c084fc)' : 'rgba(255,255,255,0.6)',
+                      maskImage: `url(${item.icon})`,
+                      WebkitMaskImage: `url(${item.icon})`,
+                      maskSize: 'contain',
+                      WebkitMaskSize: 'contain',
+                      maskRepeat: 'no-repeat',
+                      WebkitMaskRepeat: 'no-repeat',
+                      maskPosition: 'center',
+                      WebkitMaskPosition: 'center',
+                    }}
+                  />
                 ) : (
-                  <item.icon size={25} />
+                  <item.icon size={22} strokeWidth={1.5} style={{ color: isActive ? 'var(--kronos-accent, #c084fc)' : 'rgba(255,255,255,0.6)' }} />
                 )}
 
                 {/* Tooltip */}
