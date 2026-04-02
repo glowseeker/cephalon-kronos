@@ -26,6 +26,7 @@ dist-ssr
 # Ignore everything inside the data directory
 src-tauri/data/export/*
 src-tauri/data/user/*
+!src-tauri/data/user/.placeholder
 
 # But allow graphic assets and API helper
 !src-tauri/data/export/maps/

@@ -91,6 +91,7 @@ jobs:
           clang++ -std=c++20 -fno-rtti -O3 -Wl,--gc-sections "$BIN_DIR/main.o" libsoup.a -static-libgcc -static-libstdc++ -liphlpapi -ldnsapi -lbcrypt -lsetupapi -lgdi32 -lhid -lws2_32 -lwsock32 -o bin/warframe-api-helper.exe
 
       - name: Prepare Tauri Binaries Directory
+        shell: bash
         run: mkdir -p src-tauri/data/bin
 
       - name: Copy Helper Binary (Unix)
