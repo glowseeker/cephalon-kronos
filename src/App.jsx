@@ -96,7 +96,7 @@ function AppContent() {
                 onClick={() => setActiveTab(item.id)}
                 className={`
                   w-full h-12 flex items-center justify-center
-                  transition-all duration-200 relative group overflow-hidden
+                  transition-all duration-200 relative group
                   ${isActive
                     ? 'text-kronos-accent'
                     : 'hover:bg-kronos-panel/60'
@@ -107,7 +107,7 @@ function AppContent() {
                   <div
                     className="w-8 h-8 flex-shrink-0 transition-colors duration-200"
                     style={{
-                      backgroundColor: isActive ? 'var(--kronos-accent, #c084fc)' : 'rgba(255,255,255,0.6)',
+                      backgroundColor: isActive ? 'var(--color-accent, #5590ab)' : 'rgba(255,255,255,0.6)',
                       maskImage: `url(${item.icon})`,
                       WebkitMaskImage: `url(${item.icon})`,
                       maskSize: 'contain',
@@ -119,7 +119,7 @@ function AppContent() {
                     }}
                   />
                 ) : (
-                  <item.icon size={22} strokeWidth={1.5} style={{ color: isActive ? 'var(--kronos-accent, #c084fc)' : 'rgba(255,255,255,0.6)' }} />
+                  <item.icon size={22} strokeWidth={1.5} style={{ color: isActive ? 'var(--color-accent, #5590ab)' : 'rgba(255,255,255,0.6)' }} />
                 )}
 
                 {/* Tooltip */}
