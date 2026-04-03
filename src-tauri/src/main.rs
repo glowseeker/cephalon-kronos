@@ -21,10 +21,14 @@ use std::fs;
 fn get_app_root() -> PathBuf {
     if cfg!(debug_assertions) {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    } else if let Ok(appimage_path) = std::env::var("APPIMAGE") {
+        // For AppImage, use the actual AppImage file location (not the mounted squashfs)
+        let path = PathBuf::from(appimage_path);
+        path.parent().map(|p| p.to_path_buf()).unwrap_or(PathBuf::from("."))
     } else {
-        let exe = std::env::current_exe().map(|p| p.parent().unwrap_or(Path::new(".")).to_path_buf()).unwrap_or_else(|_| PathBuf::from("."));
-        println!("[DEBUG] current_exe parent: {:?}", exe);
-        exe
+        std::env::current_exe()
+            .map(|p| p.parent().unwrap_or(Path::new(".")).to_path_buf())
+            .unwrap_or_else(|_| PathBuf::from("."))
     }
 }
 
@@ -339,18 +343,46 @@ async fn load_all_exports() -> Result<Value, String> {
 #[tauri::command]
 async fn list_notes() -> Result<Vec<String>, String> {
     let notes_dir = resolve_path("data/user/notes");
+    let bundled_dir = resolve_bundled_path("data/user/notes");
+    
+    // Ensure writable directory exists
     if !notes_dir.exists() {
         fs::create_dir_all(&notes_dir).map_err(|e| e.to_string())?;
     }
+    
     let mut notes = Vec::new();
-    for entry in fs::read_dir(notes_dir).map_err(|e| e.to_string())? {
-        let entry = entry.map_err(|e| e.to_string())?;
-        if let Some(name) = entry.file_name().to_str() {
-            if name.ends_with(".md") {
-                notes.push(name.to_string());
+    
+    // Read from writable location first
+    if notes_dir.exists() {
+        if let Ok(entries) = fs::read_dir(&notes_dir) {
+            for entry in entries.flatten() {
+                if let Some(name) = entry.file_name().to_str() {
+                    if name.ends_with(".md") {
+                        notes.push(name.to_string());
+                    }
+                }
             }
         }
     }
+    
+    // Also check bundled location for notes that haven't been copied yet
+    if bundled_dir.exists() && bundled_dir != notes_dir {
+        if let Ok(entries) = fs::read_dir(&bundled_dir) {
+            for entry in entries.flatten() {
+                if let Some(name) = entry.file_name().to_str() {
+                    if name.ends_with(".md") && !notes.contains(&name.to_string()) {
+                        // Copy to writable location first
+                        let dest = notes_dir.join(name);
+                        if !dest.exists() {
+                            let _ = fs::copy(entry.path(), &dest);
+                        }
+                        notes.push(name.to_string());
+                    }
+                }
+            }
+        }
+    }
+    
     notes.sort();
     Ok(notes)
 }
@@ -380,11 +412,19 @@ async fn save_note(filename: String, content: String) -> Result<(), String> {
 /// Delete a note file.  No-op if it doesn't exist.
 #[tauri::command]
 async fn delete_note(filename: String) -> Result<(), String> {
-    let path = resolve_path("data/user/notes").join(filename);
+    let path = resolve_path("data/user/notes").join(&filename);
+    println!("[DEBUG] delete_note: path={:?}, exists={}", path, path.exists());
     if path.exists() {
         fs::remove_file(path).map_err(|e| e.to_string())
     } else {
-        Ok(())
+        // Try bundled path as fallback
+        let bundled = resolve_bundled_path("data/user/notes").join(&filename);
+        println!("[DEBUG] delete_note: bundled path={:?}, exists={}", bundled, bundled.exists());
+        if bundled.exists() {
+            fs::remove_file(bundled).map_err(|e| e.to_string())
+        } else {
+            Ok(())
+        }
     }
 }
 
