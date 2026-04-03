@@ -22,10 +22,13 @@ fn get_app_root() -> PathBuf {
     if cfg!(debug_assertions) {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
     } else if let Ok(appimage_path) = std::env::var("APPIMAGE") {
-        // For AppImage, use the actual AppImage file location (not the mounted squashfs)
         let path = PathBuf::from(appimage_path);
+        // For AppImage, the bundled resources are inside the squashfs mount
+        // We can't access them directly - need to return the parent for bundled fallback
+        println!("[DEBUG] APPIMAGE detected, returning parent: {:?}", path.parent());
         path.parent().map(|p| p.to_path_buf()).unwrap_or(PathBuf::from("."))
     } else {
+        println!("[DEBUG] No APPIMAGE, using current_exe");
         std::env::current_exe()
             .map(|p| p.parent().unwrap_or(Path::new(".")).to_path_buf())
             .unwrap_or_else(|_| PathBuf::from("."))
@@ -76,6 +79,26 @@ fn resolve_path(relative: &str) -> PathBuf {
 /// Build an absolute path from a path relative to the bundled app root.
 /// Used as fallback when writable data root doesn't have the file yet (e.g. AppImage first run).
 fn resolve_bundled_path(relative: &str) -> PathBuf {
+    #[cfg(target_os = "linux")]
+    {
+        if std::env::var("APPIMAGE").is_ok() {
+            // Search for squashfs mount - AppImage mounts to a temp directory
+            // Common patterns: /tmp/squashfs-root, /tmp/.mount_*, /tmp/appimage-*
+            if let Ok(entries) = std::fs::read_dir("/tmp") {
+                for entry in entries.flatten() {
+                    let name = entry.file_name().to_string_lossy();
+                    if name.contains("squashfs") || name.starts_with(".mount") || name.starts_with("appimage") {
+                        let candidate = entry.path().join(relative);
+                        if candidate.exists() {
+                            println!("[DEBUG] Found bundled at: {:?}", candidate);
+                            return candidate;
+                        }
+                    }
+                }
+            }
+            println!("[DEBUG] Could not find squashfs mount, falling back to app_root");
+        }
+    }
     get_app_root().join(relative)
 }
 
@@ -475,7 +498,7 @@ const RANK_NAMES: &[&str] = &[
 async fn check_media_assets() -> Result<String, String> {
     let client = reqwest::Client::new();
     let mut downloaded = 0u32;
-    let base_url = "https://raw.githubusercontent.com/glowseeker/cephalon-kronos/main/src-tauri/data/export/master";
+    let base_url = "https://raw.githubusercontent.com/cephalon-kronos/cephalon-kronos/main/src-tauri/data/export";
 
     // Download open-world maps
     let maps_dir = resolve_path("data/export/maps");
