@@ -94,8 +94,6 @@ export default function Notes() {
   const latestContentRef = useRef('')
   const activeFileRef = useRef(null)
 
-  useEffect(() => { loadFiles() }, [])
-
   const loadFiles = async () => {
     try {
       const list = await invoke('list_notes')
@@ -103,6 +101,17 @@ export default function Notes() {
       if (list.length > 0) selectFile(list[0])
     } catch (err) { console.error('list_notes failed:', err) }
   }
+
+  useEffect(() => { loadFiles() }, [])
+
+  // Save note when switching to another tab or unmounting
+  useEffect(() => {
+    return () => {
+      if (activeFileRef.current && latestContentRef.current) {
+        invoke('save_note', { filename: activeFileRef.current, content: latestContentRef.current }).catch(() => {})
+      }
+    }
+  }, [])
 
   const selectFile = useCallback(async (filename) => {
     if (activeFileRef.current && activeFileRef.current !== filename) {
@@ -170,13 +179,17 @@ export default function Notes() {
 
   const confirmDelete = async () => {
     if (!fileToDelete) return
+    console.log('[DEBUG] Deleting note:', fileToDelete)
     try {
       await invoke('delete_note', { filename: fileToDelete })
+      console.log('[DEBUG] Delete successful')
       const list = await invoke('list_notes')
       setFiles(list)
       if (list.length > 0) selectFile(list[0])
       else { setActiveFile(null); setContent(''); latestContentRef.current = ''; activeFileRef.current = null }
-    } catch { }
+    } catch (err) { 
+      console.error('[DEBUG] Delete failed:', err)
+    }
     finally { setFileToDelete(null) }
   }
 

@@ -449,14 +449,15 @@ export default function Dashboard() {
     if (!nw) return <p className="text-xs text-kronos-dim italic text-center py-4">Nightwave inactive…</p>
 
     const affiliationTag = nw.affiliationTag || ''
-    const affiliations = rawInventory?.Affiliations || []
+    const hasInventory = rawInventory !== null && Object.keys(rawInventory || {}).length > 0
+    const affiliations = hasInventory ? (rawInventory?.Affiliations || []) : []
     const nwAffiliation = affiliations.find(a => a.Tag === affiliationTag)
     const nwStandingTotal = nwAffiliation?.Standing ?? 0
     const currentRank = nwAffiliation?.Title ?? nw.phase ?? 0
-    const miscItems = rawInventory?.MiscItems || []
-    const credCount = miscItems.find(i => i.ItemType === nw.credType)?.ItemCount ?? 0
+    const miscItems = hasInventory ? (rawInventory?.MiscItems || []) : []
+    const credCount = hasInventory ? (miscItems.find(i => i.ItemType === nw.credType)?.ItemCount ?? 0) : 0
     const STANDING_PER_LEVEL = 10000
-    const standingInLevel = Math.max(0, nwStandingTotal - (currentRank * STANDING_PER_LEVEL))
+    const standingInLevel = hasInventory ? Math.max(0, nwStandingTotal - (currentRank * STANDING_PER_LEVEL)) : 0
     const categories = ['Daily', 'Weekly', 'Elite Weekly']
     const grouped = (nw.challenges || []).reduce((acc, c) => {
       let cat = 'Daily'
@@ -469,6 +470,7 @@ export default function Dashboard() {
 
     const rewardTiers = nw.rewards || []
     const progressPercent = Math.min(100, (standingInLevel / STANDING_PER_LEVEL) * 100)
+    const effectiveRank = hasInventory ? currentRank : -1
 
     return (
       <div className="space-y-3">
@@ -486,24 +488,28 @@ export default function Dashboard() {
                 <span className="text-[12px] text-kronos-dim uppercase">Ends</span>
                 <span className="text-[14px] text-kronos-text">{timeRemaining(nw.expiry)}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] text-kronos-dim uppercase">Creds</span>
-                <span className="text-[14px] font-bold text-kronos-text">{credCount}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] text-kronos-dim uppercase">Standing</span>
-                <span className="text-[14px] font-black text-kronos-accent">{standingInLevel.toLocaleString()} / {STANDING_PER_LEVEL.toLocaleString()}</span>
-              </div>
-              <div className="relative h-5 bg-black/40 rounded overflow-hidden">
-                <div
-                  className="absolute top-0 left-0 bottom-0 bg-kronos-accent"
-                  style={{ width: `${progressPercent}%` }}
-                />
-                <div className="absolute inset-0 flex items-center justify-between px-2">
-                  <span className="text-[10px] font-black text-black">{currentRank}</span>
-                  <span className="text-[10px] font-black text-white">{currentRank + 1}</span>
-                </div>
-              </div>
+              {hasInventory && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] text-kronos-dim uppercase">Creds</span>
+                    <span className="text-[14px] font-bold text-kronos-text">{credCount}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] text-kronos-dim uppercase">Standing</span>
+                    <span className="text-[14px] font-black text-kronos-accent">{standingInLevel.toLocaleString()} / {STANDING_PER_LEVEL.toLocaleString()}</span>
+                  </div>
+                  <div className="relative h-5 bg-black/40 rounded overflow-hidden">
+                    <div
+                      className="absolute top-0 left-0 bottom-0 bg-kronos-accent"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-between px-2">
+                      <span className="text-[10px] font-black text-black">{currentRank}</span>
+                      <span className="text-[10px] font-black text-white">{currentRank + 1}</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -519,12 +525,12 @@ export default function Dashboard() {
               >
                 <div className="flex gap-6 items-stretch pb-2 h-full">
                   {rewardTiers.map((r, ri) => {
-                    const isUnlocked = ri < currentRank
-                    const isCurrent = ri === currentRank
+                    const isUnlocked = ri < effectiveRank
+                    const isCurrent = ri === effectiveRank
                     return (
                       <div
                         key={ri}
-                        className={`relative flex-shrink-0 transition-all flex flex-col items-center ${isCurrent ? 'ring-2 ring-kronos-accent rounded p-1 mt-1' : ''}`}
+                        className={`relative flex-shrink-0 transition-all flex flex-col items-center ${isCurrent ? 'ring-2 ring-kronos-accent rounded p-1 m-1' : ''}`}
                       >
                         <span className={`text-[9px] font-black uppercase mb-1 ${isCurrent ? 'text-kronos-accent' : 'text-kronos-dim/60'}`}>Rank {ri + 1}</span>
                         <div className="w-36 h-full flex items-center justify-center">

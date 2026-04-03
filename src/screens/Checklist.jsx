@@ -290,16 +290,28 @@ const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextRes
       className={`p-3 rounded-lg border transition-all ${completed
         ? 'bg-kronos-accent/10 border-kronos-accent/30'
         : hidden
-          ? 'opacity-30 border-white/5'
-          : 'bg-kronos-panel/40 border-white/5 hover:border-white/20'
-        }`}
+          ? 'opacity-30'
+          : ''
+      }`}
+      style={{
+        backgroundColor: completed 
+          ? 'rgba(var(--color-accent-rgb), 0.1)' 
+          : hidden 
+            ? undefined 
+            : 'rgba(var(--color-panel-rgb, 26, 26, 46), 0.4)',
+        borderColor: completed
+          ? 'rgba(var(--color-accent-rgb), 0.3)'
+          : hidden
+            ? 'rgba(255,255,255,0.05)'
+            : 'rgba(255,255,255,0.05)',
+      }}
     >
       <div className="flex items-center justify-between mb-1">
         <span className={`text-[14px] ${completed ? 'line-through text-kronos-dim' : ''}`}>
           {task.label}
         </span>
         <div className="flex items-center gap-1">
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-kronos-accent/20 text-kronos-accent">
+          <span className="text-[10px] px-1.5 py-0.5 rounded text-kronos-accent" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.2)' }}>
             {resetLabels[task.reset]}
           </span>
           <button
@@ -484,10 +496,11 @@ export default function Checklist() {
     invoke('get_cdn_base_url').then(setCdnBase).catch(() => { })
   }, [])
 
-  const masteryRank = inventoryData?.account?.mastery_rank || 16
-  const affiliations = inventoryData?.Affiliations || []
-  const focusXP = inventoryData?.FocusXP || {}
-  const dailyFocus = inventoryData?.DailyFocus || 0
+  const hasInventory = !!inventoryData
+  const masteryRank = hasInventory ? (inventoryData?.account?.mastery_rank || 16) : 16
+  const affiliations = hasInventory ? (inventoryData?.Affiliations || []) : []
+  const focusXP = hasInventory ? (inventoryData?.FocusXP || {}) : {}
+  const dailyFocus = hasInventory ? (inventoryData?.DailyFocus || 0) : 0
   const [now, setNow] = useState(Date.now())
 
   useEffect(() => {
@@ -678,6 +691,7 @@ export default function Checklist() {
       <ColorFilters config={SYNDICATE_CONFIG} />
       <PageLayout title="Checklist" subtitle="Track daily and weekly activities">
         {/* Focus Section - Full Width */}
+        {hasInventory && (
         <div className="mb-6">
           <div className="rounded-lg p-3 border flex items-center justify-between mb-3" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.3)' }}>
             <div className="flex items-center gap-3">
@@ -711,8 +725,10 @@ export default function Checklist() {
             })}
           </div>
         </div>
+        )}
 
         {/* Standings Section */}
+        {hasInventory && (
         <div className="mb-6">
           <div className="rounded-lg p-3 border flex items-center justify-between mb-3" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.3)' }}>
             <div className="flex items-center gap-3">
@@ -746,10 +762,11 @@ export default function Checklist() {
             })}
           </div>
         </div>
+        )}
 
         {/* Tasks Section - Single Grid */}
         <div className="mb-6">
-          <div className="bg-kronos-panel/40 rounded-lg p-3 border border-white/5 flex items-center justify-between mb-3">
+          <div className="rounded-lg p-3 border flex items-center justify-between mb-3" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)', borderColor: 'rgba(var(--color-accent-rgb), 0.3)' }}>
             <div className="flex items-center gap-3">
               <span className="w-2 h-2 rounded-full bg-kronos-accent" />
               <span className="text-[14px] font-semibold text-kronos-text">Tasks</span>

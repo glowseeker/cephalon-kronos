@@ -22,9 +22,9 @@ fn get_app_root() -> PathBuf {
     if cfg!(debug_assertions) {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
     } else {
-        std::env::current_exe()
-            .map(|p| p.parent().unwrap_or(Path::new(".")).to_path_buf())
-            .unwrap_or_else(|_| PathBuf::from("."))
+        let exe = std::env::current_exe().map(|p| p.parent().unwrap_or(Path::new(".")).to_path_buf()).unwrap_or_else(|_| PathBuf::from("."));
+        println!("[DEBUG] current_exe parent: {:?}", exe);
+        exe
     }
 }
 
@@ -36,10 +36,13 @@ fn get_app_root() -> PathBuf {
 fn get_data_root() -> PathBuf {
     // Detect AppImage via APPIMAGE env var — it points to the real .AppImage path
     if let Ok(appimage_path) = std::env::var("APPIMAGE") {
+        println!("[DEBUG] APPIMAGE env var detected: {}", appimage_path);
         return PathBuf::from(appimage_path)
             .parent()
             .unwrap_or(Path::new("."))
             .to_path_buf();
+    } else {
+        println!("[DEBUG] APPIMAGE env var NOT set");
     }
 
     // On macOS inside a .app bundle, the binary is at .app/Contents/MacOS/binary
@@ -253,10 +256,18 @@ async fn load_cached_inventory() -> Result<Option<(Value, u64)>, String> {
 async fn call_api_helper() -> Result<Value, String> {
     // Binary is always bundled - check writable location first, fall back to bundled
     let writable_bin = resolve_path("data/bin/warframe-api-helper");
+    let bundled_bin = resolve_bundled_path("data/bin/warframe-api-helper");
     let bin_path = if writable_bin.exists() {
+        println!("[DEBUG] Using writable bin: {:?}", writable_bin);
         writable_bin
+    } else if bundled_bin.exists() {
+        println!("[DEBUG] Using bundled bin: {:?}", bundled_bin);
+        bundled_bin
     } else {
-        resolve_bundled_path("data/bin/warframe-api-helper")
+        return Err(format!(
+            "warframe-api-helper not found. Writable: {:?}, Bundled: {:?}",
+            writable_bin, bundled_bin
+        ));
     };
     let inv_dir = resolve_path("data/user");
     let inv_path = inv_dir.join("inventory.json");
@@ -428,8 +439,21 @@ async fn check_media_assets() -> Result<String, String> {
 
     // Download open-world maps
     let maps_dir = resolve_path("data/export/maps");
+    let bundled_maps = resolve_bundled_path("data/export/maps");
     if !maps_dir.exists() {
         fs::create_dir_all(&maps_dir).map_err(|e| e.to_string())?;
+    }
+    // Copy from bundled if not in writable location
+    if bundled_maps.exists() {
+        if let Ok(entries) = fs::read_dir(&bundled_maps) {
+            for entry in entries.flatten() {
+                let file_name = entry.file_name();
+                let dest = maps_dir.join(&file_name);
+                if !dest.exists() {
+                    let _ = fs::copy(entry.path(), &dest);
+                }
+            }
+        }
     }
     for map in MAP_FILES {
         let path = maps_dir.join(map);
@@ -443,8 +467,21 @@ async fn check_media_assets() -> Result<String, String> {
 
     // Download mastery rank icons (ranks 0-40)
     let icons_dir = resolve_path("data/export/masteryicons");
+    let bundled_icons = resolve_bundled_path("data/export/masteryicons");
     if !icons_dir.exists() {
         fs::create_dir_all(&icons_dir).map_err(|e| e.to_string())?;
+    }
+    // Copy from bundled if not in writable location
+    if bundled_icons.exists() {
+        if let Ok(entries) = fs::read_dir(&bundled_icons) {
+            for entry in entries.flatten() {
+                let file_name = entry.file_name();
+                let dest = icons_dir.join(&file_name);
+                if !dest.exists() {
+                    let _ = fs::copy(entry.path(), &dest);
+                }
+            }
+        }
     }
     for rank in 0..=40 {
         let filename = if rank <= 30 {
