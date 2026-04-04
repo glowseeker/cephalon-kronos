@@ -181,12 +181,23 @@ export default function Notes() {
     if (!fileToDelete) return
     console.log('[DEBUG] Deleting note:', fileToDelete)
     try {
+      const wasActive = fileToDelete === activeFileRef.current
+      if (wasActive) {
+        setActiveFile(null)
+        setContent('')
+        latestContentRef.current = ''
+        activeFileRef.current = null
+      }
+      
       await invoke('delete_note', { filename: fileToDelete })
       console.log('[DEBUG] Delete successful')
       const list = await invoke('list_notes')
       setFiles(list)
-      if (list.length > 0) selectFile(list[0])
-      else { setActiveFile(null); setContent(''); latestContentRef.current = ''; activeFileRef.current = null }
+      
+      if (wasActive) {
+        if (list.length > 0) selectFile(list[0])
+        else { setActiveFile(null); setContent(''); latestContentRef.current = ''; activeFileRef.current = null }
+      }
     } catch (err) { 
       console.error('[DEBUG] Delete failed:', err)
     }

@@ -78,29 +78,8 @@ fn resolve_path(relative: &str) -> PathBuf {
 
 /// Build an absolute path from a path relative to the bundled app root.
 /// Used as fallback when writable data root doesn't have the file yet (e.g. AppImage first run).
-fn resolve_bundled_path(relative: &str) -> PathBuf {
-    #[cfg(target_os = "linux")]
-    {
-        if std::env::var("APPIMAGE").is_ok() {
-            // Search for squashfs mount - AppImage mounts to a temp directory
-            // Common patterns: /tmp/squashfs-root, /tmp/.mount_*, /tmp/appimage-*
-            if let Ok(entries) = std::fs::read_dir("/tmp") {
-                for entry in entries.flatten() {
-                    let entry_name = entry.file_name();
-                    let name = entry_name.to_string_lossy();
-                    if name.contains("squashfs") || name.starts_with(".mount") || name.starts_with("appimage") {
-                        let candidate = entry.path().join(relative);
-                        if candidate.exists() {
-                            println!("[DEBUG] Found bundled at: {:?}", candidate);
-                            return candidate;
-                        }
-                    }
-                }
-            }
-            println!("[DEBUG] Could not find squashfs mount, falling back to app_root");
-        }
-    }
-    get_app_root().join(relative)
+fn resolve_bundled_path(app_handle: &tauri::AppHandle, relative: &str) -> Option<PathBuf> {
+    app_handle.path_resolver().resolve_resource(relative)
 }
 
 // ─── Export Management ────────────────────────────────────────────────────────
@@ -230,18 +209,20 @@ async fn check_exports() -> Result<String, String> {
 /// Returns an empty string if the file doesn't exist (e.g. first run offline).
 /// Called by the Dashboard to load arbitration/Steel Path data.
 #[tauri::command]
-async fn load_txt_file(name: String) -> Result<String, String> {
+async fn load_txt_file(app_handle: tauri::AppHandle, name: String) -> Result<String, String> {
     // Try writable location first, fall back to bundled
     let path = resolve_path("data/export").join(&name);
     if path.exists() {
         return fs::read_to_string(&path).map_err(|e| e.to_string());
     }
-    let bundled = resolve_bundled_path("data/export").join(&name);
-    if bundled.exists() {
-        fs::read_to_string(&bundled).map_err(|e| e.to_string())
-    } else {
-        Ok(String::new())
+    
+    if let Some(bundled) = resolve_bundled_path(&app_handle, &format!("data/export/{}", name)) {
+        if bundled.exists() {
+            return fs::read_to_string(&bundled).map_err(|e| e.to_string());
+        }
     }
+    
+    Ok(String::new())
 }
 
 // ─── Inventory Management ─────────────────────────────────────────────────────
@@ -281,22 +262,25 @@ async fn load_cached_inventory() -> Result<Option<(Value, u64)>, String> {
 /// servers, save it to data/user/inventory.json, and return the parsed JSON.
 /// Called by MonitoringContext on manual scan and on each monitoring tick.
 #[tauri::command]
-async fn call_api_helper() -> Result<Value, String> {
+async fn call_api_helper(app_handle: tauri::AppHandle) -> Result<Value, String> {
     // Binary is always bundled - check writable location first, fall back to bundled
-    let writable_bin = resolve_path("data/bin/warframe-api-helper");
-    let bundled_bin = resolve_bundled_path("data/bin/warframe-api-helper");
+    let bin_name = format!("warframe-api-helper{}", std::env::consts::EXE_SUFFIX);
+    let relative_bin = format!("data/bin/{}", bin_name);
+    let writable_bin = resolve_path(&relative_bin);
+    let bundled_bin = resolve_bundled_path(&app_handle, &relative_bin);
     let bin_path = if writable_bin.exists() {
         println!("[DEBUG] Using writable bin: {:?}", writable_bin);
         writable_bin
-    } else if bundled_bin.exists() {
-        println!("[DEBUG] Using bundled bin: {:?}", bundled_bin);
-        bundled_bin
+    } else if let Some(b) = bundled_bin.clone().filter(|p| p.exists()) {
+        println!("[DEBUG] Using bundled bin: {:?}", b);
+        b
     } else {
         return Err(format!(
             "warframe-api-helper not found. Writable: {:?}, Bundled: {:?}",
             writable_bin, bundled_bin
         ));
     };
+    
     let inv_dir = resolve_path("data/user");
     let inv_path = inv_dir.join("inventory.json");
 
@@ -336,20 +320,22 @@ async fn call_api_helper() -> Result<Value, String> {
 /// (e.g. `{ "ExportWeapons": [...], "ExportWarframes": [...], ... }`).
 /// Called by MonitoringContext once on startup; passed to inventoryParser.js.
 #[tauri::command]
-async fn load_all_exports() -> Result<Value, String> {
+async fn load_all_exports(app_handle: tauri::AppHandle) -> Result<Value, String> {
     let export_dir = resolve_path("data/export");
-    let bundled_dir = resolve_bundled_path("data/export");
     let mut result = serde_json::Map::new();
 
     for file_name in EXPORT_FILES {
         // Try writable location first, fall back to bundled
         let path = export_dir.join(file_name);
+        
         let path = if path.exists() {
             path
-        } else {
-            let bundled = bundled_dir.join(file_name);
+        } else if let Some(bundled) = resolve_bundled_path(&app_handle, &format!("data/export/{}", file_name)) {
             if bundled.exists() { bundled } else { continue }
+        } else {
+            continue
         };
+        
         let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
         let json: Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
         let key = file_name.trim_end_matches(".json");
@@ -365,9 +351,8 @@ async fn load_all_exports() -> Result<Value, String> {
 
 /// Return a sorted list of all note filenames (*.md) in data/user/notes/.
 #[tauri::command]
-async fn list_notes() -> Result<Vec<String>, String> {
+async fn list_notes(app_handle: tauri::AppHandle) -> Result<Vec<String>, String> {
     let notes_dir = resolve_path("data/user/notes");
-    let bundled_dir = resolve_bundled_path("data/user/notes");
     
     // Ensure writable directory exists
     if !notes_dir.exists() {
@@ -390,17 +375,19 @@ async fn list_notes() -> Result<Vec<String>, String> {
     }
     
     // Also check bundled location for notes that haven't been copied yet
-    if bundled_dir.exists() && bundled_dir != notes_dir {
-        if let Ok(entries) = fs::read_dir(&bundled_dir) {
-            for entry in entries.flatten() {
-                if let Some(name) = entry.file_name().to_str() {
-                    if name.ends_with(".md") && !notes.contains(&name.to_string()) {
-                        // Copy to writable location first
-                        let dest = notes_dir.join(name);
-                        if !dest.exists() {
-                            let _ = fs::copy(entry.path(), &dest);
+    if let Some(bundled_dir) = resolve_bundled_path(&app_handle, "data/user/notes") {
+        if bundled_dir.exists() && bundled_dir != notes_dir {
+            if let Ok(entries) = fs::read_dir(&bundled_dir) {
+                for entry in entries.flatten() {
+                    if let Some(name) = entry.file_name().to_str() {
+                        if name.ends_with(".md") && !notes.contains(&name.to_string()) {
+                            // Copy to writable location first
+                            let dest = notes_dir.join(name);
+                            if !dest.exists() {
+                                let _ = fs::copy(entry.path(), &dest);
+                            }
+                            notes.push(name.to_string());
                         }
-                        notes.push(name.to_string());
                     }
                 }
             }
@@ -435,17 +422,20 @@ async fn save_note(filename: String, content: String) -> Result<(), String> {
 
 /// Delete a note file.  No-op if it doesn't exist.
 #[tauri::command]
-async fn delete_note(filename: String) -> Result<(), String> {
+async fn delete_note(app_handle: tauri::AppHandle, filename: String) -> Result<(), String> {
     let path = resolve_path("data/user/notes").join(&filename);
     println!("[DEBUG] delete_note: path={:?}, exists={}", path, path.exists());
     if path.exists() {
         fs::remove_file(path).map_err(|e| e.to_string())
     } else {
         // Try bundled path as fallback
-        let bundled = resolve_bundled_path("data/user/notes").join(&filename);
-        println!("[DEBUG] delete_note: bundled path={:?}, exists={}", bundled, bundled.exists());
-        if bundled.exists() {
-            fs::remove_file(bundled).map_err(|e| e.to_string())
+        if let Some(bundled) = resolve_bundled_path(&app_handle, &format!("data/user/notes/{}", filename)) {
+            println!("[DEBUG] delete_note: bundled path={:?}, exists={}", bundled, bundled.exists());
+            if bundled.exists() {
+                fs::remove_file(bundled).map_err(|e| e.to_string())
+            } else {
+                Ok(())
+            }
         } else {
             Ok(())
         }
@@ -496,29 +486,32 @@ const RANK_NAMES: &[&str] = &[
 /// Download any map or mastery icon assets that aren't already cached.
 /// Called by MonitoringContext on startup.  Failures are non-fatal per asset.
 #[tauri::command]
-async fn check_media_assets() -> Result<String, String> {
+async fn check_media_assets(app_handle: tauri::AppHandle) -> Result<String, String> {
     let client = reqwest::Client::new();
     let mut downloaded = 0u32;
-    let base_url = "https://raw.githubusercontent.com/cephalon-kronos/cephalon-kronos/main/src-tauri/data/export";
+    // Updated to point to glowseeker GitHub namespace:
+    let base_url = "https://raw.githubusercontent.com/glowseeker/cephalon-kronos/main/src-tauri/data/export";
 
     // Download open-world maps
     let maps_dir = resolve_path("data/export/maps");
-    let bundled_maps = resolve_bundled_path("data/export/maps");
     if !maps_dir.exists() {
         fs::create_dir_all(&maps_dir).map_err(|e| e.to_string())?;
     }
     // Copy from bundled if not in writable location
-    if bundled_maps.exists() {
-        if let Ok(entries) = fs::read_dir(&bundled_maps) {
-            for entry in entries.flatten() {
-                let file_name = entry.file_name();
-                let dest = maps_dir.join(&file_name);
-                if !dest.exists() {
-                    let _ = fs::copy(entry.path(), &dest);
+    if let Some(bundled_maps) = resolve_bundled_path(&app_handle, "data/export/maps") {
+        if bundled_maps.exists() {
+            if let Ok(entries) = fs::read_dir(&bundled_maps) {
+                for entry in entries.flatten() {
+                    let file_name = entry.file_name();
+                    let dest = maps_dir.join(&file_name);
+                    if !dest.exists() {
+                        let _ = fs::copy(entry.path(), &dest);
+                    }
                 }
             }
         }
     }
+    
     for map in MAP_FILES {
         let path = maps_dir.join(map);
         if !path.exists() {
@@ -531,22 +524,25 @@ async fn check_media_assets() -> Result<String, String> {
 
     // Download mastery rank icons (ranks 0-40)
     let icons_dir = resolve_path("data/export/masteryicons");
-    let bundled_icons = resolve_bundled_path("data/export/masteryicons");
     if !icons_dir.exists() {
         fs::create_dir_all(&icons_dir).map_err(|e| e.to_string())?;
     }
+    
     // Copy from bundled if not in writable location
-    if bundled_icons.exists() {
-        if let Ok(entries) = fs::read_dir(&bundled_icons) {
-            for entry in entries.flatten() {
-                let file_name = entry.file_name();
-                let dest = icons_dir.join(&file_name);
-                if !dest.exists() {
-                    let _ = fs::copy(entry.path(), &dest);
+    if let Some(bundled_icons) = resolve_bundled_path(&app_handle, "data/export/masteryicons") {
+        if bundled_icons.exists() {
+            if let Ok(entries) = fs::read_dir(&bundled_icons) {
+                for entry in entries.flatten() {
+                    let file_name = entry.file_name();
+                    let dest = icons_dir.join(&file_name);
+                    if !dest.exists() {
+                        let _ = fs::copy(entry.path(), &dest);
+                    }
                 }
             }
         }
     }
+    
     for rank in 0..=40 {
         let filename = if rank <= 30 {
             format!("Rank{:02}{}.png", rank, RANK_NAMES[rank])

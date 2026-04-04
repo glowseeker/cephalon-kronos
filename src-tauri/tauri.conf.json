@@ -38,8 +38,7 @@
       ],
       "resources": [
         "data/bin/*",
-        "data/export/*",
-        "data/user/*"
+        "data/export/*"
       ]
     },
     "security": {
