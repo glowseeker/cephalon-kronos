@@ -86,7 +86,8 @@ fn resolve_bundled_path(relative: &str) -> PathBuf {
             // Common patterns: /tmp/squashfs-root, /tmp/.mount_*, /tmp/appimage-*
             if let Ok(entries) = std::fs::read_dir("/tmp") {
                 for entry in entries.flatten() {
-                    let name = entry.file_name().to_string_lossy();
+                    let entry_name = entry.file_name();
+                    let name = entry_name.to_string_lossy();
                     if name.contains("squashfs") || name.starts_with(".mount") || name.starts_with("appimage") {
                         let candidate = entry.path().join(relative);
                         if candidate.exists() {
