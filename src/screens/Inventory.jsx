@@ -264,7 +264,6 @@ export default function Inventory() {
   return (
     <PageLayout
       title="Inventory"
-      subtitle={lastUpdate ? `Last synced: ${formatLastUpdate(lastUpdate)}` : statusText}
       extra={renderHeaderStats()}
     >
       <div className="space-y-4">

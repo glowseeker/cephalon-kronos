@@ -457,7 +457,10 @@ export default function Dashboard() {
     const miscItems = hasInventory ? (rawInventory?.MiscItems || []) : []
     const credCount = hasInventory ? (miscItems.find(i => i.ItemType === nw.credType)?.ItemCount ?? 0) : 0
     const STANDING_PER_LEVEL = 10000
-    const standingInLevel = hasInventory ? Math.max(0, nwStandingTotal - (currentRank * STANDING_PER_LEVEL)) : 0
+    const standingInLevelRaw = hasInventory ? Math.max(0, nwStandingTotal - (currentRank * STANDING_PER_LEVEL)) : 0
+    // Handle overflow - if standing exceeds per-level max, flip to next rank
+    const effectiveRank = currentRank + Math.floor(standingInLevelRaw / STANDING_PER_LEVEL)
+    const standingInLevel = standingInLevelRaw % STANDING_PER_LEVEL
     const categories = ['Daily', 'Weekly', 'Elite Weekly']
     const grouped = (nw.challenges || []).reduce((acc, c) => {
       let cat = 'Daily'
@@ -470,7 +473,7 @@ export default function Dashboard() {
 
     const rewardTiers = nw.rewards || []
     const progressPercent = Math.min(100, (standingInLevel / STANDING_PER_LEVEL) * 100)
-    const effectiveRank = hasInventory ? currentRank : -1
+    const rankToDisplay = hasInventory ? effectiveRank : -1
 
     return (
       <div className="space-y-3">
@@ -525,8 +528,8 @@ export default function Dashboard() {
               >
                 <div className="flex gap-6 items-stretch pb-2 h-full">
                   {rewardTiers.map((r, ri) => {
-                    const isUnlocked = ri < effectiveRank
-                    const isCurrent = ri === effectiveRank
+                    const isUnlocked = ri < rankToDisplay
+                    const isCurrent = ri === rankToDisplay
                     return (
                       <div
                         key={ri}
