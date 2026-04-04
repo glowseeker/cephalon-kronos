@@ -26,7 +26,8 @@ import {
   resolveRewardText,
   resolveChallenge,
   resolveChallengeDesc,
-  resolveItemName
+  resolveItemName,
+  splitPascal
 } from './warframeUtils'
 
 // ─── Environment Cycle Parsers ────────────────────────────────────────────────

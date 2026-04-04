@@ -372,6 +372,8 @@ function splitPascal(str) {
     .trim();
 }
 
+export { splitPascal };
+
 function nameFromPath(path = '') {
   const parts = path.split('/').filter(Boolean);
   const leaf = parts.at(-1) ?? path;
