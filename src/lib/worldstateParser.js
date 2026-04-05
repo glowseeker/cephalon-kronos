@@ -190,9 +190,13 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
 
   const resolvePriority = (key) => {
     if (!key) return ''
+    // Strip leading slash for lookup
+    const lookupKey = key.startsWith('/') ? key.slice(1) : key
     if (suppDict) {
       if (suppDict[key]) return clean(suppDict[key])
       if (suppDict['/' + key]) return clean(suppDict['/' + key])
+      // Also try without leading slash
+      if (suppDict[lookupKey]) return clean(suppDict[lookupKey])
 
       // Also try resolving via ERg if the key is a solnode but we want to check suppDict for the name
       const entry = ERg[key]
@@ -577,29 +581,45 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
     })),
 
     // Events / Operations (from Goals)
-    events: (raw.Goals || []).map(g => ({
-      id: g._id?.$oid || g._id,
-      name: g.Desc ? resolvePriority(g.Desc) : (g.Tag ? resolvePriority(g.Tag) : 'Operation'),
-      description: g.ToolTip ? resolvePriority(g.ToolTip) : '',
-      factions: (g.Factions || []).map(f => resolveNode(f, dict, ERg)),
-      node: g.Node ? resolveNode(g.Node, dict, ERg) : '',
-      scoreVar: g.ScoreVarName,
-      targetScore: g.VictoryThreshold,
-      currentScore: g.Count,
-      percent: Math.min(100, Math.max(0, (g.Count / g.VictoryThreshold) * 100)),
-      rewards: (g.RewardTierItems || []).map(rt => resolveRewardText(rt, dict, ERg, uniqueNameToName)),
-      mainReward: resolveRewardText(g.Reward, dict, ERg, uniqueNameToName),
-      expiry: g.Expiry,
-      activation: g.Activation
-    })),
+    events: (raw.Goals || []).map(g => {
+      // Special case for known operations
+      let name = ''
+      if (g.Tag === 'ShadowgrapherEvent') {
+        name = 'Operation Atramentum'
+      } else if (g.Desc) {
+        name = resolvePriority(g.Desc)
+      } else if (g.Tag) {
+        name = resolvePriority(g.Tag)
+      }
+      if (!name) name = 'Operation'
+      
+      return {
+        id: g._id?.$oid || g._id,
+        name,
+        description: g.ToolTip ? resolvePriority(g.ToolTip) : '',
+        factions: (g.Factions || []).map(f => resolveNode(f, dict, ERg)),
+        node: g.Node ? resolveNode(g.Node, dict, ERg) : '',
+        scoreVar: g.ScoreVarName,
+        targetScore: g.VictoryThreshold,
+        currentScore: g.Count,
+        percent: Math.min(100, Math.max(0, (g.Count / g.VictoryThreshold) * 100)),
+        rewards: (g.RewardTierItems || []).map(rt => resolveRewardText(rt, dict, ERg, uniqueNameToName)),
+        mainReward: resolveRewardText(g.Reward, dict, ERg, uniqueNameToName),
+        expiry: g.Expiry,
+        activation: g.Activation
+      }
+    }),
 
     // Global Boosters (from GlobalUpgrades)
     globalBoosters: (raw.GlobalUpgrades || []).map(u => {
       const typeMap = {
         'GAMEPLAY_KILL_XP_AMOUNT': 'Affinity Booster',
-        'GAMEPLAY_MONEY_PICKUP_AMOUNT': 'Credit Booster',
+        'GAMEPLAY_MONEY_REWARD_AMOUNT': 'Credit Booster',
         'GAMEPLAY_PICKUP_AMOUNT': 'Resource Booster'
       }
+      const locTag = u.LocalizeTag || ''
+      if (locTag.includes('DoubleCredits')) return { name: 'Double Credits', expiry: u.ExpiryDate, activation: u.Activation }
+      if (locTag.includes('DoubleAffinity')) return { name: 'Double Affinity', expiry: u.ExpiryDate, activation: u.Activation }
       return {
         name: typeMap[u.UpgradeType] || splitPascal(u.UpgradeType.replace('GAMEPLAY_', '')),
         expiry: u.ExpiryDate || u.Expiry,
