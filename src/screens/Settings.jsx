@@ -13,7 +13,7 @@
  *    update timestamps.
  */
 import { useState } from 'react'
-import { Wifi, WifiOff, RefreshCw, Palette } from 'lucide-react'
+import { Wifi, WifiOff, RefreshCw, Palette, Bell } from 'lucide-react'
 import { PageLayout, Card, Button, Toggle } from '../components/UI'
 import { useTheme } from '../contexts/ThemeContext'
 import { useMonitoring } from '../contexts/MonitoringContext'
@@ -41,40 +41,68 @@ export default function SettingsScreen() {
     <PageLayout title="Settings">
       <div className="space-y-6">
 
-        {/* Theme Selector */}
-        <Card glow>
-          <div className="flex items-center gap-3 mb-4">
-            <Palette className="text-kronos-accent" size={24} />
-            <h2 className="text-xl font-semibold">Theme</h2>
+        {/* Theme Selector - Leaner version */}
+        <Card glow className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Palette className="text-kronos-accent" size={20} />
+              <h2 className="text-lg font-semibold uppercase tracking-tight">Theme</h2>
+            </div>
+            <p className="text-[10px] text-kronos-dim uppercase font-bold">
+              Current: {themes.find(t => t.id === theme)?.name}
+            </p>
           </div>
-          <p className="text-sm text-kronos-dim mb-4">
-            Choose your interface theme based on Warframe's official themes
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {themes.map((t) => (
               <button
                 key={t.id}
                 onClick={() => setTheme(t.id)}
                 data-theme={t.id}
+                title={t.name}
                 className={`
-                  p-4 rounded-lg text-center transition-all duration-200
+                  min-h-[56px] p-2 rounded-lg border transition-all duration-200 relative group flex items-center justify-center text-center
                   ${theme === t.id
-                    ? 'ring-2 ring-white'
-                    : 'hover:ring-1 hover:ring-white/50'
+                    ? 'border-white ring-2 ring-white/30 scale-[1.02]'
+                    : 'border-white/5 hover:border-white/20 hover:scale-[1.01]'
                   }
                 `}
                 style={{
-                  backgroundColor: t.id === theme
-                    ? 'var(--color-accent)'
-                    : 'var(--color-panel)'
+                  backgroundColor: 'var(--color-bg)',
                 }}
               >
-                <div className="font-medium text-sm" style={{
-                  color: theme === t.id ? '#000' : 'var(--color-accent)'
-                }}>
+                <div className="absolute inset-0 rounded-lg opacity-10 group-hover:opacity-20 transition-opacity" style={{ backgroundColor: `var(--color-accent)` }} />
+                <span className="relative text-xs font-bold uppercase tracking-tight leading-tight" style={{ color: 'var(--color-accent)' }}>
                   {t.name}
-                </div>
+                </span>
               </button>
+            ))}
+          </div>
+        </Card>
+
+        {/* Notifications (Placeholder for Overlay System) */}
+        <Card glow className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Bell className="text-kronos-accent" size={20} />
+            <h2 className="text-lg font-semibold uppercase tracking-tight">App Notifications</h2>
+          </div>
+          <p className="text-[11px] text-kronos-dim mb-4 uppercase font-bold tracking-wide">
+            Configure overlay alerts for game events (Coming Soon)
+          </p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 opacity-50 pointer-events-none">
+            {[
+              { label: 'S-Tier Arbitration', desc: 'Notify when a top-tier node appears' },
+              { label: 'Foundry Completion', desc: 'Alert when items are ready to claim' },
+              { label: 'Syndicate Standing', desc: 'Notify when daily standing is capped' },
+              { label: 'Mastery Progress', desc: 'Alert at 50% / 90% toward next rank' },
+            ].map((notif, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-kronos-panel/20 rounded-lg border border-white/5">
+                <div>
+                  <p className="text-xs font-bold text-kronos-text uppercase">{notif.label}</p>
+                  <p className="text-[9px] text-kronos-dim uppercase">{notif.desc}</p>
+                </div>
+                <Toggle checked={false} onChange={() => {}} />
+              </div>
             ))}
           </div>
         </Card>

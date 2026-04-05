@@ -16,7 +16,7 @@
  */
 import { useState } from 'react'
 import { Search } from 'lucide-react'
-import { PageLayout, Input, Card, Tabs } from '../components/UI'
+import { PageLayout, Input, Card, Tabs, MonitorState } from '../components/UI'
 import { useMonitoring } from '../contexts/MonitoringContext'
 
 const TYPE_TABS = [
@@ -63,9 +63,6 @@ export default function Rivens() {
   const veiledCount = allRivens.filter(r => r.veiled).length
   const capacity = inventoryData?.account?.riven_capacity ?? 0
 
-  const activeRivens = filtered.filter(r => !r.veiled)
-  const veiledRivens = filtered.filter(r => r.veiled)
-
   return (
     <PageLayout
       title="Riven Mods"
@@ -99,11 +96,7 @@ export default function Rivens() {
         </div>
 
         {!inventoryData ? (
-          <Card glow>
-            <div className="text-center py-12">
-              <p className="text-kronos-dim">Start monitoring to load riven mods</p>
-            </div>
-          </Card>
+          <MonitorState className="py-20" />
         ) : filtered.length === 0 ? (
           <Card glow>
             <div className="text-center py-12">

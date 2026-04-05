@@ -1,6 +1,28 @@
 // UI primitives and shared components
-import { useRef, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { useRef, useEffect, useState } from 'react';
+import { X, AlertCircle } from 'lucide-react';
+
+// Monitor State Prompt
+// Unified "No inventory data found" component.
+export function MonitorState({ className = "" }) {
+  const goToSettings = () => {
+    const btn = document.getElementById('nav-settings');
+    if (btn) btn.click();
+  };
+
+  return (
+    <div className={`flex flex-col items-center justify-center text-center p-8 bg-kronos-panel/10 rounded-xl border border-dashed border-white/10 ${className}`}>
+      <AlertCircle size={48} className="text-kronos-accent/30 mb-4" />
+      <h3 className="text-xl font-bold uppercase mb-2">No inventory data found.</h3>
+      <p className="text-sm text-kronos-dim mb-6 max-w-xs uppercase font-medium">
+        Sync your game memory to view your collection and progress.
+      </p>
+      <Button onClick={goToSettings} className="px-8 font-black uppercase tracking-widest">
+        Go to Settings to Start Monitoring
+      </Button>
+    </div>
+  );
+}
 
 // Card Component
 // A simple panel wrapper with optional glow style.

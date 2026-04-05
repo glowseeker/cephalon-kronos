@@ -18,7 +18,7 @@
  * - Dynamic rank icons loaded via Tauri's `get_mastery_icons_path()`.
  */
 import { useState, useEffect } from 'react'
-import { PageLayout, Card } from '../components/UI'
+import { PageLayout, Card, MonitorState } from '../components/UI'
 import { Trophy, X, CheckCircle2, Circle } from 'lucide-react'
 import { useMonitoring } from '../contexts/MonitoringContext'
 import { convertFileSrc, invoke } from '@tauri-apps/api/tauri'
@@ -88,9 +88,7 @@ export default function Mastery() {
   if (!inventoryData) {
     return (
       <PageLayout title="Mastery">
-        <Card glow className="p-8 text-center">
-          <p className="text-kronos-dim">Load inventory data to see mastery progress</p>
-        </Card>
+        <MonitorState className="py-20" />
       </PageLayout>
     )
   }

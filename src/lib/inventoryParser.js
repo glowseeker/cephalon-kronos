@@ -1263,6 +1263,11 @@ export function parseInventory(raw, exports) {
     if (aff.Tag && aff.Tag.includes('Intermission')) {
       nightwaveStanding = aff.Standing ?? 0
       nightwaveTitle = aff.Title ?? 0
+      // Standing over 10000 should flip the level
+      while (nightwaveStanding >= 10000) {
+        nightwaveStanding -= 10000;
+        nightwaveTitle += 1;
+      }
       break
     }
   }
@@ -1303,10 +1308,36 @@ export function parseInventory(raw, exports) {
       const resultType = recipe?.resultType ?? p.ItemType;
       const completionDate = p.CompletionDate?.$date?.$numberLong;
       const finishTime = completionDate ? parseInt(completionDate, 10) / 1000 : 0;
+      
+      const name = resolveName(resultType, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe);
+      
+      // Try to find if this is a subcomponent (Systems, Neuroptics, Chassis, Barrel, etc)
+      // and find its "Parent" item.
+      let parentName = name;
+      if (name.includes(' Systems')) parentName = name.replace(' Systems', '');
+      else if (name.includes(' Neuroptics')) parentName = name.replace(' Neuroptics', '');
+      else if (name.includes(' Chassis')) parentName = name.replace(' Chassis', '');
+      else if (name.includes(' Harness')) parentName = name.replace(' Harness', '');
+      else if (name.includes(' Barrel')) parentName = name.replace(' Barrel', '');
+      else if (name.includes(' Receiver')) parentName = name.replace(' Receiver', '');
+      else if (name.includes(' Stock')) parentName = name.replace(' Stock', '');
+      else if (name.includes(' Grip')) parentName = name.replace(' Grip', '');
+      else if (name.includes(' String')) parentName = name.replace(' String', '');
+      else if (name.includes(' Limb')) parentName = name.replace(' Limb', '');
+      else if (name.includes(' Blade')) parentName = name.replace(' Blade', '');
+      else if (name.includes(' Hilt')) parentName = name.replace(' Hilt', '');
+      else if (name.includes(' Blueprint')) parentName = name.replace(' Blueprint', '');
+      
+      // Find the parent item in 'all' items to check ownership/mastery
+      const parentItem = all.find(i => i.name === parentName || i.name === (parentName + " Blueprint"));
+      
       return {
         unique_name: p.ItemType,
         result_type: resultType,
-        name: resolveName(resultType, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+        name,
+        parentName,
+        parentOwned: parentItem?.owned ?? false,
+        parentMastered: parentItem?.mastered ?? false,
         image: resolveImage(resultType, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
         finishTime,
         buildTime: recipe?.buildTime ?? (12 * 3600),

@@ -17,7 +17,7 @@
  */
 import { useState } from 'react'
 import { Search, AlertCircle } from 'lucide-react'
-import { PageLayout, Input, Card, Tabs } from '../components/UI'
+import { PageLayout, Input, Card, Tabs, MonitorState } from '../components/UI'
 import { useMonitoring } from '../contexts/MonitoringContext'
 
 const ERA_ORDER = ['Lith', 'Meso', 'Neo', 'Axi', 'Requiem']
@@ -90,13 +90,7 @@ export default function Relics() {
         </div>
 
         {!inventoryData ? (
-          <Card glow>
-            <div className="text-center py-12">
-              <AlertCircle className="w-16 h-16 text-kronos-accent mx-auto mb-4 opacity-50" />
-              <h3 className="text-xl font-bold mb-2">No Data</h3>
-              <p className="text-kronos-dim">Start monitoring to load relics</p>
-            </div>
-          </Card>
+          <MonitorState className="py-20" />
         ) : totalFilteredGroups === 0 ? (
           <Card glow>
             <div className="text-center py-12">

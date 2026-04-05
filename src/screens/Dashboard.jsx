@@ -1502,49 +1502,72 @@ export default function Dashboard() {
           {isVisible('inv') && worldstate?.invasions?.length > 0 && (
             <Card glow className="p-3">
               <CardHeader icon={Swords} title="Invasions" />
-              <div className="space-y-2">
-                {worldstate.invasions.filter(i => !i.completed).slice(0, 4).map((inv, idx) => {
+              <div className="space-y-3 mt-2">
+                {worldstate.invasions.filter(i => !i.completed).slice(0, 5).map((inv, idx) => {
+                  const completionPercentage = Math.max(0, Math.min(100, inv.completion));
                   return (
-                    <div key={idx} className="bg-kronos-panel/40 rounded p-2">
-                      <p className="text-[10px] font-bold text-center mb-1 uppercase text-kronos-dim">{inv.node}</p>
+                    <div key={idx} className="bg-kronos-panel/40 rounded-lg p-3 border border-white/5 relative overflow-hidden group/inv">
+                      {/* Background faction hint */}
+                      <div className="absolute inset-0 opacity-[0.03] pointer-events-none flex justify-between px-4 items-center">
+                         <span className="text-6xl font-black italic">{inv.attacker.faction[0]}</span>
+                         <span className="text-6xl font-black italic">{inv.defender.faction[0]}</span>
+                      </div>
 
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-[10px] font-black text-kronos-dim uppercase tracking-tighter">{inv.node}</span>
+                        <span className="text-[9px] font-mono text-kronos-dim/80">{inv.missionType || 'Conflict'}</span>
+                      </div>
+
+                      <div className="flex items-center gap-3 relative z-10">
                         {/* Attacker */}
-                        <div className="flex-1 flex flex-col items-center text-center min-w-0">
-                          <div className="h-11 flex flex-col items-center justify-end mb-1">
-                            {inv.attacker.rewardText && (
-                              <>
-                                <span className="text-[9px] text-blue-400 font-bold leading-tight truncate w-full">{inv.attacker.rewardText}</span>
-                                <div className="w-8 h-8 flex items-center justify-center">
-                                  <img src={resolveAnyImage(inv.attacker.reward, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" />
-                                </div>
-                              </>
-                            )}
+                        <div className="flex-1 flex flex-col items-start min-w-0">
+                          <div className="flex items-center gap-2 w-full">
+                            <div className="w-8 h-8 bg-black/40 rounded flex items-center justify-center p-1 border border-blue-500/20">
+                              <img src={resolveAnyImage(inv.attacker.reward, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-bold text-blue-400 leading-tight truncate">{inv.attacker.rewardText}</p>
+                              <p className="text-[8px] text-kronos-dim uppercase font-black">{inv.attacker.faction}</p>
+                            </div>
                           </div>
-                          <span className="text-[8px] text-kronos-dim uppercase font-bold truncate w-full">{inv.attacker.faction}</span>
                         </div>
 
-                        <div className="text-[10px] font-black text-kronos-dim mt-auto mb-0.5">VS</div>
+                        <div className="text-[10px] font-black text-kronos-dim/40 italic">VS</div>
 
                         {/* Defender */}
-                        <div className="flex-1 flex flex-col items-center text-center min-w-0">
-                          <div className="h-11 flex flex-col items-center justify-end mb-1">
-                            {inv.defender.rewardText && (
-                              <>
-                                <span className="text-[9px] text-red-400 font-bold leading-tight truncate w-full">{inv.defender.rewardText}</span>
-                                <div className="w-8 h-8 flex items-center justify-center">
-                                  <img src={resolveAnyImage(inv.defender.reward, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" />
-                                </div>
-                              </>
-                            )}
+                        <div className="flex-1 flex flex-col items-end min-w-0 text-right">
+                          <div className="flex items-center justify-end gap-2 w-full">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-bold text-red-400 leading-tight truncate">{inv.defender.rewardText}</p>
+                              <p className="text-[8px] text-kronos-dim uppercase font-black">{inv.defender.faction}</p>
+                            </div>
+                            <div className="w-8 h-8 bg-black/40 rounded flex items-center justify-center p-1 border border-red-500/20">
+                              <img src={resolveAnyImage(inv.defender.reward, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" />
+                            </div>
                           </div>
-                          <span className="text-[8px] text-kronos-dim uppercase font-bold truncate w-full">{inv.defender.faction}</span>
                         </div>
                       </div>
 
-                      <div className="bg-zinc-800 rounded-full h-1 overflow-hidden relative">
-                        <div className="bg-blue-500 h-full absolute left-0" style={{ width: `${inv.completion}%` }} />
-                        <div className="bg-red-500 h-full absolute right-0" style={{ width: `${100 - inv.completion}%` }} />
+                      {/* Tug of war bar */}
+                      <div className="mt-2.5 h-1.5 bg-black/40 rounded-full overflow-hidden flex border border-white/5 p-[0.5px]">
+                        <div 
+                          className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-500 rounded-l-full" 
+                          style={{ width: `${completionPercentage}%` }} 
+                        />
+                        <div 
+                          className="h-full bg-gradient-to-l from-red-600 to-red-400 transition-all duration-500 rounded-r-full" 
+                          style={{ width: `${100 - completionPercentage}%` }} 
+                        />
+                      </div>
+                      
+                      {/* Completion marker */}
+                      <div className="flex justify-between mt-1 px-1">
+                        <span className={`text-[8px] font-mono ${completionPercentage > 50 ? 'text-blue-400 font-bold' : 'text-kronos-dim'}`}>
+                          {completionPercentage.toFixed(1)}%
+                        </span>
+                        <span className={`text-[8px] font-mono ${completionPercentage <= 50 ? 'text-red-400 font-bold' : 'text-kronos-dim'}`}>
+                          {(100 - completionPercentage).toFixed(1)}%
+                        </span>
                       </div>
                     </div>
                   );
