@@ -483,16 +483,16 @@ export default function Dashboard() {
           <div className="w-1/4 bg-kronos-panel/40 p-3 rounded-lg border border-white/5 flex flex-col">
             <p className="text-sm font-bold text-kronos-accent uppercase tracking-tight text-center mb-3">{nw.name}</p>
             <div className="flex-1 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] text-kronos-dim uppercase">Rank</span>
-                <span className="text-[14px] font-black text-kronos-accent">{currentRank}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] text-kronos-dim uppercase">Ends</span>
-                <span className="text-[14px] text-kronos-text">{timeRemaining(nw.expiry)}</span>
-              </div>
-              {hasInventory && (
+              {hasInventory ? (
                 <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] text-kronos-dim uppercase">Rank</span>
+                    <span className="text-[14px] font-black text-kronos-accent">{currentRank}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] text-kronos-dim uppercase">Ends</span>
+                    <span className="text-[14px] text-kronos-text">{timeRemaining(nw.expiry)}</span>
+                  </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] text-kronos-dim uppercase">Creds</span>
                     <span className="text-[14px] font-bold text-kronos-text">{credCount}</span>
@@ -512,6 +512,11 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </>
+              ) : (
+                <div className="flex flex-col items-center justify-center flex-1">
+                  <p className="text-[12px] text-kronos-dim uppercase mb-1">Ends in</p>
+                  <p className="text-lg font-black text-kronos-text">{timeRemaining(nw.expiry)}</p>
+                </div>
               )}
             </div>
           </div>
