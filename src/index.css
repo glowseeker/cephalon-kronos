@@ -222,6 +222,32 @@
     box-shadow: 0 0 10px var(--color-accent);
   }
 
+  /* Thin variant for the sidebar nav — 4px wide, same theme */
+  .nav-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .nav-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .nav-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+
+  .nav-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-accent);
+    box-shadow: 0 0 10px var(--color-accent);
+  }
+
+  /* Firefox */
+  .nav-scrollbar {
+    scrollbar-width: auto;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  }
+
   @keyframes shimmer {
     from {
       background-position: 0 0;

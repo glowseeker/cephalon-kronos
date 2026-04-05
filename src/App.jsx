@@ -22,11 +22,57 @@
  * Rust backend, parses them with inventoryParser.js and worldstateParser.js,
  * and exposes the results via React context.  Screens read from that context.
  */
-import { useState, lazy, Suspense } from 'react'
+import { useState, lazy, Suspense, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useMonitoring } from './contexts/MonitoringContext'
 import { formatLastUpdate } from './lib/warframeUtils'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { MonitoringProvider } from './contexts/MonitoringContext'
+
+// Portal tooltip that follows button during scroll
+function TooltipPortal({ children, triggerRef, visible }) {
+  const [position, setPosition] = useState({ top: 0, left: 0 })
+  const [opacity, setOpacity] = useState(0)
+
+  useEffect(() => {
+    if (!triggerRef.current) return
+
+    const updatePos = () => {
+      const rect = triggerRef.current.getBoundingClientRect()
+      setPosition({
+        top: rect.top + window.scrollY + rect.height / 2,
+        left: rect.right + window.scrollX + 8
+      })
+    }
+
+    updatePos()
+    window.addEventListener('scroll', updatePos, true)
+    return () => window.removeEventListener('scroll', updatePos, true)
+  }, [triggerRef])
+
+  useEffect(() => {
+    if (visible) {
+      setOpacity(1)
+    } else {
+      setOpacity(0)
+    }
+  }, [visible])
+
+  return createPortal(
+    <div
+      className="fixed z-50 pointer-events-none bg-kronos-bg border border-white/10 rounded-lg px-3 py-2 shadow-2xl glass-panel font-black uppercase text-[10px] tracking-widest text-kronos-accent whitespace-nowrap transition-opacity duration-200"
+      style={{ 
+        top: position.top, 
+        left: position.left, 
+        transform: 'translateY(-50%)',
+        opacity 
+      }}
+    >
+      {children}
+    </div>,
+    document.body
+  )
+}
 
 const Dashboard = lazy(() => import('./screens/Dashboard'))
 const Inventory = lazy(() => import('./screens/Inventory'))
@@ -72,9 +118,9 @@ function AppContent() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar Navigation */}
-      <nav className="glass-panel w-20 border-r flex flex-col items-center py-6 gap-4">
+      <nav className="glass-panel w-20 border-r flex flex-col items-center py-6 gap-4 z-40 relative flex-shrink-0">
         {/* Logo */}
-        <div className="mb-4">
+        <div className="mb-4 flex-shrink-0">
           <div className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden">
             <img
               src="/IconKronos.png"
@@ -84,55 +130,62 @@ function AppContent() {
           </div>
         </div>
 
-        {/* Nav Items */}
-        <div className="flex-1 flex flex-col justify-evenly">
-          {NAV_ITEMS.map((item) => {
-            const isActive = activeTab === item.id
-            const isImg = typeof item.icon === 'string'
+        {/* Nav Items — scrollable, portal tooltip escapes overflow */}
+        <div className="flex-1 w-full overflow-y-auto py-2 nav-scrollbar">
+          <div className="flex flex-col gap-6 items-center min-h-min pb-4">
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeTab === item.id
+              const isImg = typeof item.icon === 'string'
+              const btnRef = useRef(null)
+              const [showTooltip, setShowTooltip] = useState(false)
 
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`
-                  w-full h-12 flex items-center justify-center
-                  transition-all duration-200 relative group
-                  ${isActive
-                    ? 'text-kronos-accent'
-                    : 'hover:bg-kronos-panel/60'
-                  }
-                `}
-              >
-                {isImg ? (
-                  <div
-                    className="w-8 h-8 flex-shrink-0 transition-colors duration-200"
-                    style={{
-                      backgroundColor: isActive ? 'var(--color-accent, #5590ab)' : 'rgba(255,255,255,0.6)',
-                      maskImage: `url(${item.icon})`,
-                      WebkitMaskImage: `url(${item.icon})`,
-                      maskSize: 'contain',
-                      WebkitMaskSize: 'contain',
-                      maskRepeat: 'no-repeat',
-                      WebkitMaskRepeat: 'no-repeat',
-                      maskPosition: 'center',
-                      WebkitMaskPosition: 'center',
-                    }}
-                  />
-                ) : (
-                  <item.icon size={22} strokeWidth={1.5} style={{ color: isActive ? 'var(--color-accent, #5590ab)' : 'rgba(255,255,255,0.6)' }} />
-                )}
-
-                {/* Tooltip */}
-                <div className="absolute left-full ml-3 px-3 py-2 glass-panel rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[9999] glow-border">
-                  <span className="text-sm font-medium">{item.label}</span>
+              return (
+                <div key={item.id} className="relative">
+                  <button
+                    ref={btnRef}
+                    onClick={() => setActiveTab(item.id)}
+                    onMouseEnter={() => setShowTooltip(true)}
+                    onMouseLeave={() => setShowTooltip(false)}
+                    className={`
+                      w-12 h-12 flex items-center justify-center rounded-lg
+                      transition-all duration-200 flex-shrink-0
+                      ${isActive
+                        ? 'bg-kronos-accent/10 text-kronos-accent shadow-[0_0_15px_rgba(var(--kronos-accent-rgb),0.2)]'
+                        : 'text-kronos-dim hover:bg-white/5 hover:text-white'
+                      }
+                    `}
+                  >
+                    {isImg ? (
+                      <div
+                        className="w-7 h-7 flex-shrink-0 transition-colors duration-200"
+                        style={{
+                          backgroundColor: isActive ? 'var(--color-accent, #5590ab)' : 'currentColor',
+                          maskImage: `url(${item.icon})`,
+                          WebkitMaskImage: `url(${item.icon})`,
+                          maskSize: 'contain',
+                          WebkitMaskSize: 'contain',
+                          maskRepeat: 'no-repeat',
+                          WebkitMaskRepeat: 'no-repeat',
+                          maskPosition: 'center',
+                          WebkitMaskPosition: 'center',
+                          opacity: isActive ? 1 : 0.6
+                        }}
+                      />
+                    ) : (
+                      <item.icon size={22} strokeWidth={1.5} />
+                    )}
+                  </button>
+                  <TooltipPortal triggerRef={btnRef} visible={showTooltip}>
+                    {item.label}
+                  </TooltipPortal>
                 </div>
-              </button>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
 
-        {/* Monitoring status and last update */}
-        <div className="mt-auto flex flex-col items-center gap-2">
+        {/* Monitoring status and last update — fixed at bottom */}
+        <div className="mt-auto flex-shrink-0 flex flex-col items-center gap-4 pt-4 border-t border-white/5 w-full">
           <div className="text-xs text-kronos-dim text-center whitespace-nowrap">
             Last update:
             <br />
@@ -148,8 +201,8 @@ function AppContent() {
               }
             `}
           >
-            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 glass-panel rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[9999] glow-border">
-              <span className="text-sm font-medium">
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 glass-panel rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[9999] shadow-2xl bg-kronos-bg border border-white/10 font-black uppercase text-[10px] tracking-widest text-kronos-accent">
+              <span className="font-medium">
                 {monitorResult === 'success' ? 'Monitoring' : monitorResult === 'error' ? 'Connection Error' : 'Not Monitoring'}
               </span>
             </div>
