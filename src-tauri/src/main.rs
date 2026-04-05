@@ -375,18 +375,21 @@ async fn list_notes(app_handle: tauri::AppHandle) -> Result<Vec<String>, String>
     }
     
     // Also check bundled location for notes that haven't been copied yet
-    if let Some(bundled_dir) = resolve_bundled_path(&app_handle, "data/user/notes") {
-        if bundled_dir.exists() && bundled_dir != notes_dir {
-            if let Ok(entries) = fs::read_dir(&bundled_dir) {
-                for entry in entries.flatten() {
-                    if let Some(name) = entry.file_name().to_str() {
-                        if name.ends_with(".md") && !notes.contains(&name.to_string()) {
-                            // Copy to writable location first
-                            let dest = notes_dir.join(name);
-                            if !dest.exists() {
-                                let _ = fs::copy(entry.path(), &dest);
+    // Skip this in debug builds to avoid issues with source/data being the same
+    if !cfg!(debug_assertions) {
+        if let Some(bundled_dir) = resolve_bundled_path(&app_handle, "data/user/notes") {
+            if bundled_dir.exists() && bundled_dir != notes_dir {
+                if let Ok(entries) = fs::read_dir(&bundled_dir) {
+                    for entry in entries.flatten() {
+                        if let Some(name) = entry.file_name().to_str() {
+                            if name.ends_with(".md") && !notes.contains(&name.to_string()) {
+                                // Copy to writable location first
+                                let dest = notes_dir.join(name);
+                                if !dest.exists() {
+                                    let _ = fs::copy(entry.path(), &dest);
+                                }
+                                notes.push(name.to_string());
                             }
-                            notes.push(name.to_string());
                         }
                     }
                 }
