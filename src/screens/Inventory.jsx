@@ -49,13 +49,28 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
   const [isResizing, setIsResizing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [visibleCount, setVisibleCount] = useState(24)
+  const [shouldRender, setShouldRender] = useState(isOpen)
+  const [isAnimating, setIsAnimating] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true)
+      // Small delay to ensure DOM is ready for entry animation
+      requestAnimationFrame(() => setIsAnimating(true))
+    } else {
+      setIsAnimating(false)
+      const timer = setTimeout(() => setShouldRender(false), 300)
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (!isResizing) return
     const handleMouseMove = (e) => {
       window.requestAnimationFrame(() => {
         const newWidth = window.innerWidth - e.clientX
-        if (newWidth > 320 && newWidth < 1200) setWidth(newWidth)
+        // Limit to window width minus sidebar (80px)
+        if (newWidth > 320 && newWidth < window.innerWidth - 80) setWidth(newWidth)
       })
     }
     const handleMouseUp = () => {
@@ -88,9 +103,12 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
 
   const formatFoundryTime = (seconds) => {
     if (seconds <= 0) return 'READY'
-    const h = Math.floor(seconds / 3600)
+    const d = Math.floor(seconds / (24 * 3600))
+    const h = Math.floor((seconds % (24 * 3600)) / 3600)
     const m = Math.floor((seconds % 3600) / 60)
     const s = Math.floor(seconds % 60)
+
+    if (d > 0) return `${d}d ${h}h`
     return h > 0 ? `${h}h ${m}m` : (m > 0 ? `${m}m ${s}s` : `${s}s`)
   }
 
@@ -115,13 +133,13 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
         i.ingredients.some(ing => ing.name.toLowerCase().includes(q))
       )
     } else {
-      // Without search, only show BPs player owns
-      items = items.filter(i => i.bpCount > 0)
+      // Without search, show BPs player owns OR component-based ones they have parts for
+      items = items.filter(i => i.bpCount > 0 || i.componentBased)
     }
 
     // Apply other filters
     if (foundryFilters.unmastered) {
-      items = items.filter(i => !i.isMastered && i.fullItemOwned)
+      items = items.filter(i => i.hasMastery && !i.isMastered)
     }
     if (foundryFilters.owned) {
       items = items.filter(i => !i.fullItemOwned)
@@ -133,16 +151,22 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
     return items
   }, [craftableItems, searchQuery, foundryFilters])
 
-  if (!isOpen) return null
+  if (!shouldRender) return null
 
   const hasData = !!inventoryData
+  const isLarge = width > 850
+  const isMedium = width > 500
 
   return (
-    <div className="fixed inset-0 z-[100] flex justify-end">
+    <div className={`fixed inset-0 z-[100] flex justify-end transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isAnimating ? 'opacity-100' : 'opacity-0'}`}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div 
-        className={`relative h-full bg-kronos-bg border-l border-white/5 shadow-2xl flex flex-col ${isResizing ? '' : 'animate-in slide-in-from-right duration-300'}`} 
-        style={{ width: `${width}px`, maxWidth: '90vw', transition: isResizing ? 'none' : 'width 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
+      <div
+        className={`relative h-full bg-kronos-bg border-l border-white/5 shadow-2xl flex flex-col transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]`}
+        style={{
+          width: `${width}px`,
+          transform: isAnimating ? 'translateX(0)' : 'translateX(100%)',
+          transition: isResizing ? 'none' : 'width 500ms cubic-bezier(0.16, 1, 0.3, 1), transform 500ms cubic-bezier(0.16, 1, 0.3, 1)'
+        }}
       >
         <div
           className={`absolute left-0 top-0 w-2 h-full cursor-ew-resize hover:bg-kronos-accent/30 transition-colors z-50 flex items-center justify-center ${isResizing ? 'bg-kronos-accent/20' : ''}`}
@@ -150,45 +174,46 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
         >
           <div className={`w-[1px] h-12 rounded-full transition-colors ${isResizing ? 'bg-kronos-accent shadow-[0_0_8px_rgba(var(--kronos-accent-rgb),0.8)]' : 'bg-white/10'}`} />
         </div>
-        <div className="p-4 border-b border-white/5 flex items-center justify-between">
-          <div><h3 className="text-lg font-bold uppercase tracking-tight">Foundry</h3><p className="text-[10px] text-kronos-dim">Crafting & Blueprints</p></div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X size={18} /></button>
+        <div className="p-6 border-b border-white/5 flex items-center justify-between">
+          <div><h3 className="text-2xl font-bold uppercase tracking-tight">Foundry</h3></div>
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X size={22} /></button>
         </div>
 
         {/* Search */}
-        <div className="px-4 py-2 border-b border-white/5">
+        <div className="px-6 py-4 border-b border-white/5">
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-kronos-dim group-focus-within:text-kronos-accent transition-colors" size={14} />
-            <Input placeholder="Search blueprints..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-kronos-dim group-focus-within:text-kronos-accent transition-colors" size={16} />
+            <Input placeholder="Search blueprints..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 py-3 text-sm" />
           </div>
         </div>
 
         {/* Filters */}
-        <div className="px-4 py-2 border-b border-white/5 flex gap-2">
+        <div className="px-6 py-3 border-b border-white/5 flex gap-3">
           <button
             onClick={() => setFoundryFilters(prev => ({ ...prev, crafting: !prev.crafting }))}
-            className={`flex-1 flex items-center justify-center py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${foundryFilters.crafting ? 'bg-orange-500/20 border-orange-500 text-orange-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
+            className={`flex-1 flex items-center justify-center py-3 rounded-xl border text-[11px] font-black uppercase transition-all ${foundryFilters.crafting ? 'bg-orange-500/20 border-orange-500 text-orange-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
           >
             Crafting
           </button>
           <button
             onClick={() => setFoundryFilters(prev => ({ ...prev, ready: !prev.ready }))}
-            className={`flex-1 flex items-center justify-center py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${foundryFilters.ready ? 'bg-green-500/20 border-green-500 text-green-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
+            className={`flex-1 flex items-center justify-center py-3 rounded-xl border text-[11px] font-black uppercase transition-all ${foundryFilters.ready ? 'bg-green-500/20 border-green-500 text-green-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
           >
             Ready
           </button>
           <button
             onClick={() => setFoundryFilters(prev => ({ ...prev, owned: !prev.owned }))}
-            className={`flex-1 flex items-center justify-center py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${foundryFilters.owned ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
+            className={`flex-1 flex items-center justify-center py-3 rounded-xl border text-[11px] font-black uppercase transition-all ${foundryFilters.owned ? 'bg-blue-500/10 border-blue-500 text-blue-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
           >
             Unowned
           </button>
           <button
             onClick={() => setFoundryFilters(prev => ({ ...prev, unmastered: !prev.unmastered }))}
-            className={`flex-1 flex items-center justify-center py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${foundryFilters.unmastered ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
+            className={`flex-1 flex items-center justify-center py-3 rounded-xl border text-[11px] font-black uppercase transition-all ${foundryFilters.unmastered ? 'bg-purple-500/10 border-purple-500 text-purple-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
           >
             Unmastered
           </button>
+
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
@@ -211,7 +236,7 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
                           const timeLeft = Math.max(0, item.finishTime - now);
                           return (
                             <div key={item.unique_name + idx} className="flex gap-3 items-center bg-kronos-panel/30 p-2 rounded-lg border border-orange-500/20">
-                              <div className="w-10 h-10 bg-black/40 rounded flex items-center justify-center p-1 flex-shrink-0">
+                              <div className="w-11 h-11 flex items-center justify-center flex-shrink-0">
                                 {item.image && <img src={item.image} alt="" className="max-w-full max-h-full object-contain" />}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -241,90 +266,103 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
               {/* Craftable Blueprints - show when Crafting is OFF */}
               {!foundryFilters.crafting && (
                 <>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-[10px] font-black text-kronos-accent uppercase tracking-widest">Blueprints</h4>
-                    {filteredCraftable.length > visibleCount && (
-                      <button
-                        onClick={() => setVisibleCount(prev => prev + 24)}
-                        className="text-[9px] font-bold text-kronos-accent hover:text-white transition-colors"
-                      >
-                        Load More ({filteredCraftable.length - visibleCount} more)
-                      </button>
-                    )}
-                  </div>
                   {filteredCraftable.length === 0 ? (
-                    <div className="text-center py-8 text-kronos-dim text-xs italic">No blueprints match your filters.</div>
+                    <div className="text-center py-12 text-kronos-dim text-sm italic">No blueprints match your filters.</div>
                   ) : (
-                    <div className="space-y-3">
-                      {filteredCraftable.slice(0, visibleCount).map((item, idx) => (
-                        <div key={item.uniqueName + idx} className={`rounded-lg border overflow-hidden ${item.bpCount > 0 ? 'border-green-500/30 bg-green-500/5' : 'border-white/5 bg-kronos-panel/20'}`}>
-                          {/* Header: BP image + name + badges */}
-                          <div className="flex items-center gap-4 px-4 py-5 border-b border-white/5 relative">
-                            <div className="w-24 h-24 bg-black/40 rounded-xl flex items-center justify-center p-2 flex-shrink-0 border border-white/5 shadow-inner">
-                              {item.image
-                                ? <img src={item.image} alt="" className="max-w-full max-h-full object-contain" />
-                                : <div className="w-12 h-12 rounded bg-white/5" />
-                              }
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="text-xl font-black text-kronos-text uppercase truncate">{item.baseName}</p>
-                                </div>
-                                {item.allIngredientsMet && item.bpCount > 0 && (
-                                  <div className="px-2 py-1 bg-green-500 text-black text-[10px] font-black uppercase rounded flex items-center gap-1 shadow-[0_0_15px_rgba(34,197,94,0.4)]">
-                                    <CheckCircle2 size={12} /> Ready
-                                  </div>
-                                )}
+                    <>
+                      <div className={`grid gap-4 ${isLarge ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                        {filteredCraftable.slice(0, visibleCount).map((item, idx) => (
+                          <div key={item.uniqueName + idx} className={`rounded-xl border border-white/5 overflow-hidden flex flex-col bg-kronos-panel/20`}>
+                            {/* Header: BP image + name + badges */}
+                            <div className={`flex items-center gap-4 px-4 py-5 border-b border-white/5 relative ${item.bpCount > 0 ? 'bg-green-500/5' : ''}`}>
+                              <div className="w-28 h-28 flex items-center justify-center flex-shrink-0">
+                                {item.image
+                                  ? <img src={item.image} alt="" className="max-w-full max-h-full object-contain" />
+                                  : <div className="w-14 h-14 rounded bg-white/5" />
+                                }
                               </div>
-                              
-                              <div className="flex flex-wrap gap-2 mt-4">
-                                {/* Blueprint Status */}
-                                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${item.bpCount > 0 ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
-                                  <div className={`w-1.5 h-1.5 rounded-full ${item.bpCount > 0 ? 'bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]' : 'bg-red-400'}`} />
-                                  <span className="text-[10px] font-black uppercase tracking-wider">Blueprint: {item.bpCount}</span>
-                                </div>
-
-                                {/* Crafted Status */}
-                                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${item.fullItemOwned ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' : 'bg-white/5 border-white/5 text-kronos-dim'}`}>
-                                  <span className="text-[10px] font-black uppercase tracking-wider">Crafted: {item.ownedCount || 0}</span>
-                                </div>
-
-                                {/* Mastery Status */}
-                                {item.hasMastery && (
-                                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${item.isMastered ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/5 text-kronos-dim'}`}>
-                                    <span className="text-[10px] font-black uppercase tracking-wider">{item.isMastered ? 'Mastered' : 'Unmastered'}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xl font-black text-kronos-text uppercase whitespace-normal leading-tight">{item.baseName}</p>
+                                    {(item.buildTime > 0 || item.buildPrice > 0) && (
+                                      <div className="flex gap-3 mt-1">
+                                        {item.buildPrice > 0 && <span className="text-[10px] font-black text-yellow-500/80 uppercase">Credit cost: {item.buildPrice.toLocaleString()}</span>}
+                                        {item.buildTime > 0 && <span className="text-[10px] font-black text-kronos-dim uppercase">Build time: {formatFoundryTime(item.buildTime)}</span>}
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Ingredients grid */}
-                          {item.ingredients.length > 0 && (
-                            <div className="grid gap-px" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
-                              {item.ingredients.map((ing, i) => {
-                                const met = ing.have >= ing.need
-                                return (
-                                  <div key={i} className={`flex flex-col items-center gap-2 p-4 ${met ? 'bg-green-500/5' : 'bg-black/20'}`}>
-                                    <div className="w-16 h-16 bg-black/40 rounded flex items-center justify-center p-1.5 flex-shrink-0">
-                                      {ing.image
-                                        ? <img src={ing.image} alt="" className="max-w-full max-h-full object-contain" />
-                                        : <div className="w-8 h-8 rounded bg-white/5" />
-                                      }
+                                  {item.allIngredientsMet && item.bpCount > 0 && (
+                                    <div className="px-2 py-1 bg-green-500 text-black text-[10px] font-black uppercase rounded flex items-center gap-1 shadow-[0_0_15px_rgba(34,197,94,0.4)]">
+                                      <CheckCircle2 size={12} /> Ready
                                     </div>
-                                    <p className="text-xs text-kronos-dim text-center leading-tight line-clamp-2 w-full">{ing.name}</p>
-                                    <span className={`text-sm font-black font-mono ${met ? 'text-green-400' : 'text-red-400'}`}>
-                                      {ing.have}/{ing.need}
-                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 mt-4">
+                                  {/* Blueprint Status */}
+                                  <div className={`flex items-center px-3 py-1.5 rounded-lg border transition-colors ${item.bpCount > 0 ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+                                    <div className={`${item.bpCount > 0 ? 'bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]' : 'bg-red-400'}`} />
+                                    <span className="text-[10px] font-black uppercase tracking-wider">Blueprint: {item.bpCount}</span>
                                   </div>
-                                )
-                              })}
+
+                                  {/* Crafted Status */}
+                                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${item.fullItemOwned ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' : 'bg-white/5 border-white/5 text-kronos-dim'}`}>
+                                    <span className="text-[10px] font-black uppercase tracking-wider">Crafted: {item.ownedCount || 0}</span>
+                                  </div>
+
+                                  {/* Mastery Status */}
+                                  {item.hasMastery && (
+                                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${item.isMastered ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/5 text-kronos-dim'}`}>
+                                      <span className="text-[10px] font-black uppercase tracking-wider">{item.isMastered ? 'Mastered' : 'Unmastered'}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          )}
+
+                            {/* Ingredients grid */}
+                            {item.ingredients.length > 0 && (
+                              <div
+                                className={`grid gap-px flex-1 border-t border-white/5`}
+                                style={{
+                                  gridTemplateColumns: `repeat(${isMedium ? Math.min(item.ingredients.length, 4) : 2}, 1fr)`
+                                }}
+                              >
+                                {item.ingredients.map((ing, i) => {
+                                  const met = ing.have >= ing.need
+                                  return (
+                                    <div key={i} className={`flex flex-col items-center justify-center gap-1.5 p-3 h-full ${met ? 'bg-green-500/5' : 'bg-black/20'}`}>
+                                      <div className="w-14 h-14 flex items-center justify-center flex-shrink-0">
+                                        {ing.image
+                                          ? <img src={ing.image} alt="" className="max-w-full max-h-full object-contain" />
+                                          : <div className="w-7 h-7 rounded bg-white/5" />
+                                        }
+                                      </div>
+                                      <p className="text-[14px] font-medium text-kronos-dim text-center leading-tight w-full px-1">{ing.name}</p>
+                                      <span className={`text-[12px] font-black font-mono ${met ? 'text-green-400' : 'text-red-400'}`}>
+                                        {ing.have}/{ing.need}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {visibleCount < filteredCraftable.length && (
+                        <div className="flex justify-center pt-8 pb-12">
+                          <Button
+                            variant="secondary"
+                            onClick={() => setVisibleCount(prev => prev + 24)}
+                            className="w-full py-4 text-[11px] font-black uppercase tracking-[0.2em] border border-white/5 bg-kronos-panel/10 hover:bg-kronos-panel/30 transition-all text-kronos-accent"
+                          >
+                            Load More Blueprints ({filteredCraftable.length - visibleCount} remaining)
+                          </Button>
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -335,7 +373,6 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
     </div>
   )
 }
-
 export default function Inventory() {
   const { inventoryData } = useMonitoring()
   const [activeTab, setActiveTab] = useState('all')

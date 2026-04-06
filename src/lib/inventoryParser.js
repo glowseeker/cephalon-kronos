@@ -586,12 +586,21 @@ export function parseInventory(raw, exports) {
   weaponsRaw.forEach(i => {
     const e = EW[i.unique_name];
     const un = i.unique_name;
-    if (un.includes('ModularPistol') || un.includes('ModularPrimary')) {
-      i.category = 'kitguns';
-      kitguns.push(i);
-    } else if (un.includes('ModularMelee')) {
-      i.category = 'zaws';
-      zaws.push(i);
+    const isKitgun = un.includes('ModularPistol') || un.includes('ModularPrimary');
+    const isZaw = un.includes('ModularMelee');
+
+    if (isKitgun) {
+      // Only include finished assemblies or Chambers (mastery-providing parts)
+      if (!un.endsWith('Part') || un.includes('/Barrel/') || un.includes('/Barrels/')) {
+        i.category = 'kitguns';
+        kitguns.push(i);
+      }
+    } else if (isZaw) {
+      // Only include finished assemblies or Strikes (mastery-providing parts)
+      if (!un.endsWith('Part') || un.includes('/Tip/') || un.includes('/Tips/')) {
+        i.category = 'zaws';
+        zaws.push(i);
+      }
     } else if (e.productCategory === 'LongGuns' && e.noise) {
       // LongGuns: noise field present on real weapons; excludes bayonet-only melee attachments
       i.category = 'primary';
@@ -854,6 +863,15 @@ export function parseInventory(raw, exports) {
       mods.push(createItem(un, 'mods', [EM], [EM], u));
     }
   });
+
+  const consumables = (raw.Consumables ?? []).map(c => ({
+    unique_name: c.ItemType,
+    name: resolveName(c.ItemType, dict, EGear, ER, ERecipe) || nameFromPath(c.ItemType),
+    image: resolveImage(c.ItemType, EGear, ER, ERecipe),
+    category: 'consumables',
+    quantity: c.ItemCount ?? 1,
+    owned: true
+  }));
 
   const resources = [], prime_parts = [];
   for (const item of (raw.MiscItems ?? [])) {
@@ -1239,7 +1257,7 @@ export function parseInventory(raw, exports) {
       };
     });
 
-  const all = [...warframes, ...primary, ...secondary, ...melee, ...kitguns, ...zaws, ...sentinels, ...moas, ...hounds, ...beasts, ...archwings, ...kdrives, ...archweapons, ...necramechs, ...amps, ...mods, ...arcanes, ...resources, ...rivens, ...prime_parts, ...intrinsics, ...plexus];
+  const all = [...warframes, ...primary, ...secondary, ...melee, ...kitguns, ...zaws, ...sentinels, ...moas, ...hounds, ...beasts, ...archwings, ...kdrives, ...archweapons, ...necramechs, ...amps, ...mods, ...arcanes, ...consumables, ...resources, ...rivens, ...prime_parts, ...intrinsics, ...plexus];
 
   const playerLevel = raw.PlayerLevel ?? 0;
   const rivenBin = raw.RandomModBin ?? { Slots: 0, Extra: 0 };
@@ -1325,7 +1343,7 @@ export function parseInventory(raw, exports) {
         raw.Suits, raw.LongGuns, raw.Pistols, raw.Melee,
         raw.Sentinels, raw.KubrowPets, raw.MoaPets, raw.SentinelWeapons,
         raw.SpaceMelee, raw.SpaceGuns, raw.MechSuits, raw.OperatorAmps,
-        raw.SpaceSuits, raw.Hoverboards, raw.MiscItems, raw.Recipes
+        raw.SpaceSuits, raw.Hoverboards, raw.MiscItems, raw.Recipes, raw.Consumables
       ];
       
       for (const arr of inventoryArrays) {
@@ -1396,13 +1414,19 @@ export function parseInventory(raw, exports) {
         // Check if player has the full item (owned)
         const ownedCount = all.filter(i =>
           (i.name === baseName || i.name === baseName + " Prime") && i.owned
-        ).length;
+        ).reduce((sum, i) => sum + (i.quantity ?? 1), 0);
         const fullItemOwned = ownedCount > 0;
 
         // Check if mastered
         const masteredEntry = all.find(i => (i.name === baseName || i.name === baseName + " Prime"));
         const isMastered = masteredEntry?.mastered ?? false;
-        const hasMastery = masteredEntry ? (masteredEntry.category !== 'resources' && masteredEntry.category !== 'mods' && masteredEntry.category !== 'arcanes' && masteredEntry.category !== 'prime_parts') : false;
+        let hasMastery = masteredEntry ? (masteredEntry.category !== 'resources' && masteredEntry.category !== 'mods' && masteredEntry.category !== 'arcanes' && masteredEntry.category !== 'prime_parts') : false;
+
+        // Modular parts mastery fix: only Strikes, Chambers, and Heads provide mastery
+        if (hasMastery && (bpKey.includes('Modular') || bpKey.includes('/Ostron/Melee/') || bpKey.includes('/SolarisUnited/') || bpKey.includes('/InfKitGun/'))) {
+          const isMasteryPart = bpKey.includes('/Barrel/') || bpKey.includes('/Barrels/') || bpKey.includes('/Tip/') || bpKey.includes('/Tips/') || bpKey.includes('MoaPetHead') || bpKey.includes('ZanukaPetPartHead');
+          if (!isMasteryPart) hasMastery = false;
+        }
 
         // Check all ingredients - check both resources AND owned items (including component blueprints)
         const ingredients = (recipe.ingredients ?? []).map(ing => {
