@@ -24,7 +24,7 @@ const ERA_ORDER = ['Lith', 'Meso', 'Neo', 'Axi', 'Requiem']
 const QUALITY_ORDER = ['Intact', 'Exceptional', 'Flawless', 'Radiant']
 
 export default function Relics() {
-  const { inventoryData } = useMonitoring()
+  const { inventoryData, isInventoryLoading } = useMonitoring()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeEra, setActiveEra] = useState('All')
   const [activeQuality, setActiveQuality] = useState('All')
@@ -89,7 +89,9 @@ export default function Relics() {
           </div>
         </div>
 
-        {!inventoryData ? (
+        {isInventoryLoading ? (
+          <MonitorState isLoading className="py-20" />
+        ) : !inventoryData ? (
           <MonitorState className="py-20" />
         ) : totalFilteredGroups === 0 ? (
           <Card glow>

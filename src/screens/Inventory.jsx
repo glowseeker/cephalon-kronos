@@ -45,6 +45,7 @@ const FILTER_CONFIG = {
 const ITEMS_PER_PAGE = 48
 
 function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFoundryFilters }) {
+  const { isInventoryLoading } = useMonitoring()
   const [width, setWidth] = useState(600)
   const [isResizing, setIsResizing] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -217,7 +218,9 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
-          {!hasData ? (
+          {isInventoryLoading ? (
+            <MonitorState isLoading className="h-full" />
+          ) : inventoryData === null ? (
             <MonitorState className="h-full" />
           ) : (
             <>
@@ -374,7 +377,7 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
   )
 }
 export default function Inventory() {
-  const { inventoryData } = useMonitoring()
+  const { inventoryData, isInventoryLoading } = useMonitoring()
   const [activeTab, setActiveTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilterSortPanel, setShowFilterSortPanel] = useState(false)
@@ -461,7 +464,15 @@ export default function Inventory() {
         )}
         <Tabs tabs={INVENTORY_TABS} activeTab={activeTab} onChange={(id) => { setActiveTab(id); setCurrentFilters({}) }} />
         {inventoryData && <p className="text-xs text-kronos-dim">Showing {visibleItems.length} of {filteredItems.length} items</p>}
-        {!inventoryData ? <MonitorState className="py-20" /> : (filteredItems.length === 0 ? <div className="text-center py-20 text-kronos-dim">No items found in {tabLabel.toLowerCase()}.</div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pb-4">
+        {isInventoryLoading ? (
+          <MonitorState isLoading className="py-20" />
+        ) : inventoryData === null ? (
+          <MonitorState className="py-20" />
+        ) : (
+          filteredItems.length === 0 ? (
+            <div className="text-center py-20 text-kronos-dim">No items found in {tabLabel.toLowerCase()}.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pb-4">
           {visibleItems.map((item, idx) => {
             const isUnowned = !item.owned
             const isPrimePart = item.category === 'prime_parts'
@@ -483,7 +494,8 @@ export default function Inventory() {
               </Card>
             )
           })}
-        </div>)}
+        </div>)
+        )}
         {visibleCount < filteredItems.length && <div className="flex justify-center py-8"><Button onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}>Load More Items</Button></div>}
       </div>
       <FoundryPanel isOpen={showFoundry} onClose={() => setShowFoundry(false)} inventoryData={inventoryData} foundryFilters={foundryFilters} setFoundryFilters={setFoundryFilters} />

@@ -76,7 +76,7 @@ function getXPNeededFor(rank) {
 }
 
 export default function Mastery() {
-  const { inventoryData } = useMonitoring()
+  const { inventoryData, isInventoryLoading } = useMonitoring()
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [iconsPath, setIconsPath] = useState('');
   const [hideNonMastery, setHideNonMastery] = useState(false)
@@ -85,10 +85,10 @@ export default function Mastery() {
     invoke('get_mastery_icons_path').then(setIconsPath).catch(console.error);
   }, []);
 
-  if (!inventoryData) {
+  if (isInventoryLoading || !inventoryData) {
     return (
       <PageLayout title="Mastery">
-        <MonitorState className="py-20" />
+        <MonitorState isLoading={isInventoryLoading} className="py-20" />
       </PageLayout>
     )
   }

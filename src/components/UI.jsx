@@ -1,14 +1,26 @@
 // UI primitives and shared components
 import { useRef, useEffect, useState } from 'react';
-import { X, AlertCircle } from 'lucide-react';
+import { X, AlertCircle, RefreshCw } from 'lucide-react';
 
 // Monitor State Prompt
 // Unified "No inventory data found" component.
-export function MonitorState({ className = "" }) {
+export function MonitorState({ className = "", isLoading = false }) {
   const goToSettings = () => {
     const btn = document.getElementById('nav-settings');
     if (btn) btn.click();
   };
+
+  if (isLoading) {
+    return (
+      <div className={`flex flex-col items-center justify-center text-center p-8 bg-kronos-panel/10 rounded-xl border border-dashed border-white/10 ${className}`}>
+        <RefreshCw size={48} className="text-kronos-accent animate-spin mb-4" />
+        <h3 className="text-xl font-bold uppercase mb-2">Inventory Loading...</h3>
+        <p className="text-sm text-kronos-dim max-w-xs uppercase font-medium">
+          Processing your game collection data.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex flex-col items-center justify-center text-center p-8 bg-kronos-panel/10 rounded-xl border border-dashed border-white/10 ${className}`}>

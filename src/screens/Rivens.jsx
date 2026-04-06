@@ -39,7 +39,7 @@ const STATE_TABS = [
 ]
 
 export default function Rivens() {
-  const { inventoryData } = useMonitoring()
+  const { inventoryData, isInventoryLoading } = useMonitoring()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeType, setActiveType] = useState('all')
   const [activeState, setActiveState] = useState('all')
@@ -95,7 +95,9 @@ export default function Rivens() {
           </div>
         </div>
 
-        {!inventoryData ? (
+        {isInventoryLoading ? (
+          <MonitorState isLoading className="py-20" />
+        ) : !inventoryData ? (
           <MonitorState className="py-20" />
         ) : filtered.length === 0 ? (
           <Card glow>

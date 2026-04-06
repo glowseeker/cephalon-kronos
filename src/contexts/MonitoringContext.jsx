@@ -51,6 +51,7 @@ export function MonitoringProvider({ children }) {
   const [lastUpdate, setLastUpdate] = useState(localStorage.getItem('lastUpdate') || null)
   const [rawInventory, setRawInventory] = useState(null)
   const [inventoryData, setInventoryData] = useState(undefined)
+  const [isUpdating, setIsUpdating] = useState(false)
   const [worldState, setWorldState] = useState(null)
   const [statusText, setStatusText] = useState('Initializing…')
   const [spIncursions, setSpIncursions] = useState(null)
@@ -59,6 +60,10 @@ export function MonitoringProvider({ children }) {
   const intervalRef = useRef(null)
   const busyRef = useRef(false)
   const autoStartRef = useRef(autoStart)
+
+  const isInventoryLoading = useMemo(() => {
+    return (inventoryData === undefined) || (!!rawInventory && !inventoryData) || isUpdating;
+  }, [inventoryData, rawInventory, isUpdating]);
 
   const setAutoStart = useCallback((val) => {
     const v = !!val
@@ -257,6 +262,7 @@ export function MonitoringProvider({ children }) {
   const callApiHelper = useCallback(async () => {
     if (busyRef.current) return
     busyRef.current = true
+    setIsUpdating(true)
     try {
       setStatusText('Launching warframe-api-helper…')
       // Fetch everything concurrently: inventory + text updates
@@ -283,6 +289,7 @@ export function MonitoringProvider({ children }) {
       throw err
     } finally {
       busyRef.current = false
+      setIsUpdating(false)
     }
   }, [applyRaw])
 
@@ -325,7 +332,7 @@ export function MonitoringProvider({ children }) {
     <MonitoringContext.Provider value={{
       exportData, spIncursions, arbys, descendiaDescs,
       dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENW, ENWRawRewards, ExportImages, ExportTextIcons, arbyTiers: ARBY_TIERS,
-      isMonitoring, monitorResult, autoStart, setAutoStart, lastUpdate, rawInventory, inventoryData, worldState, setWorldState, statusText,
+      isMonitoring, monitorResult, autoStart, setAutoStart, lastUpdate, rawInventory, inventoryData, isInventoryLoading, worldState, setWorldState, statusText,
       startMonitoring, stopMonitoring, manualRefresh, callApiHelper,
     }}>
       {children}
