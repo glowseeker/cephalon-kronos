@@ -6,7 +6,7 @@
  * filtering (e.g., "Owned + Unmastered").
  */
 import { useState, useMemo, useEffect } from 'react'
-import { Search, Filter, ArrowUpDown, AlertCircle, CheckCircle2, Box, Zap, Gem, Clock, X } from 'lucide-react'
+import { Search, Filter, ArrowUpDown, AlertCircle, CheckCircle2, Box, Zap, Gem, Clock, X, Hammer, Package } from 'lucide-react'
 import { PageLayout, Card, Input, Button, Tabs, MonitorState } from '../components/UI'
 import { useMonitoring } from '../contexts/MonitoringContext'
 
@@ -45,8 +45,10 @@ const FILTER_CONFIG = {
 const ITEMS_PER_PAGE = 48
 
 function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFoundryFilters }) {
-  const [width, setWidth] = useState(480)
+  const [width, setWidth] = useState(600)
   const [isResizing, setIsResizing] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [visibleCount, setVisibleCount] = useState(24)
 
   useEffect(() => {
     if (!isResizing) return
@@ -56,32 +58,33 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
         if (newWidth > 320 && newWidth < 1200) setWidth(newWidth)
       })
     }
-    const handleMouseUp = () => setIsResizing(false)
+    const handleMouseUp = () => {
+      setIsResizing(false)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    document.body.style.cursor = 'ew-resize'
+    document.body.style.userSelect = 'none'
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
     }
   }, [isResizing])
 
-  const groupList = useMemo(() => {
-    const rawItems = inventoryData?.foundry ?? []
-    if (rawItems.length === 0) return []
-    const groups = {}
-    rawItems.forEach(item => {
-      const p = item.parentName || item.name;
-      if (!groups[p]) groups[p] = { name: p, items: [], owned: item.parentOwned, mastered: item.parentMastered }
-      groups[p].items.push(item)
-    })
-    let list = Object.values(groups)
-    if (foundryFilters.ready) list = list.filter(g => g.items.some(i => i.ready))
-    if (foundryFilters.owned) list = list.filter(g => g.owned)
-    if (foundryFilters.mastered) list = list.filter(g => g.mastered)
-    return list
-  }, [inventoryData, foundryFilters])
+  const craftingItems = useMemo(() => {
+    return inventoryData?.foundry ?? []
+  }, [inventoryData])
 
-  if (!isOpen) return null
+  const craftableItems = useMemo(() => {
+    return inventoryData?.craftable ?? []
+  }, [inventoryData])
+
+  useEffect(() => { setVisibleCount(24) }, [searchQuery, foundryFilters])
 
   const formatFoundryTime = (seconds) => {
     if (seconds <= 0) return 'READY'
@@ -91,68 +94,242 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
     return h > 0 ? `${h}h ${m}m` : (m > 0 ? `${m}m ${s}s` : `${s}s`)
   }
 
+  const filteredCrafting = useMemo(() => {
+    let items = craftingItems
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      items = items.filter(i => (i.name ?? '').toLowerCase().includes(q) || (i.parentName ?? '').toLowerCase().includes(q))
+    }
+    return items
+  }, [craftingItems, searchQuery])
+
+  const filteredCraftable = useMemo(() => {
+    let items = craftableItems
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      // Search everything - owned BPs and component-based warframe BPs
+      items = items.filter(i =>
+        i.bpName.toLowerCase().includes(q) ||
+        i.baseName.toLowerCase().includes(q) ||
+        i.ingredients.some(ing => ing.name.toLowerCase().includes(q))
+      )
+    } else {
+      // Without search, only show BPs player owns
+      items = items.filter(i => i.bpCount > 0)
+    }
+
+    // Apply other filters
+    if (foundryFilters.unmastered) {
+      items = items.filter(i => !i.isMastered && i.fullItemOwned)
+    }
+    if (foundryFilters.owned) {
+      items = items.filter(i => !i.fullItemOwned)
+    }
+    if (foundryFilters.ready) {
+      items = items.filter(i => i.allIngredientsMet)
+    }
+
+    return items
+  }, [craftableItems, searchQuery, foundryFilters])
+
+  if (!isOpen) return null
+
   const hasData = !!inventoryData
-  const rawItems = inventoryData?.foundry ?? []
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-end">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative h-full bg-kronos-bg border-l border-white/5 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300" style={{ width: `${width}px`, maxWidth: '90vw' }}>
+      <div 
+        className={`relative h-full bg-kronos-bg border-l border-white/5 shadow-2xl flex flex-col ${isResizing ? '' : 'animate-in slide-in-from-right duration-300'}`} 
+        style={{ width: `${width}px`, maxWidth: '90vw', transition: isResizing ? 'none' : 'width 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
+      >
         <div
           className={`absolute left-0 top-0 w-2 h-full cursor-ew-resize hover:bg-kronos-accent/30 transition-colors z-50 flex items-center justify-center ${isResizing ? 'bg-kronos-accent/20' : ''}`}
           onMouseDown={(e) => { e.preventDefault(); setIsResizing(true); }}
         >
           <div className={`w-[1px] h-12 rounded-full transition-colors ${isResizing ? 'bg-kronos-accent shadow-[0_0_8px_rgba(var(--kronos-accent-rgb),0.8)]' : 'bg-white/10'}`} />
         </div>
-        <div className="p-6 border-b border-white/5 flex items-center justify-between">
-          <div><h3 className="text-xl font-bold uppercase tracking-tight">Foundry</h3><p className="text-xs text-kronos-dim">Track active construction</p></div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X size={20} /></button>
+        <div className="p-4 border-b border-white/5 flex items-center justify-between">
+          <div><h3 className="text-lg font-bold uppercase tracking-tight">Foundry</h3><p className="text-[10px] text-kronos-dim">Crafting & Blueprints</p></div>
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X size={18} /></button>
         </div>
-        <div className="flex-1 p-4 min-h-0 flex flex-col">
-          <div className="flex gap-2 mb-4 px-1">
-            {[
-              { id: 'ready', label: 'Ready', icon: CheckCircle2 },
-              { id: 'owned', label: 'Owned', icon: Box },
-              { id: 'mastered', label: 'Mastered', icon: Zap },
-            ].map(f => (
-              <button key={f.id} onClick={() => setFoundryFilters(prev => ({ ...prev, [f.id]: !prev[f.id] }))} className={`flex-1 flex flex-col items-center py-2 rounded-lg border transition-all ${foundryFilters[f.id] ? 'bg-kronos-accent/20 border-kronos-accent text-kronos-accent' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}>
-                <f.icon size={14} className="mb-1" /><span className="text-[9px] font-black uppercase tracking-tighter">{f.label}</span>
-              </button>
-            ))}
+
+        {/* Search */}
+        <div className="px-4 py-2 border-b border-white/5">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-kronos-dim group-focus-within:text-kronos-accent transition-colors" size={14} />
+            <Input placeholder="Search blueprints..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" />
           </div>
-          <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar-slim pr-2 pb-10">
-            {!hasData ? <MonitorState className="h-full" /> : (groupList.length === 0 ? <div className="text-center py-20 text-kronos-dim italic text-sm">{rawItems.length === 0 ? 'No items currently crafting.' : 'No matching items.'}</div> : groupList.map((group, idx) => (
-              <Card key={group.name + idx} className="p-3 border-white/5 bg-kronos-panel/20">
-                <div className="flex justify-between items-start mb-3 border-b border-white/5 pb-2">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-black text-xs uppercase truncate text-kronos-text leading-tight">{group.name}</h4>
-                    <div className="flex gap-2 mt-1">
-                      {group.owned && <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Owned</span>}
-                      {group.mastered && <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 border border-green-500/20">Mastered</span>}
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {group.items.map((item, iidx) => {
-                    const duration = item.startTime ? (item.finishTime - item.startTime) : (item.buildTime || 12 * 3600);
-                    const now = Date.now() / 1000;
-                    const elapsed = item.startTime ? (now - item.startTime) : (now - (item.finishTime - (item.buildTime || 12 * 3600)));
-                    const progress = Math.min(100, Math.max(0, (elapsed / duration) * 100));
-                    const timeLeft = Math.max(0, item.finishTime - now);
-                    return (
-                      <div key={item.unique_name + iidx} className="flex gap-3 items-center">
-                        <div className="w-10 h-10 bg-black/40 rounded flex items-center justify-center p-1.5 flex-shrink-0 relative border border-white/5">{item.image && <img src={item.image} alt="" className="max-w-full max-h-full object-contain z-10" />}</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-center mb-1"><span className="text-[10px] font-bold text-kronos-dim truncate uppercase flex-1 mr-2">{item.name}</span>{item.ready ? <span className="text-[9px] font-black text-green-500 uppercase flex items-center gap-1"><CheckCircle2 size={10} /> READY</span> : <span className="text-[9px] font-mono text-kronos-accent uppercase">{formatFoundryTime(timeLeft)}</span>}</div>
-                          {!item.ready && <div className="w-full bg-black/40 h-1 rounded-full overflow-hidden relative border border-white/5"><div className="h-full bg-kronos-accent shadow-[0_0_5px_rgba(var(--kronos-accent-rgb),0.5)] transition-all duration-1000" style={{ width: `${progress}%` }} /></div>}
-                        </div>
+        </div>
+
+        {/* Filters */}
+        <div className="px-4 py-2 border-b border-white/5 flex gap-2">
+          <button
+            onClick={() => setFoundryFilters(prev => ({ ...prev, crafting: !prev.crafting }))}
+            className={`flex-1 flex items-center justify-center py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${foundryFilters.crafting ? 'bg-orange-500/20 border-orange-500 text-orange-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
+          >
+            Crafting
+          </button>
+          <button
+            onClick={() => setFoundryFilters(prev => ({ ...prev, ready: !prev.ready }))}
+            className={`flex-1 flex items-center justify-center py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${foundryFilters.ready ? 'bg-green-500/20 border-green-500 text-green-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
+          >
+            Ready
+          </button>
+          <button
+            onClick={() => setFoundryFilters(prev => ({ ...prev, owned: !prev.owned }))}
+            className={`flex-1 flex items-center justify-center py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${foundryFilters.owned ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
+          >
+            Unowned
+          </button>
+          <button
+            onClick={() => setFoundryFilters(prev => ({ ...prev, unmastered: !prev.unmastered }))}
+            className={`flex-1 flex items-center justify-center py-1.5 rounded-lg border text-[9px] font-black uppercase transition-all ${foundryFilters.unmastered ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'bg-kronos-panel/20 border-white/5 text-kronos-dim'}`}
+          >
+            Unmastered
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+          {!hasData ? (
+            <MonitorState className="h-full" />
+          ) : (
+            <>
+              {/* Currently Crafting */}
+              {foundryFilters.crafting && (
+                <>
+                  {filteredCrafting.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-3">Currently Crafting</h4>
+                      <div className="space-y-2">
+                        {filteredCrafting.map((item, idx) => {
+                          const duration = item.startTime ? (item.finishTime - item.startTime) : (item.buildTime || 12 * 3600);
+                          const now = Date.now() / 1000;
+                          const elapsed = item.startTime ? (now - item.startTime) : (now - (item.finishTime - (item.buildTime || 12 * 3600)));
+                          const progress = Math.min(100, Math.max(0, (elapsed / duration) * 100));
+                          const timeLeft = Math.max(0, item.finishTime - now);
+                          return (
+                            <div key={item.unique_name + idx} className="flex gap-3 items-center bg-kronos-panel/30 p-2 rounded-lg border border-orange-500/20">
+                              <div className="w-10 h-10 bg-black/40 rounded flex items-center justify-center p-1 flex-shrink-0">
+                                {item.image && <img src={item.image} alt="" className="max-w-full max-h-full object-contain" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-[10px] font-bold text-kronos-text truncate">{item.name}</span>
+                                  {item.ready ? (
+                                    <span className="text-[9px] font-black text-green-500 uppercase flex items-center gap-1"><CheckCircle2 size={10} /> READY</span>
+                                  ) : (
+                                    <span className="text-[9px] font-mono text-orange-400">{formatFoundryTime(timeLeft)}</span>
+                                  )}
+                                </div>
+                                {!item.ready && (
+                                  <div className="w-full bg-black/40 h-1.5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-orange-500 transition-all" style={{ width: `${progress}%` }} />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
-                    )
-                  })}
-                </div>
-              </Card>
-            )))}
-          </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Craftable Blueprints - show when Crafting is OFF */}
+              {!foundryFilters.crafting && (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-[10px] font-black text-kronos-accent uppercase tracking-widest">Blueprints</h4>
+                    {filteredCraftable.length > visibleCount && (
+                      <button
+                        onClick={() => setVisibleCount(prev => prev + 24)}
+                        className="text-[9px] font-bold text-kronos-accent hover:text-white transition-colors"
+                      >
+                        Load More ({filteredCraftable.length - visibleCount} more)
+                      </button>
+                    )}
+                  </div>
+                  {filteredCraftable.length === 0 ? (
+                    <div className="text-center py-8 text-kronos-dim text-xs italic">No blueprints match your filters.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredCraftable.slice(0, visibleCount).map((item, idx) => (
+                        <div key={item.uniqueName + idx} className={`rounded-lg border overflow-hidden ${item.bpCount > 0 ? 'border-green-500/30 bg-green-500/5' : 'border-white/5 bg-kronos-panel/20'}`}>
+                          {/* Header: BP image + name + badges */}
+                          <div className="flex items-center gap-4 px-4 py-5 border-b border-white/5 relative">
+                            <div className="w-24 h-24 bg-black/40 rounded-xl flex items-center justify-center p-2 flex-shrink-0 border border-white/5 shadow-inner">
+                              {item.image
+                                ? <img src={item.image} alt="" className="max-w-full max-h-full object-contain" />
+                                : <div className="w-12 h-12 rounded bg-white/5" />
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="text-xl font-black text-kronos-text uppercase truncate">{item.baseName}</p>
+                                </div>
+                                {item.allIngredientsMet && item.bpCount > 0 && (
+                                  <div className="px-2 py-1 bg-green-500 text-black text-[10px] font-black uppercase rounded flex items-center gap-1 shadow-[0_0_15px_rgba(34,197,94,0.4)]">
+                                    <CheckCircle2 size={12} /> Ready
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="flex flex-wrap gap-2 mt-4">
+                                {/* Blueprint Status */}
+                                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${item.bpCount > 0 ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+                                  <div className={`w-1.5 h-1.5 rounded-full ${item.bpCount > 0 ? 'bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]' : 'bg-red-400'}`} />
+                                  <span className="text-[10px] font-black uppercase tracking-wider">Blueprint: {item.bpCount}</span>
+                                </div>
+
+                                {/* Crafted Status */}
+                                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${item.fullItemOwned ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' : 'bg-white/5 border-white/5 text-kronos-dim'}`}>
+                                  <span className="text-[10px] font-black uppercase tracking-wider">Crafted: {item.ownedCount || 0}</span>
+                                </div>
+
+                                {/* Mastery Status */}
+                                {item.hasMastery && (
+                                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${item.isMastered ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/5 text-kronos-dim'}`}>
+                                    <span className="text-[10px] font-black uppercase tracking-wider">{item.isMastered ? 'Mastered' : 'Unmastered'}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Ingredients grid */}
+                          {item.ingredients.length > 0 && (
+                            <div className="grid gap-px" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
+                              {item.ingredients.map((ing, i) => {
+                                const met = ing.have >= ing.need
+                                return (
+                                  <div key={i} className={`flex flex-col items-center gap-2 p-4 ${met ? 'bg-green-500/5' : 'bg-black/20'}`}>
+                                    <div className="w-16 h-16 bg-black/40 rounded flex items-center justify-center p-1.5 flex-shrink-0">
+                                      {ing.image
+                                        ? <img src={ing.image} alt="" className="max-w-full max-h-full object-contain" />
+                                        : <div className="w-8 h-8 rounded bg-white/5" />
+                                      }
+                                    </div>
+                                    <p className="text-xs text-kronos-dim text-center leading-tight line-clamp-2 w-full">{ing.name}</p>
+                                    <span className={`text-sm font-black font-mono ${met ? 'text-green-400' : 'text-red-400'}`}>
+                                      {ing.have}/{ing.need}
+                                    </span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -169,7 +346,7 @@ export default function Inventory() {
   const [sortDirection, setSortDirection] = useState('asc')
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
   const [showFoundry, setShowFoundry] = useState(false)
-  const [foundryFilters, setFoundryFilters] = useState({ ready: false, owned: false, mastered: false })
+  const [foundryFilters, setFoundryFilters] = useState({ crafting: true, ready: false, owned: false, unmastered: false })
 
   useEffect(() => { setVisibleCount(ITEMS_PER_PAGE) }, [activeTab, searchQuery, currentFilters])
 

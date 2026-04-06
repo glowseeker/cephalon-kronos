@@ -1303,14 +1303,162 @@ export function parseInventory(raw, exports) {
     archwings, kdrives,
     archweapons, necramechs, amps, mods, arcanes, relics, resources, rivens, prime_parts, intrinsics, starchart, plexus, all,
     kitgunChambers, zawStrikes, moaHeads, houndHeads,
+
+    // ── Craftable Items (all recipes with ingredient checks) ──
+    craftable: (() => {
+      const craftableItems = [];
+
+      // Build ingredient inventory map for quick lookup
+      const resourceCounts = {};
+      
+      // Count resources from raw
+      (raw.Resources ?? []).forEach(r => {
+        resourceCounts[r.ItemType] = (resourceCounts[r.ItemType] ?? 0) + (r.ItemCount ?? 1);
+      });
+
+      // Get player's owned blueprints from inventory (with counts)
+      // Note: raw.Recipes is included in inventoryArrays below, so we use ownedItemCounts
+      
+      // Build map of all owned items (for checking components, etc.)
+      const ownedItemCounts = {};
+      const inventoryArrays = [
+        raw.Suits, raw.LongGuns, raw.Pistols, raw.Melee,
+        raw.Sentinels, raw.KubrowPets, raw.MoaPets, raw.SentinelWeapons,
+        raw.SpaceMelee, raw.SpaceGuns, raw.MechSuits, raw.OperatorAmps,
+        raw.SpaceSuits, raw.Hoverboards, raw.MiscItems, raw.Recipes
+      ];
+      
+      for (const arr of inventoryArrays) {
+        if (arr) {
+          for (const item of arr) {
+            const un = item.ItemType;
+            if (un) {
+              ownedItemCounts[un] = (ownedItemCounts[un] ?? 0) + (item.ItemCount ?? 1);
+            }
+          }
+        }
+      }
+
+      // Also check the processed all array
+      all.forEach(item => {
+        if (item.owned && item.uniqueName) {
+          ownedItemCounts[item.uniqueName] = (ownedItemCounts[item.uniqueName] ?? 0) + 1;
+        }
+      });
+
+      // Mastered items set
+      const masteredSet = new Set(
+        all.filter(i => i.mastered).map(i => i.name)
+      );
+
+      // Process each recipe
+      Object.entries(ERecipe ?? {}).forEach(([bpKey, recipe]) => {
+        if (!recipe || !recipe.resultType) return;
+
+        const resultName = resolveName(recipe.resultType, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe);
+
+        // Skip Helminth abilities and quest items
+        if (bpKey.includes('AbilityOverride')) return;
+        if (recipe.resultType?.includes('/Abilities/')) return;
+        if (bpKey.includes('Quest')) return;
+
+        // Skip component blueprints (Helmet/Chassis/Systems/Wings Blueprint) - they're shown as components in main BP
+        if (bpKey.includes('HelmetBlueprint') || bpKey.includes('ChassisBlueprint') || bpKey.includes('SystemsBlueprint') || bpKey.includes('HarnessBlueprint') || bpKey.includes('WingsBlueprint')) return;
+        
+        // Check if this is a main BP that could have components (warframes, archwings, etc)
+        const isMainItemBP = (bpKey.includes('/Recipes/WarframeRecipes/') || bpKey.includes('/Recipes/ArchwingRecipes/')) && !bpKey.includes('Component');
+        const isOwned = bpKey in ownedItemCounts;
+        
+        // Show if owned, OR if it's a main item BP with owned components
+        let showBP = isOwned;
+        
+        // If it's a main BP and player doesn't own it, check if they own any component BPs for it
+        if (isMainItemBP && !isOwned) {
+          const base = bpKey.replace('/Lotus/Types/Recipes/WarframeRecipes/', '').replace('/Lotus/Types/Recipes/ArchwingRecipes/', '').replace('Blueprint', '');
+          const prefix = bpKey.includes('ArchwingRecipes') ? '/Lotus/Types/Recipes/ArchwingRecipes/' : '/Lotus/Types/Recipes/WarframeRecipes/';
+          const componentBPs = [
+            `${prefix}${base}HelmetBlueprint`,
+            `${prefix}${base}ChassisBlueprint`,
+            `${prefix}${base}SystemsBlueprint`,
+            `${prefix}${base}HarnessBlueprint`,
+            `${prefix}${base}WingsBlueprint`
+          ];
+          showBP = componentBPs.some(cb => cb in ownedItemCounts);
+        }
+        
+        if (!showBP) return;
+        
+        // Get count of this BP owned
+        const bpCount = ownedItemCounts[bpKey] ?? 0;
+        
+        const baseName = resultName.replace(' Blueprint', '').replace(' Prime', ' Prime');
+
+        // Check if player has the full item (owned)
+        const ownedCount = all.filter(i =>
+          (i.name === baseName || i.name === baseName + " Prime") && i.owned
+        ).length;
+        const fullItemOwned = ownedCount > 0;
+
+        // Check if mastered
+        const masteredEntry = all.find(i => (i.name === baseName || i.name === baseName + " Prime"));
+        const isMastered = masteredEntry?.mastered ?? false;
+        const hasMastery = masteredEntry ? (masteredEntry.category !== 'resources' && masteredEntry.category !== 'mods' && masteredEntry.category !== 'arcanes' && masteredEntry.category !== 'prime_parts') : false;
+
+        // Check all ingredients - check both resources AND owned items (including component blueprints)
+        const ingredients = (recipe.ingredients ?? []).map(ing => {
+          const ingName = resolveName(ing.ItemType, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe);
+          
+          // Check resources
+          let have = resourceCounts[ing.ItemType] ?? 0;
+          
+          // Check owned items - try exact match first
+          have += ownedItemCounts[ing.ItemType] ?? 0;
+          
+          // Also check if there's a Blueprint version (for component blueprints like UrielHelmetBlueprint)
+          if (ing.ItemType.includes('Component')) {
+            const bpKey = ing.ItemType.replace('Component', 'Blueprint');
+            have += ownedItemCounts[bpKey] ?? 0;
+          }
+          
+          const need = ing.ItemCount ?? 1;
+          const image = resolveImage(ing.ItemType, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe);
+          return { name: ingName, have, need, itemType: ing.ItemType, image };
+        });
+
+        const allIngredientsMet = ingredients.every(ing => ing.have >= ing.need);
+
+        // No separate "parts" section needed - ingredients already has everything
+
+        craftableItems.push({
+          bpName: resultName,
+          baseName,
+          componentBased: isMainItemBP && !isOwned,
+          image: resolveImage(recipe.resultType, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+          buildTime: recipe.buildTime ?? (12 * 3600),
+          buildPrice: recipe.buildPrice ?? 0,
+          ingredients,
+          allIngredientsMet,
+          bpCount,
+          ownedCount,
+          fullItemOwned,
+          isMastered,
+          hasMastery,
+          uniqueName: bpKey,
+          resultType: recipe.resultType
+        });
+      });
+
+      return craftableItems;
+    })(),
+
     foundry: (raw.PendingRecipes ?? []).map(p => {
       const recipe = ERecipe[p.ItemType];
       const resultType = recipe?.resultType ?? p.ItemType;
       const completionDate = p.CompletionDate?.$date?.$numberLong;
       const finishTime = completionDate ? parseInt(completionDate, 10) / 1000 : 0;
-      
+
       const name = resolveName(resultType, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe);
-      
+
       // Try to find if this is a subcomponent (Systems, Neuroptics, Chassis, Barrel, etc)
       // and find its "Parent" item.
       let parentName = name;
@@ -1327,10 +1475,10 @@ export function parseInventory(raw, exports) {
       else if (name.includes(' Blade')) parentName = name.replace(' Blade', '');
       else if (name.includes(' Hilt')) parentName = name.replace(' Hilt', '');
       else if (name.includes(' Blueprint')) parentName = name.replace(' Blueprint', '');
-      
+
       // Find the parent item in 'all' items to check ownership/mastery
       const parentItem = all.find(i => i.name === parentName || i.name === (parentName + " Blueprint"));
-      
+
       return {
         unique_name: p.ItemType,
         result_type: resultType,
