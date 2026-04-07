@@ -29,7 +29,7 @@ import {
   Coins, Newspaper, DollarSign, Sparkles, RefreshCw,
   Swords, Activity, Bell, ShoppingBag, Shield,
   Calendar, Moon, LayoutDashboard, ChevronDown, ChevronUp, X,
-  Settings, CheckCircle2, MoreHorizontal, Trophy, Star
+  Settings, Check, MoreHorizontal, Trophy, Star
 } from 'lucide-react'
 import { useMonitoring } from '../contexts/MonitoringContext'
 import {

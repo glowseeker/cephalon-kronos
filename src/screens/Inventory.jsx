@@ -6,8 +6,8 @@
  * filtering (e.g., "Owned + Unmastered").
  */
 import { useState, useMemo, useEffect } from 'react'
-import { Search, Filter, ArrowUpDown, AlertCircle, CheckCircle2, Box, Zap, Gem, Clock, X, Hammer, Package } from 'lucide-react'
-import { PageLayout, Card, Input, Button, Tabs, MonitorState } from '../components/UI'
+import { Search, Filter, ArrowUpDown, AlertCircle, Check, Box, Zap, Gem, Clock, X, Hammer, Package } from 'lucide-react'
+import { PageLayout, Card, Input, Button, Tabs, MonitorState, Tooltip } from '../components/UI'
 import { useMonitoring } from '../contexts/MonitoringContext'
 
 const INVENTORY_TABS = [
@@ -246,7 +246,7 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
                                 <div className="flex justify-between items-center mb-1">
                                   <span className="text-[10px] font-bold text-kronos-text truncate">{item.name}</span>
                                   {item.ready ? (
-                                    <span className="text-[9px] font-black text-green-500 uppercase flex items-center gap-1"><CheckCircle2 size={10} /> READY</span>
+                                    <span className="text-[9px] font-black text-green-500 uppercase flex items-center gap-1"><Check size={10} /> READY</span>
                                   ) : (
                                     <span className="text-[9px] font-mono text-orange-400">{formatFoundryTime(timeLeft)}</span>
                                   )}
@@ -297,7 +297,7 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
                                   </div>
                                   {item.allIngredientsMet && item.bpCount > 0 && (
                                     <div className="px-2 py-1 bg-green-500 text-black text-[10px] font-black uppercase rounded flex items-center gap-1 shadow-[0_0_15px_rgba(34,197,94,0.4)]">
-                                      <CheckCircle2 size={12} /> Ready
+                                      <Check size={12} /> Ready
                                     </div>
                                   )}
                                 </div>
@@ -334,20 +334,61 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
                               >
                                 {item.ingredients.map((ing, i) => {
                                   const met = ing.have >= ing.need
-                                  return (
-                                    <div key={i} className={`flex flex-col items-center justify-center gap-1.5 p-3 h-full ${met ? 'bg-green-500/5' : 'bg-black/20'}`}>
-                                      <div className="w-14 h-14 flex items-center justify-center flex-shrink-0">
+                                  const hasSubIngredients = ing.isComponent && ing.bpOwned > 0 && ing.subIngredients && ing.subIngredients.length > 0;
+                                  
+                                  const ingredientContent = (
+                                    <div 
+                                      className={`flex flex-col items-center justify-center gap-1.5 p-3 h-full ${met ? 'bg-green-500/5' : 'bg-black/20'} relative group ${hasSubIngredients ? 'cursor-help' : ''}`}
+                                    >
+                                      <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 relative">
                                         {ing.image
                                           ? <img src={ing.image} alt="" className="max-w-full max-h-full object-contain" />
                                           : <div className="w-7 h-7 rounded bg-white/5" />
                                         }
+                                        {ing.isComponent && ing.bpOwned > 0 && (
+                                          <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center ${ing.bpReady ? 'bg-green-500' : 'bg-red-500'}`}>
+                                            {ing.bpReady ? <Check size={10} className="text-black" /> : <X size={10} className="text-white" />}
+                                          </div>
+                                        )}
                                       </div>
                                       <p className="text-[14px] font-medium text-kronos-dim text-center leading-tight w-full px-1">{ing.name}</p>
                                       <span className={`text-[12px] font-black font-mono ${met ? 'text-green-400' : 'text-red-400'}`}>
-                                        {ing.have}/{ing.need}
+                                        {ing.have}/{ing.need}{ing.isComponent && ing.bpOwned > 0 && ` (${ing.bpOwned} BP${ing.bpOwned > 1 ? 's' : ''})`}
                                       </span>
                                     </div>
-                                  )
+                                  );
+
+                                  if (hasSubIngredients) {
+                                    return (
+                                      <Tooltip 
+                                        key={i} 
+                                        position="top"
+                                        content={
+                                          <div className="min-w-[200px]">
+                                            <p className="text-[10px] font-black text-kronos-accent uppercase mb-2">Requires:</p>
+                                            <div className="space-y-1">
+                                              {ing.subIngredients.map((sub, si) => {
+                                                const subMet = sub.have >= sub.need;
+                                                return (
+                                                  <div key={si} className="flex items-center gap-2 text-[10px]">
+                                                    <div className="w-6 h-6 flex-shrink-0">
+                                                      {sub.image ? <img src={sub.image} alt="" className="max-w-full max-h-full object-contain" /> : <div className="w-4 h-4 bg-white/10 rounded" />}
+                                                    </div>
+                                                    <span className={`flex-1 ${subMet ? 'text-green-400' : 'text-red-400'}`}>{sub.name}</span>
+                                                    <span className="font-mono">{sub.have}/{sub.need}</span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+                                        }
+                                      >
+                                        {ingredientContent}
+                                      </Tooltip>
+                                    );
+                                  }
+
+                                  return <div key={i} className="h-full">{ingredientContent}</div>;
                                 })}
                               </div>
                             )}
@@ -444,11 +485,15 @@ export default function Inventory() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-kronos-dim group-focus-within:text-kronos-accent transition-colors" size={20} />
             <Input placeholder={`Search in ${tabLabel}...`} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-12" />
           </div>
-          <Button variant="secondary" onClick={() => setShowFilterSortPanel(v => !v)}><Filter size={20} className={showFilterSortPanel ? 'text-kronos-accent' : ''} /></Button>
-          <Button variant="secondary" onClick={() => setShowFoundry(true)} className="relative">
-            <img src="/IconFoundry.png" alt="Foundry" className="w-6 h-6 object-contain" />
-            {inventoryData?.foundry?.some(i => i.ready) && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-kronos-bg" />}
-          </Button>
+          <Tooltip content="Filters">
+            <Button variant="secondary" onClick={() => setShowFilterSortPanel(v => !v)}><Filter size={20} className={showFilterSortPanel ? 'text-kronos-accent' : ''} /></Button>
+          </Tooltip>
+          <Tooltip content="Foundry">
+            <Button variant="secondary" onClick={() => setShowFoundry(true)} className="relative">
+              <img src="/IconFoundry.png" alt="Foundry" className="w-6 h-6 object-contain" />
+              {inventoryData?.foundry?.some(i => i.ready) && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-kronos-bg" />}
+            </Button>
+          </Tooltip>
         </div>
         {showFilterSortPanel && (
           <Card glow className="p-4 border-kronos-accent/30 animate-in slide-in-from-top-4 duration-300">

@@ -1,6 +1,90 @@
 // UI primitives and shared components
 import { useRef, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, AlertCircle, RefreshCw } from 'lucide-react';
+
+// Portal tooltip that follows trigger during scroll/resize
+export function TooltipPortal({ children, triggerRef, visible, position = 'right' }) {
+  const [coords, setCoords] = useState({ top: 0, left: 0 })
+  const [opacity, setOpacity] = useState(0)
+
+  useEffect(() => {
+    if (!triggerRef.current || !visible) return
+
+    const updatePos = () => {
+      if (!triggerRef.current) return
+      const rect = triggerRef.current.getBoundingClientRect()
+      
+      if (position === 'right') {
+        setCoords({
+          top: rect.top + window.scrollY + rect.height / 2,
+          left: rect.right + window.scrollX + 8
+        })
+      } else if (position === 'top') {
+        setCoords({
+          top: rect.top + window.scrollY - 8,
+          left: rect.left + window.scrollX + rect.width / 2
+        })
+      } else if (position === 'bottom') {
+        setCoords({
+          top: rect.bottom + window.scrollY + 8,
+          left: rect.left + window.scrollX + rect.width / 2
+        })
+      }
+    }
+
+    updatePos()
+    window.addEventListener('scroll', updatePos, true)
+    window.addEventListener('resize', updatePos)
+    return () => {
+      window.removeEventListener('scroll', updatePos, true)
+      window.removeEventListener('resize', updatePos)
+    }
+  }, [triggerRef, visible, position])
+
+  useEffect(() => {
+    if (visible) setOpacity(1)
+    else setOpacity(0)
+  }, [visible])
+
+  if (!visible && opacity === 0) return null
+
+  return createPortal(
+    <div
+      className="fixed z-[9999] pointer-events-none bg-kronos-bg border border-white/10 rounded-lg px-3 py-2 shadow-2xl glass-panel font-black uppercase text-[10px] tracking-widest text-kronos-accent whitespace-nowrap transition-opacity duration-200"
+      style={{ 
+        top: coords.top, 
+        left: coords.left, 
+        transform: position === 'right' ? 'translateY(-50%)' : 'translateX(-50%) translateY(-100%)',
+        opacity 
+      }}
+    >
+      {children}
+    </div>,
+    document.body
+  )
+}
+
+export function Tooltip({ children, content, position = 'right' }) {
+  const triggerRef = useRef(null)
+  const [visible, setVisible] = useState(false)
+
+  return (
+    <>
+      <div 
+        ref={triggerRef}
+        onMouseEnter={() => setVisible(true)}
+        onMouseLeave={() => setVisible(false)}
+        className="inline-block"
+      >
+        {children}
+      </div>
+      <TooltipPortal triggerRef={triggerRef} visible={visible} position={position}>
+        {content}
+      </TooltipPortal>
+    </>
+  )
+}
 
 // Monitor State Prompt
 // Unified "No inventory data found" component.
@@ -40,7 +124,7 @@ export function MonitorState({ className = "", isLoading = false }) {
 // A simple panel wrapper with optional glow style.
 export function Card({ children, className = '', glow = false, ...props }) {
   return (
-    <div 
+    <div
       className={`
         glass-panel rounded-lg p-6
         ${glow ? 'glow-hover' : ''}
@@ -71,9 +155,9 @@ export function PageLayout({ title, subtitle, children, extra }) {
           {extra && <div className="flex items-center gap-4">{extra}</div>}
         </div>
       </div>
-        {/* Actual page contant below header */}
-        <div className="flex-1 overflow-y-auto px-8 pb-8 pt-4 custom-scrollbar">
-          {children}
+      {/* Actual page contant below header */}
+      <div className="flex-1 overflow-y-auto px-8 pb-8 pt-4 custom-scrollbar">
+        {children}
       </div>
     </div>
   )
@@ -110,12 +194,12 @@ export function CardHeader({ icon: Icon, title, action }) {
 }
 
 // Button Component
-export function Button({ 
-  children, 
-  variant = 'primary', 
-  className = '', 
+export function Button({
+  children,
+  variant = 'primary',
+  className = '',
   disabled = false,
-  ...props 
+  ...props
 }) {
   const variants = {
     primary: 'bg-kronos-accent hover:bg-kronos-accent-secondary text-kronos-bg glow-hover',
@@ -194,16 +278,16 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl'
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div 
-        className="absolute inset-0" 
-        onClick={onClose} 
+      <div
+        className="absolute inset-0"
+        onClick={onClose}
       />
       <div className={`relative w-full ${maxWidth} bg-kronos-bg border border-white/5 rounded-xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 overflow-hidden`}>
         <div className="p-6 border-b border-white/5 flex items-center justify-between flex-shrink-0">
           <div>
             <h3 className="text-xl font-bold uppercase tracking-tight">{title}</h3>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 hover:bg-white/5 rounded-full transition-colors text-kronos-dim hover:text-white"
           >
@@ -268,27 +352,27 @@ export function ItemCard({ item }) {
   return (
     <Card glow className="p-4">
       <h3 className="font-bold mb-2">{item.display_name}</h3>
-      
+
       <div className="text-sm space-y-1">
         <div className="flex justify-between">
           <span className="text-kronos-dim">Rank</span>
           <span>{item.mastery?.current_rank}/{item.mastery?.max_rank}</span>
         </div>
-        
+
         <div className="flex justify-between">
           <span className="text-kronos-dim">Mastered</span>
           <span className={item.mastery?.mastered ? 'text-green-500' : 'text-gray-500'}>
             {item.mastery?.mastered ? '✓' : '✗'}
           </span>
         </div>
-        
+
         {item.forma_count > 0 && (
           <div className="flex justify-between">
             <span className="text-kronos-dim">Forma</span>
             <span>{item.forma_count}</span>
           </div>
         )}
-        
+
         {item.subsumed && (
           <div className="text-purple-400 text-xs">
             ⚗️ Subsumed

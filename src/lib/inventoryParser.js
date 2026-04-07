@@ -1428,25 +1428,48 @@ export function parseInventory(raw, exports) {
           if (!isMasteryPart) hasMastery = false;
         }
 
-        // Check all ingredients - check both resources AND owned items (including component blueprints)
+        // Check all ingredients - separate crafted vs blueprints
         const ingredients = (recipe.ingredients ?? []).map(ing => {
           const ingName = resolveName(ing.ItemType, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe);
           
-          // Check resources
-          let have = resourceCounts[ing.ItemType] ?? 0;
+          let have = 0;
+          let bpOwned = 0;
+          let bpReady = false;
+          let subIngredients = null;
           
-          // Check owned items - try exact match first
-          have += ownedItemCounts[ing.ItemType] ?? 0;
-          
-          // Also check if there's a Blueprint version (for component blueprints like UrielHelmetBlueprint)
-          if (ing.ItemType.includes('Component')) {
+          // For component blueprints (Helmet/Chassis/Systems/etc), separate crafted from BPs
+          const isComponent = ing.ItemType.includes('Component');
+          if (isComponent) {
+            // Crafted component count
+            have = ownedItemCounts[ing.ItemType] ?? 0;
+            // Blueprint count (separate)
             const bpKey = ing.ItemType.replace('Component', 'Blueprint');
-            have += ownedItemCounts[bpKey] ?? 0;
+            bpOwned = ownedItemCounts[bpKey] ?? 0;
+            
+            // Check if component blueprint is ready to craft
+            const bpRecipe = ERecipe?.[bpKey];
+            if (bpRecipe?.ingredients) {
+              bpReady = bpRecipe.ingredients.every(subIng => {
+                const subHave = (resourceCounts[subIng.ItemType] ?? 0) + (ownedItemCounts[subIng.ItemType] ?? 0);
+                return subHave >= (subIng.ItemCount ?? 1);
+              });
+              
+              // Get sub-ingredients for tooltip
+              subIngredients = bpRecipe.ingredients.map(subIng => ({
+                name: resolveName(subIng.ItemType, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
+                have: (resourceCounts[subIng.ItemType] ?? 0) + (ownedItemCounts[subIng.ItemType] ?? 0),
+                need: subIng.ItemCount ?? 1,
+                image: resolveImage(subIng.ItemType, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe)
+              }));
+            }
+          } else {
+            // For regular resources/items - count both resources and owned items
+            have = (resourceCounts[ing.ItemType] ?? 0) + (ownedItemCounts[ing.ItemType] ?? 0);
           }
           
           const need = ing.ItemCount ?? 1;
           const image = resolveImage(ing.ItemType, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe);
-          return { name: ingName, have, need, itemType: ing.ItemType, image };
+          return { name: ingName, have, need, itemType: ing.ItemType, image, bpOwned, isComponent, bpReady, subIngredients };
         });
 
         const allIngredientsMet = ingredients.every(ing => ing.have >= ing.need);

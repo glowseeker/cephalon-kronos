@@ -19,7 +19,7 @@
  */
 import { useState, useEffect } from 'react'
 import { PageLayout, Card, MonitorState } from '../components/UI'
-import { Trophy, X, CheckCircle2, Circle } from 'lucide-react'
+import { Trophy, X, Check, Circle } from 'lucide-react'
 import { useMonitoring } from '../contexts/MonitoringContext'
 import { convertFileSrc, invoke } from '@tauri-apps/api/tauri'
 
@@ -85,13 +85,22 @@ export default function Mastery() {
     invoke('get_mastery_icons_path').then(setIconsPath).catch(console.error);
   }, []);
 
-  if (isInventoryLoading || !inventoryData) {
+  if (isInventoryLoading || (inventoryData === undefined)) {
     return (
       <PageLayout title="Mastery">
-        <MonitorState isLoading={isInventoryLoading} className="py-20" />
+        <MonitorState isLoading className="py-20" />
       </PageLayout>
     )
   }
+
+  if (inventoryData === null) {
+    return (
+      <PageLayout title="Mastery">
+        <MonitorState className="py-20" />
+      </PageLayout>
+    )
+  }
+
 
   const { account, intrinsics, starchart } = inventoryData
 
@@ -423,7 +432,7 @@ export default function Mastery() {
                         }`}
                       onClick={() => setHideNonMastery(!hideNonMastery)}
                     >
-                      {hideNonMastery && <CheckCircle2 size={12} className="text-kronos-bg" />}
+                      {hideNonMastery && <Check size={12} className="text-kronos-bg" />}
                     </div>
                     <span className="text-[10px] font-black uppercase text-kronos-dim group-hover:text-kronos-accent tracking-widest select-none">
                       Hide Non-Mastery
@@ -474,7 +483,7 @@ export default function Mastery() {
                             <div key={node.tag} className={`flex items-center justify-between p-2 rounded bg-kronos-panel/10 border border-kronos-panel/20 mb-1 ${completed ? 'opacity-50' : ''}`}>
                               <div className="flex items-center gap-2">
                                 {completed
-                                  ? <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />
+                                  ? <Check size={14} className="text-green-500 flex-shrink-0" />
                                   : <Circle size={14} className="text-kronos-dim flex-shrink-0" />}
                                 <span className={`text-xs font-medium ${completed ? 'text-kronos-dim line-through' : 'text-kronos-text'}`}>
                                   {node.name}
@@ -511,7 +520,7 @@ export default function Mastery() {
                     >
                       <div className="flex items-center gap-3">
                         {item.mastered ? (
-                          <CheckCircle2 size={18} className="text-green-500" />
+                          <Check size={18} className="text-green-500" />
                         ) : (
                           <Circle size={18} className="text-kronos-dim" />
                         )}

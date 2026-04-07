@@ -23,56 +23,11 @@
  * and exposes the results via React context.  Screens read from that context.
  */
 import { useState, lazy, Suspense, useRef, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { Tooltip } from './components/UI'
 import { useMonitoring } from './contexts/MonitoringContext'
 import { formatLastUpdate } from './lib/warframeUtils'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { MonitoringProvider } from './contexts/MonitoringContext'
-
-// Portal tooltip that follows button during scroll
-function TooltipPortal({ children, triggerRef, visible }) {
-  const [position, setPosition] = useState({ top: 0, left: 0 })
-  const [opacity, setOpacity] = useState(0)
-
-  useEffect(() => {
-    if (!triggerRef.current) return
-
-    const updatePos = () => {
-      const rect = triggerRef.current.getBoundingClientRect()
-      setPosition({
-        top: rect.top + window.scrollY + rect.height / 2,
-        left: rect.right + window.scrollX + 8
-      })
-    }
-
-    updatePos()
-    window.addEventListener('scroll', updatePos, true)
-    return () => window.removeEventListener('scroll', updatePos, true)
-  }, [triggerRef])
-
-  useEffect(() => {
-    if (visible) {
-      setOpacity(1)
-    } else {
-      setOpacity(0)
-    }
-  }, [visible])
-
-  return createPortal(
-    <div
-      className="fixed z-50 pointer-events-none bg-kronos-bg border border-white/10 rounded-lg px-3 py-2 shadow-2xl glass-panel font-black uppercase text-[10px] tracking-widest text-kronos-accent whitespace-nowrap transition-opacity duration-200"
-      style={{ 
-        top: position.top, 
-        left: position.left, 
-        transform: 'translateY(-50%)',
-        opacity 
-      }}
-    >
-      {children}
-    </div>,
-    document.body
-  )
-}
 
 const Dashboard = lazy(() => import('./screens/Dashboard'))
 const Inventory = lazy(() => import('./screens/Inventory'))
@@ -136,48 +91,42 @@ function AppContent() {
             {NAV_ITEMS.map((item) => {
               const isActive = activeTab === item.id
               const isImg = typeof item.icon === 'string'
-              const btnRef = useRef(null)
-              const [showTooltip, setShowTooltip] = useState(false)
 
               return (
                 <div key={item.id} className="relative">
-                  <button
-                    ref={btnRef}
-                    onClick={() => setActiveTab(item.id)}
-                    onMouseEnter={() => setShowTooltip(true)}
-                    onMouseLeave={() => setShowTooltip(false)}
-                    className={`
-                      w-12 h-12 flex items-center justify-center rounded-lg
-                      transition-all duration-200 flex-shrink-0
-                      ${isActive
-                        ? 'bg-kronos-accent/10 text-kronos-accent shadow-[0_0_15px_rgba(var(--kronos-accent-rgb),0.2)]'
-                        : 'text-kronos-dim hover:bg-white/5 hover:text-white'
-                      }
-                    `}
-                  >
-                    {isImg ? (
-                      <div
-                        className="w-7 h-7 flex-shrink-0 transition-colors duration-200"
-                        style={{
-                          backgroundColor: isActive ? 'var(--color-accent, #5590ab)' : 'currentColor',
-                          maskImage: `url(${item.icon})`,
-                          WebkitMaskImage: `url(${item.icon})`,
-                          maskSize: 'contain',
-                          WebkitMaskSize: 'contain',
-                          maskRepeat: 'no-repeat',
-                          WebkitMaskRepeat: 'no-repeat',
-                          maskPosition: 'center',
-                          WebkitMaskPosition: 'center',
-                          opacity: isActive ? 1 : 0.6
-                        }}
-                      />
-                    ) : (
-                      <item.icon size={22} strokeWidth={1.5} />
-                    )}
-                  </button>
-                  <TooltipPortal triggerRef={btnRef} visible={showTooltip}>
-                    {item.label}
-                  </TooltipPortal>
+                  <Tooltip content={item.label}>
+                    <button
+                      onClick={() => setActiveTab(item.id)}
+                      className={`
+                        w-12 h-12 flex items-center justify-center rounded-lg
+                        transition-all duration-200 flex-shrink-0
+                        ${isActive
+                          ? 'bg-kronos-accent/10 text-kronos-accent shadow-[0_0_15px_rgba(var(--kronos-accent-rgb),0.2)]'
+                          : 'text-kronos-dim hover:bg-white/5 hover:text-white'
+                        }
+                      `}
+                    >
+                      {isImg ? (
+                        <div
+                          className="w-7 h-7 flex-shrink-0 transition-colors duration-200"
+                          style={{
+                            backgroundColor: isActive ? 'var(--color-accent, #5590ab)' : 'currentColor',
+                            maskImage: `url(${item.icon})`,
+                            WebkitMaskImage: `url(${item.icon})`,
+                            maskSize: 'contain',
+                            WebkitMaskSize: 'contain',
+                            maskRepeat: 'no-repeat',
+                            WebkitMaskRepeat: 'no-repeat',
+                            maskPosition: 'center',
+                            WebkitMaskPosition: 'center',
+                            opacity: isActive ? 1 : 0.6
+                          }}
+                        />
+                      ) : (
+                        <item.icon size={22} strokeWidth={1.5} />
+                      )}
+                    </button>
+                  </Tooltip>
                 </div>
               )
             })}
