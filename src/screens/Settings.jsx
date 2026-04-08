@@ -12,18 +12,37 @@
  * 3. Status Display: Shows real-time backend connection status and last
  *    update timestamps.
  */
-import { useState } from 'react'
-import { Wifi, WifiOff, RefreshCw, Palette, Bell } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Wifi, WifiOff, RefreshCw, Palette, Bell, Bug } from 'lucide-react'
 import { PageLayout, Card, Button, Toggle } from '../components/UI'
 import { useTheme } from '../contexts/ThemeContext'
 import { useMonitoring } from '../contexts/MonitoringContext'
 import { formatLastUpdate } from '../lib/warframeUtils'
+import { invoke } from '@tauri-apps/api/tauri'
+import { listen } from '@tauri-apps/api/event'
 
 export default function SettingsScreen() {
   const { theme, setTheme, themes } = useTheme()
   const { isMonitoring, startMonitoring, stopMonitoring, manualRefresh, lastUpdate, statusText, autoStart, setAutoStart, monitorResult } = useMonitoring()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [isCalibrationOpen, setIsCalibrationOpen] = useState(false)
+  const [notifPosition, setNotifPosition] = useState(
+    () => localStorage.getItem('notif_position') || 'top-right'
+  )
+
+  // Listen for calibration window close from X button
+  useEffect(() => {
+    const unlisten = listen('calibration-closed', () => {
+      setIsCalibrationOpen(false)
+    })
+    return () => { unlisten.then(f => f()) }
+  }, [])
+
+  // Check initial state
+  useEffect(() => {
+    invoke('is_overlay_visible').then(setIsCalibrationOpen).catch(() => {})
+  }, [])
 
   const handleStart = async () => {
     setLoading(true)
@@ -37,9 +56,127 @@ export default function SettingsScreen() {
     }
   }
 
+  const handleSetPosition = (pos) => {
+    console.log('Settings: setting position to', pos)
+    setNotifPosition(pos)
+    localStorage.setItem('notif_position', pos)
+  }
+
+  const handleTestNotification = (position, delay = 5000) => {
+    console.log('Settings: test notification with position:', position, 'delay:', delay)
+    setTimeout(() => {
+      invoke('show_notification', { 
+        title: 'Foundry Complete', 
+        message: 'Harrow Chassis has finished crafting and is ready to claim.',
+        position
+      }).then(() => {
+        console.log('Settings: show_notification succeeded')
+      }).catch(e => console.error('Settings: show_notification error', e))
+    }, delay)
+  }
+
+  const handleTestRelic = () => {
+    invoke('show_relic_overlay', {
+      rewards: [
+        { name: 'Glaive Prime BP', rarity: 'Rare', price: 120, owned: 0, image: 'https://browse.wf/Lotus/Interface/Icons/Store/GlaivePrime.png' },
+        { name: 'Braton Prime Stock', rarity: 'Common', price: 2, owned: 12, image: 'https://browse.wf/Lotus/Interface/Icons/Store/BratonPrime.png' },
+        { name: 'Lex Prime Receiver', rarity: 'Uncommon', price: 15, owned: 3, image: 'https://browse.wf/Lotus/Interface/Icons/Store/LexPrime.png' },
+        { name: 'Forma Blueprint', rarity: 'Uncommon', price: 0, owned: 45, image: 'https://browse.wf/Lotus/Interface/Icons/Store/Forma.png' },
+      ]
+    }).catch(console.error)
+  }
+
+  const handleHideOverlay = () => {
+    invoke('hide_overlay').catch(console.error)
+  }
+
+  const handleToggleCalibrate = async () => {
+    try {
+      await invoke('toggle_overlay')
+      // Query actual state after toggle
+      const isOpen = await invoke('is_overlay_visible')
+      setIsCalibrationOpen(isOpen)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleToggleCalibrateClose = () => {
+    invoke('toggle_overlay').then(async () => {
+      setIsCalibrationOpen(false)
+    }).catch(console.error)
+  }
+
   return (
     <PageLayout title="Settings">
       <div className="space-y-6">
+
+        {/* Dev Tools - only in dev builds */}
+        {import.meta.env.DEV && (
+          <Card glow className="p-4 border-yellow-500/30 bg-yellow-500/5">
+            <div className="flex items-center gap-2 mb-4">
+              <Bug className="text-yellow-500" size={20} />
+              <h2 className="text-lg font-semibold uppercase tracking-tight text-yellow-500">Dev Tools</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] text-yellow-500 font-bold uppercase">Position</span>
+                <select 
+                  value={notifPosition}
+                  onChange={(e) => handleSetPosition(e.target.value)}
+                  className="bg-black/30 border border-yellow-500/30 rounded px-2 py-1.5 text-xs text-yellow-500 focus:outline-none focus:border-yellow-500/60"
+                >
+                  <option value="top-left">Top Left</option>
+                  <option value="top-center">Top Middle</option>
+                  <option value="top-right">Top Right</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] text-yellow-500 font-bold uppercase">Delay</span>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleTestNotification(notifPosition)}
+                  className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs"
+                >
+                  Test Popup (5s)
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleTestNotification(notifPosition, 0)}
+                  className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs"
+                >
+                  Test Now
+                </Button>
+              </div>
+              <Button 
+                variant="secondary" 
+                onClick={handleTestRelic}
+                className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs self-end"
+              >
+                Test Relics
+              </Button>
+            </div>
+            <div className="mt-4 pt-4 border-t border-yellow-500/20">
+              {isCalibrationOpen ? (
+                <Button 
+                  variant="secondary" 
+                  onClick={handleToggleCalibrateClose}
+                  className="border-orange-500/30 hover:bg-orange-500/10 text-orange-500 text-xs"
+                >
+                  Close Overlay Settings
+                </Button>
+              ) : (
+                <Button 
+                  variant="secondary" 
+                  onClick={handleToggleCalibrate}
+                  className="border-orange-500/30 hover:bg-orange-500/10 text-orange-500 text-xs"
+                >
+                  Overlay Settings
+                </Button>
+              )}
+            </div>
+          </Card>
+        )}
 
         {/* Theme Selector - Leaner version */}
         <Card glow className="p-4">
@@ -85,10 +222,27 @@ export default function SettingsScreen() {
             <Bell className="text-kronos-accent" size={20} />
             <h2 className="text-lg font-semibold uppercase tracking-tight">App Notifications</h2>
           </div>
-          <p className="text-[11px] text-kronos-dim mb-4 uppercase font-bold tracking-wide">
-            Configure overlay alerts for game events (Coming Soon)
-          </p>
-          
+          {/* Position picker */}
+          <div className="mb-5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-kronos-dim mb-3">Notification Position</p>
+            <div className="grid grid-cols-3 gap-2">
+              {['top-left', 'top-center', 'top-right'].map((pos) => (
+                <button
+                  key={pos}
+                  onClick={() => handleSetPosition(pos)}
+                  className={`py-2 px-3 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all ${
+                    notifPosition === pos
+                      ? 'bg-kronos-accent/20 border-kronos-accent text-kronos-accent'
+                      : 'bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20'
+                  }`}
+                >
+                  {pos.replace('top-', '').replace('-', ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Alert toggles */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 opacity-50 pointer-events-none">
             {[
               { label: 'S-Tier Arbitration', desc: 'Notify when a top-tier node appears' },

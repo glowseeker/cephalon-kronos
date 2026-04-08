@@ -13,6 +13,9 @@
   "tauri": {
     "allowlist": {
       "all": false,
+      "notification": {
+        "all": true
+      },
       "protocol": {
         "asset": true,
         "assetScope": [
@@ -46,6 +49,7 @@
     },
     "windows": [
       {
+        "label": "main",
         "fullscreen": false,
         "resizable": true,
         "title": "Cephalon Kronos",
@@ -53,6 +57,31 @@
         "height": 800,
         "minWidth": 900,
         "minHeight": 500
+      },
+      {
+        "label": "overlay",
+        "title": "Kronos Overlay",
+        "width": 1,
+        "height": 1,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "resizable": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "url": "/#overlay",
+        "acceptFirstMouse": true,
+        "focus": false
+      },
+      {
+        "label": "calibration",
+        "title": "Kronos Overlay",
+        "width": 600,
+        "height": 400,
+        "decorations": true,
+        "resizable": true,
+        "visible": false,
+        "url": "/#calibration"
       }
     ]
   }

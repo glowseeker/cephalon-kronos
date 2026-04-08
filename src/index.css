@@ -149,6 +149,12 @@
     -moz-osx-font-smoothing: grayscale;
     transition: background-color 500ms ease, color 500ms ease;
   }
+
+  /* Transparent background for overlay window */
+  html.is-overlay,
+  html.is-overlay body {
+    background-color: transparent !important;
+  }
 }
 
 @layer components {
@@ -261,4 +267,93 @@
   .animate-shimmer {
     animation: shimmer 2s linear infinite;
   }
+
+  /* ── Notification overlay animations ────────────────────────────────── */
+
+  @keyframes notif-slide-in-right {
+    from {
+      transform: translateX(calc(100% + 32px));
+      opacity: 0;
+    }
+
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes notif-slide-in-left {
+    from {
+      transform: translateX(calc(-100% - 32px));
+      opacity: 0;
+    }
+
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes notif-slide-in-top {
+    from {
+      transform: translateY(-32px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes notif-slide-in-bottom {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes notif-exit {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    to {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.9);
+      filter: blur(4px);
+    }
+  }
+
+  /* full names (legacy) */
+  .notif-slide-in-right,
+  .notif-slide-right {
+    animation: notif-slide-in-right 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .notif-slide-in-left,
+  .notif-slide-left {
+    animation: notif-slide-in-left 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .notif-slide-in-top,
+  .notif-slide-top {
+    animation: notif-slide-in-top 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .notif-slide-in-bottom,
+  .notif-slide-bottom {
+    animation: notif-slide-in-bottom 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .notif-exit {
+    animation: notif-exit 0.3s ease-in both;
+  }
+
 }

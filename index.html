@@ -5,6 +5,17 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cephalon Kronos</title>
+    <script>
+      // Force transparent html/body for overlay or hud or calibration hash
+      document.addEventListener('DOMContentLoaded', function() {
+        var h = window.location.hash;
+        if (h === '#overlay' || h === '#hud' || h === '#calibration') {
+          document.documentElement.style.backgroundColor = 'transparent';
+          document.body.style.backgroundColor = 'transparent';
+          document.documentElement.classList.add('is-overlay');
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

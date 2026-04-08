@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 use std::fs;
+use tauri::Manager;
+use serde::Serialize;
 
 // ─── Path Resolution ──────────────────────────────────────────────────────────
 //
@@ -591,10 +593,169 @@ fn get_cdn_base_url() -> String {
     "https://browse.wf".to_string()
 }
 
+#[derive(Clone, serde::Serialize)]
+struct NotificationPayload {
+    title: String,
+    message: String,
+    image: String,
+    position: String,
+}
+
+#[tauri::command]
+async fn show_relic_overlay(app_handle: tauri::AppHandle, rewards: Value) -> Result<(), String> {
+    if let Some(window) = app_handle.get_window("overlay") {
+        let _ = window.show();
+        let _ = window.set_always_on_top(true);
+    }
+    app_handle.emit_all("show-relic-rewards", rewards).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn hide_overlay(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_window("overlay") {
+        let _ = window.hide();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn toggle_overlay(app_handle: tauri::AppHandle) -> Result<bool, String> {
+    let window = app_handle.get_window("calibration").ok_or("Calibration window not found")?;
+    let is_visible = window.is_visible().map_err(|e| e.to_string())?;
+    
+    if is_visible {
+        window.hide().map_err(|e| e.to_string())?;
+    } else {
+        window.show().map_err(|e| e.to_string())?;
+    }
+    
+    Ok(!is_visible)
+}
+
+#[tauri::command]
+async fn is_overlay_visible(app_handle: tauri::AppHandle) -> Result<bool, String> {
+    let window = app_handle.get_window("calibration").ok_or("Calibration window not found")?;
+    window.is_visible().map_err(|e| e.to_string())
+}
+
+/// Called by NotificationOverlay.jsx via ResizeObserver whenever visible content changes.
+/// Resizes the overlay Tauri window to exactly fit the content, then moves it to
+/// the appropriate screen corner.  This prevents any invisible input-blocking rectangle
+/// on Linux/Wayland.
+#[tauri::command]
+async fn update_overlay_bounds(
+    app_handle: tauri::AppHandle,
+    width: u32,
+    height: u32,
+    position: String,  // "top-left" | "top-center" | "top-right"
+) -> Result<(), String> {
+    const PADDING: f64 = 16.0; // gap from screen edge, in logical pixels
+
+    let window = match app_handle.get_window("overlay") {
+        Some(w) => w,
+        None => return Err("overlay window not found".to_string()),
+    };
+
+    // If content is empty, hide and bail out.
+    if width == 0 || height == 0 {
+        let _ = window.hide();
+        return Ok(());
+    }
+
+    // Make sure the overlay is visible and always on top.
+    let _ = window.show();
+    let _ = window.set_always_on_top(true);
+
+    // Resize to exactly the content size.
+    window.set_size(tauri::Size::Logical(tauri::LogicalSize {
+        width:  width  as f64,
+        height: height as f64,
+    })).map_err(|e| e.to_string())?;
+
+    // Calculate the target position on the monitor.
+    let monitor = window.current_monitor()
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "no monitor for overlay window".to_string())?;
+
+    let scale   = monitor.scale_factor();
+    let mon_w   = monitor.size().width  as f64 / scale;
+    let mon_h   = monitor.size().height as f64 / scale;
+    let mon_x   = monitor.position().x  as f64 / scale;
+    let mon_y   = monitor.position().y  as f64 / scale;
+    let w       = width  as f64;
+    let h       = height as f64;
+
+    let (x, y) = match position.as_str() {
+        "top-left"      => (mon_x + PADDING, mon_y + PADDING),
+        "top-center"    => (mon_x + (mon_w - w) / 2.0, mon_y + PADDING),
+        "bottom-center" => (mon_x + (mon_w - w) / 2.0, mon_y + mon_h - h - PADDING),
+        _               => (mon_x + mon_w - w - PADDING, mon_y + PADDING), // top-right
+    };
+
+    window.set_position(tauri::Position::Logical(tauri::LogicalPosition { x, y }))
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn show_notification(
+    app_handle: tauri::AppHandle,
+    title: String,
+    message: String,
+    image: Option<String>,
+    position: Option<String>,
+) -> Result<(), String> {
+    let pos = position.unwrap_or_else(|| "top-right".to_string());
+    let img = image.unwrap_or_default();
+
+    // Make overlay visible so the frontend can measure and then resize it.
+    if let Some(window) = app_handle.get_window("overlay") {
+        let _ = window.show();
+        let _ = window.set_always_on_top(true);
+    } else {
+        println!("Warning: overlay window not found during show_notification");
+    }
+
+    app_handle.emit_all("new-notification", NotificationPayload {
+        title,
+        message,
+        image: img,
+        position: pos,
+    }).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 // ─── Entry Point ──────────────────────────────────────────────────────────────
 
 fn main() {
     tauri::Builder::default()
+        .setup(|app| {
+            // Create overlay window on startup if it doesn't exist
+            #[cfg(target_os = "linux")]
+            {
+                if app.get_window("overlay").is_none() {
+                    eprintln!("Warning: overlay window not found in config");
+                }
+            }
+            Ok(())
+        })
+        .on_window_event(|event| match event.event() {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                // Only exit when main window is closed
+                if event.window().label() == "main" {
+                    std::process::exit(0);
+                } else if event.window().label() == "calibration" {
+                    // Hide and notify main window
+                    let _ = event.window().hide();
+                    let _ = event.window().app_handle().emit_all("calibration-closed", ());
+                    api.prevent_close();
+                }
+            }
+            _ => {}
+        })
         .invoke_handler(tauri::generate_handler![
             load_cached_inventory,
             call_api_helper,
@@ -611,6 +772,12 @@ fn main() {
             get_maps_path,
             get_assets_path,
             get_cdn_base_url,
+            show_notification,
+            show_relic_overlay,
+            hide_overlay,
+            toggle_overlay,
+            is_overlay_visible,
+            update_overlay_bounds,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
