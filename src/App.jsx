@@ -196,7 +196,7 @@ export default function App() {
 function CalibrationWindow() {
   return (
     <main className="h-screen w-screen p-6 bg-kronos-bg flex flex-col items-center justify-center text-center overflow-hidden">
-      <h2 className="text-xl font-black text-kronos-text mb-4 tracking-tight">KDE Plasma Overlay Setup</h2>
+      <h2 className="text-xl font-black text-kronos-text mb-4 tracking-tight">Linux Overlay Settings</h2>
       <div className="w-full max-w-full space-y-4 text-xs text-kronos-dim font-bold tracking-widest overflow-y-auto custom-scrollbar px-2">
 
         <div className="text-left space-y-2 bg-black/30 p-5 rounded-xl border border-white/5 shadow-2xl">
@@ -204,15 +204,11 @@ function CalibrationWindow() {
           <ul className="list-disc list-inside space-y-1.5 opacity-90">
             <li>Open <span className="text-white">System Settings → Window Management → Window Rules</span></li>
             <li>Click <span className="text-white">Add New...</span></li>
-            <li className="ml-4 mt-2">Description: <span className="text-kronos-accent">Kronos Overlay</span></li>
-            <li className="ml-4 border-t border-white/10 pt-2">Match settings:</li>
-            <li className="ml-6">- <span className="text-white">Window class:</span> match RegExp <span className="text-yellow-400">.*cephalon-kronos.*</span></li>
-            <li className="ml-6">- <span className="text-white">Window title:</span> match <span className="text-yellow-400">Kronos Overlay</span></li>
-            <li className="ml-4 mt-2 border-t border-white/10 pt-2">Force these properties:</li>
-            <li className="ml-6">- <span className="text-white">Keep above others:</span> <span className="text-yellow-400">Yes</span></li>
-            <li className="ml-6">- <span className="text-white">Accept focus:</span> <span className="text-yellow-400">No</span></li>
-            <li className="ml-6">- <span className="text-white">Skip taskbar:</span> <span className="text-yellow-400">Yes</span></li>
-            <li className="ml-6">- <span className="text-white">Skip pager:</span> <span className="text-yellow-400">Yes</span></li>
+            <li className="ml-4 mt-2">Click the <span className="text-kronos-accent">Magnifying Glass</span> icon and select the Overlay window</li>
+            <li className="ml-4 border-t border-white/10 pt-2">Match these settings:</li>
+            <li className="ml-6"><span className="text-yellow-400">Windows Title: "Kronos Overlay" (exact match)</span></li>
+            <li className="ml-6"><span className="text-yellow-400">No Title and Frame: Yes (Force)</span></li>
+            <li className="ml-6"><span className="text-yellow-400">Layer: On-Screen Display (Force)</span></li>
             <li>Click <span className="text-white">OK</span> then <span className="text-white">Apply</span></li>
           </ul>
         </div>

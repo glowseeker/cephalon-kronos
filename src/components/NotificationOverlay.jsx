@@ -177,15 +177,15 @@ export default function NotificationOverlay() {
 function ToastCard({ toast, slideIn }) {
   return (
     <div
-      className={`w-72 flex gap-3 items-start p-4 rounded-xl pointer-events-auto
-        ${toast.exiting ? 'notif-exit' : slideIn}`}
+      className={`w-72 flex gap-3 items-start p-4 rounded-xl pointer-events-auto ${toast.exiting ? 'notif-exit' : slideIn}`}
       style={{
         background: 'var(--color-panel)',
-        color:      'var(--color-text)',
-        border:     '1px solid rgba(var(--color-accent-rgb),0.25)',
+        color: 'var(--color-text)',
+        border: '1px solid rgba(var(--color-accent-rgb),0.25)',
         borderLeft: '3px solid var(--color-accent)',
-        boxShadow:  '0 8px 32px rgba(0,0,0,0.85)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.85)',
         willChange: 'transform,opacity',
+        overflow: 'hidden',
       }}
     >
       <div

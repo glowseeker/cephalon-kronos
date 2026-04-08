@@ -57,21 +57,17 @@ export default function SettingsScreen() {
   }
 
   const handleSetPosition = (pos) => {
-    console.log('Settings: setting position to', pos)
     setNotifPosition(pos)
     localStorage.setItem('notif_position', pos)
   }
 
   const handleTestNotification = (position, delay = 5000) => {
-    console.log('Settings: test notification with position:', position, 'delay:', delay)
     setTimeout(() => {
       invoke('show_notification', { 
         title: 'Foundry Complete', 
         message: 'Harrow Chassis has finished crafting and is ready to claim.',
         position
-      }).then(() => {
-        console.log('Settings: show_notification succeeded')
-      }).catch(e => console.error('Settings: show_notification error', e))
+      }).catch(console.error)
     }, delay)
   }
 
