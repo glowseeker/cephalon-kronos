@@ -10,6 +10,13 @@ use serde_json::Value;
 use std::fs;
 use tauri::Manager;
 use serde::Serialize;
+use std::io::BufReader;
+use std::sync::{Arc, Mutex};
+use rodio::{Decoder, OutputStream, Sink};
+
+pub struct AppState {
+    pub notif_sound: Arc<Mutex<String>>,
+}
 
 // ─── Path Resolution ──────────────────────────────────────────────────────────
 //
@@ -595,19 +602,122 @@ fn get_cdn_base_url() -> String {
 
 #[derive(Clone, serde::Serialize)]
 struct NotificationPayload {
+    id: String,
     title: String,
     message: String,
     image: String,
     position: String,
+    persistent: bool,
 }
 
 #[tauri::command]
-async fn show_relic_overlay(app_handle: tauri::AppHandle, rewards: Value) -> Result<(), String> {
-    if let Some(window) = app_handle.get_window("overlay") {
+async fn show_relic_overlay(
+    app_handle: tauri::AppHandle, 
+    state: tauri::State<'_, AppState>,
+    rewards: Value, 
+    persistent: Option<bool>
+) -> Result<(), String> {
+    println!("[Rust] show_relic_overlay entry triggered");
+    if let Some(window) = app_handle.get_window("overlay-tc") {
+        if let Ok(Some(monitor)) = window.primary_monitor() {
+            let screen = monitor.size();
+            let scale  = monitor.scale_factor();
+            let win_w = (580.0 * scale) as u32;
+            let win_h = (300.0 * scale) as u32;
+
+            // Bottom-center positioning (above taskbar area)
+            let x = ((screen.width - win_w) / 2) as i32;
+            let y = (screen.height - win_h - 30) as i32;
+
+            let _ = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }));
+        }
         let _ = window.show();
         let _ = window.set_always_on_top(true);
     }
-    app_handle.emit_all("show-relic-rewards", rewards).map_err(|e| e.to_string())?;
+    
+    let payload = serde_json::json!({
+        "rewards": rewards,
+        "persistent": persistent.unwrap_or(false)
+    });
+    
+    // Auto-play sound based on Rust state
+    let sound = state.notif_sound.lock().unwrap().clone();
+    let _ = play_notification_sound(app_handle.clone(), sound);
+
+    app_handle.emit_all("show-relic-rewards", payload).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn hide_specific_window(app_handle: tauri::AppHandle, label: String) -> Result<(), String> {
+    if let Some(window) = app_handle.get_window(&label) {
+        let _ = window.hide();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn set_notification_sound(state: tauri::State<'_, AppState>, sound: String) -> Result<(), String> {
+    println!("[Rust] set_notification_sound: {}", sound);
+    let mut current = state.notif_sound.lock().unwrap();
+    *current = sound;
+    Ok(())
+}
+
+#[tauri::command]
+fn set_overlay_clickable(app_handle: tauri::AppHandle, clickable: bool) -> Result<(), String> {
+    if let Some(window) = app_handle.get_window("overlay") {
+        let _ = window.set_ignore_cursor_events(!clickable);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) -> Result<(), String> {
+    println!("[Rust] play_notification_sound called with arg: {:?}", sound);
+    if sound == "none" {
+        return Ok(());
+    }
+
+    // In dev, the files are in public/audio/
+    // In production, they are bundled in the resource path.
+    let resource_path = if cfg!(debug_assertions) {
+        get_app_root().parent().unwrap().join("public/audio").join(&sound)
+    } else {
+        app_handle.path_resolver()
+            .resolve_resource(format!("public/audio/{}", sound))
+            .ok_or_else(|| format!("Could not find sound file: {}", sound))?
+    };
+
+    std::thread::spawn(move || {
+        println!("[Audio] Initializing playback for: {:?}", resource_path);
+        
+        match OutputStream::try_default() {
+            Ok((_stream, stream_handle)) => {
+                match Sink::try_new(&stream_handle) {
+                    Ok(sink) => {
+                        match fs::File::open(&resource_path) {
+                            Ok(file) => {
+                                match Decoder::new(BufReader::new(file)) {
+                                    Ok(source) => {
+                                        println!("[Audio] Playback started...");
+                                        sink.append(source);
+                                        sink.sleep_until_end();
+                                        println!("[Audio] Playback finished.");
+                                    }
+                                    Err(e) => eprintln!("[Audio] Decoder error: {}", e),
+                                }
+                            }
+                            Err(e) => eprintln!("[Audio] File open error: {}", e),
+                        }
+                    }
+                    Err(e) => eprintln!("[Audio] Sink error: {}", e),
+                }
+            }
+            Err(e) => eprintln!("[Audio] OutputStream error: {}", e),
+        }
+    });
+
     Ok(())
 }
 
@@ -617,6 +727,21 @@ async fn hide_overlay(app_handle: tauri::AppHandle) -> Result<(), String> {
         let _ = window.hide();
     }
     Ok(())
+}
+
+#[tauri::command]
+async fn clear_overlay_state(app_handle: tauri::AppHandle) -> Result<(), String> {
+    app_handle.emit_all("clear-overlay-state", ()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn dismiss_persistent(app_handle: tauri::AppHandle, id: String) -> Result<(), String> {
+    app_handle.emit_all("dismiss-persistent", id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn dismiss_persistent_relic(app_handle: tauri::AppHandle) -> Result<(), String> {
+    app_handle.emit_all("dismiss-persistent-relic", ()).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -650,6 +775,7 @@ async fn update_overlay_bounds(
     height: u32,
     position: String,  // "top-left" | "top-center" | "top-right"
 ) -> Result<(), String> {
+    println!("[Rust] update_overlay_bounds: {}x{} at {}", width, height, position);
     const PADDING: f64 = 16.0; // gap from screen edge, in logical pixels
 
     let window = match app_handle.get_window("overlay") {
@@ -689,7 +815,17 @@ async fn update_overlay_bounds(
     let (x, y) = match position.as_str() {
         "top-left"      => (mon_x + PADDING, mon_y + PADDING),
         "top-center"    => (mon_x + (mon_w - w) / 2.0, mon_y + PADDING),
+        "center"        => (mon_x + (mon_w - w) / 2.0, mon_y + (mon_h - h) / 2.0),
         "bottom-center" => (mon_x + (mon_w - w) / 2.0, mon_y + mon_h - h - PADDING),
+        // full-screen / full: expand to cover the entire monitor.
+        // JS passes window.screen.width/height as w/h; we re-apply precisely
+        // from monitor info to avoid any fractional-DPI mismatch.
+        "full-screen" | "full" => {
+            window.set_size(tauri::Size::Logical(tauri::LogicalSize {
+                width: mon_w, height: mon_h,
+            })).map_err(|e| e.to_string())?;
+            (mon_x, mon_y)
+        }
         _               => (mon_x + mon_w - w - PADDING, mon_y + PADDING), // top-right
     };
 
@@ -700,29 +836,78 @@ async fn update_overlay_bounds(
 }
 
 #[tauri::command]
+async fn update_overlay_size(
+    app_handle: tauri::AppHandle,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let window = app_handle.get_window("overlay").ok_or("Overlay window not found")?;
+    
+    window.set_size(tauri::Size::Logical(tauri::LogicalSize {
+        width,
+        height,
+    })).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn show_notification(
     app_handle: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    id: Option<String>,
     title: String,
     message: String,
     image: Option<String>,
     position: Option<String>,
+    persistent: Option<bool>,
 ) -> Result<(), String> {
-    let pos = position.unwrap_or_else(|| "top-right".to_string());
+    println!("[Rust] show_notification entry triggered: title={:?}", title);
+    let pos = position.clone().unwrap_or_else(|| "top-right".to_string());
     let img = image.unwrap_or_default();
+    let persist = persistent.unwrap_or(false);
+    let notif_id = id.clone().unwrap_or_else(|| format!("notif-{}", SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis()));
 
-    // Make overlay visible so the frontend can measure and then resize it.
-    if let Some(window) = app_handle.get_window("overlay") {
+    // Route to correct label
+    let label = match pos.as_str() {
+        "top-left"   => "overlay-tl",
+        "top-center" => "overlay-tc",
+        _            => "overlay-tr",
+    };
+
+    if let Some(window) = app_handle.get_window(label) {
+        if let Ok(Some(monitor)) = window.primary_monitor() {
+            let screen = monitor.size();
+            let scale  = monitor.scale_factor();
+            let win_w = (320.0 * scale) as u32;
+
+            let (x, y) = match pos.as_str() {
+                "top-left"   => (20, 20),
+                "top-center" => (((screen.width - win_w) / 2) as i32, 20),
+                "top-right"  | _ => ((screen.width - win_w - 20) as i32, 20),
+            };
+
+            let _ = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }));
+        }
+
         let _ = window.show();
         let _ = window.set_always_on_top(true);
-    } else {
-        println!("Warning: overlay window not found during show_notification");
     }
 
+    // Auto-play sound based on Rust state
+    let sound_name = state.notif_sound.lock().unwrap().clone();
+    let _ = play_notification_sound(app_handle.clone(), sound_name);
+
     app_handle.emit_all("new-notification", NotificationPayload {
+        id: notif_id,
         title,
         message,
         image: img,
         position: pos,
+        persistent: persist,
     }).map_err(|e| e.to_string())?;
 
     Ok(())
@@ -732,6 +917,9 @@ async fn show_notification(
 
 fn main() {
     tauri::Builder::default()
+        .manage(AppState {
+            notif_sound: Arc::new(Mutex::new("notification1.ogg".to_string())),
+        })
         .setup(|app| {
             // Create overlay window on startup if it doesn't exist
             #[cfg(target_os = "linux")]
@@ -775,9 +963,17 @@ fn main() {
             show_notification,
             show_relic_overlay,
             hide_overlay,
+            clear_overlay_state,
+            dismiss_persistent,
+            dismiss_persistent_relic,
             toggle_overlay,
             is_overlay_visible,
             update_overlay_bounds,
+            update_overlay_size,
+            play_notification_sound,
+            set_notification_sound,
+            set_overlay_clickable,
+            hide_specific_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

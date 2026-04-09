@@ -352,6 +352,10 @@
     animation: notif-slide-in-bottom 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
+  .notif-enter {
+    animation: notif-slide-in-right 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
   .notif-exit {
     animation: notif-exit 0.3s ease-in both;
   }

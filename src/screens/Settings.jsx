@@ -27,8 +27,12 @@ export default function SettingsScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isCalibrationOpen, setIsCalibrationOpen] = useState(false)
+
   const [notifPosition, setNotifPosition] = useState(
     () => localStorage.getItem('notif_position') || 'top-right'
+  )
+  const [notifSound, setNotifSound] = useState(
+    () => localStorage.getItem('notif_sound') || 'notification1.ogg'
   )
 
   // Listen for calibration window close from X button
@@ -59,6 +63,25 @@ export default function SettingsScreen() {
   const handleSetPosition = (pos) => {
     setNotifPosition(pos)
     localStorage.setItem('notif_position', pos)
+  }
+
+  useEffect(() => {
+    // Sync current sound to Rust backend on mount
+    const savedSound = localStorage.getItem('notif_sound') || 'notification1.ogg'
+    invoke('set_notification_sound', { sound: savedSound }).catch(console.error)
+  }, [])
+
+  const handleSetSound = (sound) => {
+    setNotifSound(sound)
+    localStorage.setItem('notif_sound', sound)
+    
+    // Update Rust state for ALL future notifications
+    invoke('set_notification_sound', { sound }).catch(console.error)
+    
+    // Preview sound via Rust (one-time manual play)
+    if (sound !== 'none') {
+      invoke('play_notification_sound', { sound }).catch(console.error)
+    }
   }
 
   const handleTestNotification = (position, delay = 5000) => {
@@ -114,62 +137,37 @@ export default function SettingsScreen() {
               <Bug className="text-yellow-500" size={20} />
               <h2 className="text-lg font-semibold uppercase tracking-tight text-yellow-500">Dev Tools</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="flex flex-col gap-2">
-                <span className="text-[10px] text-yellow-500 font-bold uppercase">Position</span>
-                <select 
-                  value={notifPosition}
-                  onChange={(e) => handleSetPosition(e.target.value)}
-                  className="bg-black/30 border border-yellow-500/30 rounded px-2 py-1.5 text-xs text-yellow-500 focus:outline-none focus:border-yellow-500/60"
-                >
-                  <option value="top-left">Top Left</option>
-                  <option value="top-center">Top Middle</option>
-                  <option value="top-right">Top Right</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <span className="text-[10px] text-yellow-500 font-bold uppercase">Delay</span>
-                <Button 
-                  variant="secondary" 
-                  onClick={() => handleTestNotification(notifPosition)}
-                  className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs"
-                >
-                  Test Popup (5s)
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  onClick={() => handleTestNotification(notifPosition, 0)}
-                  className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs"
-                >
-                  Test Now
-                </Button>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Button 
+                variant="secondary" 
+                onClick={() => handleTestNotification(notifPosition)}
+                className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs"
+              >
+                Test Popup (5s)
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={() => handleTestNotification(notifPosition, 0)}
+                className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs"
+              >
+                Test Now
+              </Button>
               <Button 
                 variant="secondary" 
                 onClick={handleTestRelic}
-                className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs self-end"
+                className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs"
               >
                 Test Relics
               </Button>
             </div>
             <div className="mt-4 pt-4 border-t border-yellow-500/20">
-              {isCalibrationOpen ? (
-                <Button 
-                  variant="secondary" 
-                  onClick={handleToggleCalibrateClose}
-                  className="border-orange-500/30 hover:bg-orange-500/10 text-orange-500 text-xs"
-                >
-                  Close Overlay Settings
-                </Button>
-              ) : (
-                <Button 
-                  variant="secondary" 
-                  onClick={handleToggleCalibrate}
-                  className="border-orange-500/30 hover:bg-orange-500/10 text-orange-500 text-xs"
-                >
-                  Overlay Settings
-                </Button>
-              )}
+              <Button 
+                variant="secondary" 
+                onClick={handleToggleCalibrate}
+                className="border-orange-500/30 hover:bg-orange-500/10 text-orange-500 text-xs"
+              >
+                Linux Calibration
+              </Button>
             </div>
           </Card>
         )}
@@ -233,6 +231,30 @@ export default function SettingsScreen() {
                   }`}
                 >
                   {pos.replace('top-', '').replace('-', ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sound picker */}
+          <div className="mb-5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-kronos-dim mb-3">Notification Sound</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'None', value: 'none' },
+                { label: 'Sound 1', value: 'notification1.ogg' },
+                { label: 'Sound 2', value: 'notification2.ogg' },
+              ].map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => handleSetSound(s.value)}
+                  className={`py-2 px-3 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all ${
+                    notifSound === s.value
+                      ? 'bg-kronos-accent/20 border-kronos-accent text-kronos-accent'
+                      : 'bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20'
+                  }`}
+                >
+                  {s.label}
                 </button>
               ))}
             </div>

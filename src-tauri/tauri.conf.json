@@ -41,7 +41,8 @@
       ],
       "resources": [
         "data/bin/*",
-        "data/export/*"
+        "data/export/*",
+        "../public/audio/*"
       ]
     },
     "security": {
@@ -59,14 +60,44 @@
         "minHeight": 500
       },
       {
-        "label": "overlay",
-        "title": "Kronos Overlay",
-        "width": 1,
-        "height": 1,
-        "decorations": false,
+        "label": "overlay-tr",
+        "title": "Kronos Overlay TR",
+        "width": 320,
+        "height": 90,
         "transparent": true,
+        "decorations": false,
         "alwaysOnTop": true,
-        "resizable": true,
+        "resizable": false,
+        "visible": false,
+        "skipTaskbar": true,
+        "url": "/#overlay",
+        "acceptFirstMouse": true,
+        "focus": false
+      },
+      {
+        "label": "overlay-tl",
+        "title": "Kronos Overlay TL",
+        "width": 320,
+        "height": 90,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "resizable": false,
+        "visible": false,
+        "skipTaskbar": true,
+        "url": "/#overlay",
+        "acceptFirstMouse": true,
+        "focus": false
+      },
+      {
+        "label": "overlay-tc",
+        "title": "Kronos Overlay TC",
+        "width": 580,
+        "height": 220,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "resizable": false,
         "visible": false,
         "skipTaskbar": true,
         "url": "/#overlay",
