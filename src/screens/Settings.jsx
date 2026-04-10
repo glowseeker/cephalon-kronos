@@ -43,10 +43,8 @@ export default function SettingsScreen() {
     return () => { unlisten.then(f => f()) }
   }, [])
 
-  // Check initial state
-  useEffect(() => {
-    invoke('is_overlay_visible').then(setIsCalibrationOpen).catch(() => {})
-  }, [])
+  // Calibration window state is managed locally — no Rust command needed
+  // (is_overlay_visible was removed; we track it via toggle_calibration return value)
 
   const handleStart = async () => {
     setLoading(true)
@@ -74,10 +72,10 @@ export default function SettingsScreen() {
   const handleSetSound = (sound) => {
     setNotifSound(sound)
     localStorage.setItem('notif_sound', sound)
-    
+
     // Update Rust state for ALL future notifications
     invoke('set_notification_sound', { sound }).catch(console.error)
-    
+
     // Preview sound via Rust (one-time manual play)
     if (sound !== 'none') {
       invoke('play_notification_sound', { sound }).catch(console.error)
@@ -86,8 +84,8 @@ export default function SettingsScreen() {
 
   const handleTestNotification = (position, delay = 5000) => {
     setTimeout(() => {
-      invoke('show_notification', { 
-        title: 'Foundry Complete', 
+      invoke('show_notification', {
+        title: 'Foundry Complete',
         message: 'Harrow Chassis has finished crafting and is ready to claim.',
         position
       }).catch(console.error)
@@ -106,14 +104,15 @@ export default function SettingsScreen() {
   }
 
   const handleHideOverlay = () => {
-    invoke('hide_overlay').catch(console.error)
+    invoke('hide_overlay_window', { label: 'overlay-tr' }).catch(console.error)
+    invoke('hide_overlay_window', { label: 'overlay-tl' }).catch(console.error)
+    invoke('hide_overlay_window', { label: 'overlay-tc' }).catch(console.error)
+    invoke('hide_overlay_window', { label: 'overlay-relic' }).catch(console.error)
   }
 
   const handleToggleCalibrate = async () => {
     try {
-      await invoke('toggle_overlay')
-      // Query actual state after toggle
-      const isOpen = await invoke('is_overlay_visible')
+      const isOpen = await invoke('toggle_calibration')
       setIsCalibrationOpen(isOpen)
     } catch (err) {
       console.error(err)
@@ -121,7 +120,7 @@ export default function SettingsScreen() {
   }
 
   const handleToggleCalibrateClose = () => {
-    invoke('toggle_overlay').then(async () => {
+    invoke('toggle_calibration').then(async () => {
       setIsCalibrationOpen(false)
     }).catch(console.error)
   }
@@ -138,22 +137,22 @@ export default function SettingsScreen() {
               <h2 className="text-lg font-semibold uppercase tracking-tight text-yellow-500">Dev Tools</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 onClick={() => handleTestNotification(notifPosition)}
                 className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs"
               >
                 Test Popup (5s)
               </Button>
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 onClick={() => handleTestNotification(notifPosition, 0)}
                 className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs"
               >
                 Test Now
               </Button>
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 onClick={handleTestRelic}
                 className="border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500 text-xs"
               >
@@ -161,8 +160,8 @@ export default function SettingsScreen() {
               </Button>
             </div>
             <div className="mt-4 pt-4 border-t border-yellow-500/20">
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 onClick={handleToggleCalibrate}
                 className="border-orange-500/30 hover:bg-orange-500/10 text-orange-500 text-xs"
               >
@@ -224,11 +223,10 @@ export default function SettingsScreen() {
                 <button
                   key={pos}
                   onClick={() => handleSetPosition(pos)}
-                  className={`py-2 px-3 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all ${
-                    notifPosition === pos
+                  className={`py-2 px-3 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all ${notifPosition === pos
                       ? 'bg-kronos-accent/20 border-kronos-accent text-kronos-accent'
                       : 'bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20'
-                  }`}
+                    }`}
                 >
                   {pos.replace('top-', '').replace('-', ' ')}
                 </button>
@@ -248,11 +246,10 @@ export default function SettingsScreen() {
                 <button
                   key={s.value}
                   onClick={() => handleSetSound(s.value)}
-                  className={`py-2 px-3 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all ${
-                    notifSound === s.value
+                  className={`py-2 px-3 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-all ${notifSound === s.value
                       ? 'bg-kronos-accent/20 border-kronos-accent text-kronos-accent'
                       : 'bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20'
-                  }`}
+                    }`}
                 >
                   {s.label}
                 </button>
@@ -273,7 +270,7 @@ export default function SettingsScreen() {
                   <p className="text-xs font-bold text-kronos-text uppercase">{notif.label}</p>
                   <p className="text-[9px] text-kronos-dim uppercase">{notif.desc}</p>
                 </div>
-                <Toggle checked={false} onChange={() => {}} />
+                <Toggle checked={false} onChange={() => { }} />
               </div>
             ))}
           </div>

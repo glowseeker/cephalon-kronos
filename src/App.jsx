@@ -18,7 +18,7 @@ const Rivens = lazy(() => import('./screens/Rivens'))
 const Relics = lazy(() => import('./screens/Relics'))
 
 // Overlay (separate window, no monitoring context needed)
-const NotificationOverlay = lazy(() => import('./components/NotificationOverlay'))
+const NotificationOverlay = lazy(() => import('./components/Notifications/NotificationOverlay'))
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: '/IconDashboard.png', label: 'Dashboard' },
