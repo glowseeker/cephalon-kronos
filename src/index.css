@@ -295,13 +295,24 @@
   }
 
   @keyframes notif-slide-top {
-    from { transform: translateY(-20px); opacity: 0; }
-    to   { transform: translateY(0);     opacity: 1; }
+
+    /* Enters from above, slides down — correct for top-of-screen stacks */
+    from {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
-  @keyframes notif-slide-in-bottom {
+  @keyframes notif-slide-bottom {
+
+    /* Enters from below, slides up — correct for relic rewards */
     from {
-      transform: translateY(100%);
+      transform: translateY(20px);
       opacity: 0;
     }
 
@@ -312,36 +323,104 @@
   }
 
   @keyframes notif-exit {
-    from { opacity: 1; transform: translateY(0) scale(1); }
-    to   { opacity: 0; transform: translateY(-8px) scale(0.96); }
+
+    /* Fades out upward, and collapses height so the stack closes smoothly */
+    0% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      max-height: 120px;
+    }
+
+    50% {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.96);
+      max-height: 120px;
+    }
+
+    100% {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.96);
+      max-height: 0;
+    }
+  }
+
+  @keyframes notif-relic-exit {
+
+    /* Fades out downward, correctly for bottom-of-screen reward grid */
+    0% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translateY(20px) scale(0.96);
+    }
   }
 
   /* full names (legacy) */
-  .notif-slide-in-right,
-  .notif-slide-right {
-    animation: notif-slide-in-right 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+
+
+  /* ── Notification animations — pure opacity only, zero transform ──────────
+     Any transform on a transparent Wayland window causes compositor artifacts.
+  ────────────────────────────────────────────────────────────────────────── */
+
+  @keyframes notif-fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
 
-  .notif-slide-in-left,
-  .notif-slide-left {
-    animation: notif-slide-in-left 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
+  @keyframes notif-fade-out {
+    from {
+      opacity: 1;
+    }
 
-  .notif-slide-top {
-    animation: notif-slide-top 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-
-  .notif-slide-in-bottom,
-  .notif-slide-bottom {
-    animation: notif-slide-in-bottom 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+    to {
+      opacity: 0;
+    }
   }
 
   .notif-enter {
-    animation: notif-slide-in-right 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: notif-fade-in 0.25s ease both;
+  }
+
+  .notif-enter-right {
+    animation: notif-fade-in 0.25s ease both;
+  }
+
+  .notif-enter-left {
+    animation: notif-fade-in 0.25s ease both;
+  }
+
+  .notif-enter-top {
+    animation: notif-fade-in 0.25s ease both;
+  }
+
+  .notif-enter-bottom {
+    animation: notif-fade-in 0.25s ease both;
+  }
+
+  .notif-relic-enter {
+    animation: notif-fade-in 0.25s ease both;
   }
 
   .notif-exit {
-    animation: notif-exit 0.32s ease-in both;
+    animation: notif-fade-out 0.22s ease both;
+  }
+
+  /* Legacy aliases */
+  .notif-slide-top,
+  .notif-slide-in-right,
+  .notif-slide-right,
+  .notif-slide-in-left,
+  .notif-slide-left,
+  .notif-slide-bottom {
+    animation: notif-fade-in 0.25s ease both;
   }
 
 }

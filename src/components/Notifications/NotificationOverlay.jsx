@@ -1,27 +1,26 @@
 /**
  * NotificationOverlay.jsx
+ * Runs in overlay-tr / overlay-tl / overlay-tc / overlay-relic.
  *
- * Runs inside overlay-tr, overlay-tl, overlay-tc, overlay-relic.
- *
- * APPROACH: Rust handles all window positioning and showing.
- *           JS only manages card state and calls hide when empty.
- *           No ResizeObserver feedback loop — eliminates all silent failure points.
- *
- * Cards are click-through (window has ignore_cursor_events=true).
- * Relic window has ignore_cursor_events=false so the close button works.
+ * NO QUEUE: All toasts render directly. No "+X more" badge.
+ * NO EXIT ANIMATION: Toasts disappear instantly to avoid ghosting.
+ * NEW AT BOTTOM: New notifications appear at bottom, push older ones up.
  */
-import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/tauri'
 import { appWindow } from '@tauri-apps/api/window'
 import { Bell, Star, Zap, X } from 'lucide-react'
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+const TOAST_MS = 5000
+const RELIC_MS = 15000
 
-const TOAST_DURATION = 5000
-const EXIT_DURATION = 300
-const RELIC_DURATION = 15000
-const MAX_VISIBLE = 5
+const POS_ENTER_CLASS = {
+  'top-right': 'notif-slide-in-right',
+  'top-left': 'notif-slide-in-left',
+  'top-center': 'notif-slide-top',
+  'relic': 'notif-relic-enter',
+}
 
 const LABEL_TO_POS = {
   'overlay-tr': 'top-right',
@@ -36,118 +35,91 @@ const RARITY = {
   Common: { text: '#9ca3af', bg: 'rgba(255,255,255,0.03)' },
 }
 
-// ─── Reducer ─────────────────────────────────────────────────────────────────
-
-function reducer(state, action) {
-  switch (action.type) {
-    case 'ADD':
-      return { ...state, toasts: [...state.toasts, action.payload] }
-    case 'PROMOTE':
-      return {
-        ...state, toasts: state.toasts.map(t =>
-          t.id === action.id ? { ...t, status: 'showing' } : t
-        )
-      }
-    case 'EXIT':
-      return {
-        ...state, toasts: state.toasts.map(t =>
-          t.id === action.id ? { ...t, status: 'exiting' } : t
-        )
-      }
-    case 'REMOVE':
-      return { ...state, toasts: state.toasts.filter(t => t.id !== action.id) }
-    case 'RELIC_SHOW': return { ...state, relic: action.payload }
-    case 'RELIC_HIDE': return { ...state, relic: null }
-    case 'WIPE': return { toasts: [], relic: null }
-    default: return state
-  }
-}
-
-// ─── Component ───────────────────────────────────────────────────────────────
-
 export default function NotificationOverlay() {
-  const [{ toasts, relic }, dispatch] = useReducer(reducer, { toasts: [], relic: null })
+  console.log('[JS] NotificationOverlay mounted, label:', appWindow.label)
+  const [toasts, setToasts] = useState([])
+  const [relic, setRelic] = useState(null)
+  const timers = useRef({})
   const relicTimer = useRef(null)
-  const dispatchRef = useRef(dispatch)
-  dispatchRef.current = dispatch
-
-  // Read our position from the window label — synchronous, no state needed
   const myLabel = appWindow.label
   const myPos = LABEL_TO_POS[myLabel] ?? 'top-right'
+  const enterClass = POS_ENTER_CLASS[myPos] || ''
 
-  // ── Schedule exit for a toast ─────────────────────────────────────────────
-  const scheduleExit = useCallback((id) => {
-    setTimeout(() => {
-      dispatchRef.current({ type: 'EXIT', id })
-      setTimeout(() => dispatchRef.current({ type: 'REMOVE', id }), EXIT_DURATION)
-    }, TOAST_DURATION)
+const removeToast = useCallback((id) => {
+    if (timers.current[id]) {
+      clearTimeout(timers.current[id])
+      delete timers.current[id]
+    }
+    setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
 
-  // ── Promote queued toasts as slots open ───────────────────────────────────
-  useEffect(() => {
-    const showing = toasts.filter(t => t.status === 'showing').length
-    const next = toasts.find(t => t.status === 'queued')
-    if (next && showing < MAX_VISIBLE) {
-      dispatch({ type: 'PROMOTE', id: next.id })
-      scheduleExit(next.id)
-    }
-  }, [toasts, scheduleExit])
+  // NO-OP - hiding causes webview reload which wipes state
+  const hideWindow = useCallback(() => {}, [myLabel])
 
-  // ── Hide window when empty ────────────────────────────────────────────────
-  useEffect(() => {
-    const empty = toasts.length === 0 && !relic
-    if (empty) {
-      invoke('hide_overlay_window', { label: myLabel }).catch(() => { })
-    }
-  }, [toasts.length, relic, myLabel])
-
-  // ── Tauri event listeners ─────────────────────────────────────────────────
   useEffect(() => {
     const subs = []
 
     subs.push(listen('new-notification', (e) => {
-      const { id, position = 'top-right', ...rest } = e.payload
+      const { position = 'top-right', title = '', message = '', image = '' } = e.payload
       if (position !== myPos) return
-      // Add as queued; promotion useEffect handles showing
-      dispatch({ type: 'ADD', payload: { id, status: 'queued', position, ...rest } })
+      const uniqueId = `t-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+      console.log('[JS] Adding toast:', uniqueId)
+      setToasts(prev => {
+        console.log('[JS] setToasts after add:', prev.length + 1)
+        return [...prev, { id: uniqueId, title, message, image }]
+      })
+      const timerId = setTimeout(() => {
+        console.log('[JS] Timer FIRED for:', uniqueId)
+        try {
+          delete timers.current[uniqueId]
+        } catch (e) { console.log('[JS] timer delete error:', e) }
+        try {
+          setToasts(prev => {
+            console.log('[JS] setToasts filter, was:', prev.length)
+            return prev.filter(t => t.id !== uniqueId)
+          })
+        } catch (e) { console.log('[JS] timer filter error:', e) }
+      }, TOAST_MS)
+      console.log('[JS] Timer set for:', uniqueId, 'in', TOAST_MS, 'ms')
+      timers.current[uniqueId] = timerId
     }))
 
     subs.push(listen('show-relic-rewards', (e) => {
       if (myPos !== 'relic') return
       const rewards = Array.isArray(e.payload) ? e.payload : (e.payload?.rewards ?? [])
-      dispatch({ type: 'RELIC_SHOW', payload: { rewards } })
+      setRelic({ rewards })
       clearTimeout(relicTimer.current)
-      relicTimer.current = setTimeout(() => dispatchRef.current({ type: 'RELIC_HIDE' }), RELIC_DURATION)
+      relicTimer.current = setTimeout(() => setRelic(null), RELIC_MS)
     }))
 
     subs.push(listen('wipe-state', () => {
+      console.log('[JS] WIPE STATE received! current toasts:', toasts.length)
+      Object.values(timers.current).forEach(clearTimeout)
+      timers.current = {}
       clearTimeout(relicTimer.current)
-      dispatch({ type: 'WIPE' })
+      setToasts([])
+      setRelic(null)
     }))
 
     return () => {
+      Object.values(timers.current).forEach(clearTimeout)
       clearTimeout(relicTimer.current)
       subs.forEach(p => p.then(f => f()))
     }
-  }, [myPos, scheduleExit])
+  }, [myPos, hideWindow])
 
   const dismissRelic = useCallback(() => {
     clearTimeout(relicTimer.current)
-    dispatch({ type: 'RELIC_HIDE' })
+    setRelic(null)
     invoke('hide_overlay_window', { label: 'overlay-relic' }).catch(() => { })
   }, [])
 
-  const visible = toasts.filter(t => t.status !== 'queued')
-
-  // ── Render ─────────────────────────────────────────────────────────────────
-  // The window is full-screen height but click-through.
-  // Cards stack from the top (or bottom for relic).
-  // The transparent area below cards passes all mouse events to the game.
-
   return (
-    <div className="flex flex-col gap-2 p-3 select-none" style={{ width: '300px' }}>
-      {visible.map(t => <ToastCard key={t.id} toast={t} />)}
-
+    <div className="flex flex-col gap-2 p-3 select-none" 
+         style={{ width: '320px' }}>
+      {toasts.slice().reverse().map(t => (
+        <ToastCard key={t.id} toast={t} enterClass={enterClass} />
+      ))}
       {relic && myPos === 'relic' && (
         <RelicCard data={relic} onClose={dismissRelic} />
       )}
@@ -155,23 +127,18 @@ export default function NotificationOverlay() {
   )
 }
 
-// ─── Toast Card ───────────────────────────────────────────────────────────────
-
-function ToastCard({ toast }) {
-  const anim = toast.status === 'exiting' ? 'notif-exit' : 'notif-slide-top'
+function ToastCard({ toast, enterClass }) {
   return (
     <div
-      className={`flex gap-3 items-center px-3 py-3 rounded-xl ${anim}`}
+      className={`flex gap-3 items-center px-3 py-3 rounded-xl ${enterClass}`}
       style={{
         background: 'var(--color-panel)',
         border: '1px solid rgba(var(--color-accent-rgb), 0.25)',
         borderLeft: '3px solid var(--color-accent)',
       }}
     >
-      <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
-        style={{ background: 'rgba(var(--color-accent-rgb), 0.15)' }}
-      >
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
+        style={{ background: 'rgba(var(--color-accent-rgb), 0.15)' }}>
         {toast.image
           ? <img src={toast.image} alt="" className="w-6 h-6 object-contain" />
           : <Bell size={15} style={{ color: 'var(--color-accent)' }} />
@@ -179,40 +146,30 @@ function ToastCard({ toast }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[9px] font-black uppercase tracking-widest mb-0.5 truncate"
-          style={{ color: 'var(--color-accent)' }}>
-          {toast.title}
-        </p>
+          style={{ color: 'var(--color-accent)' }}>{toast.title}</p>
         <p className="text-[12px] font-semibold leading-tight line-clamp-2"
-          style={{ color: 'var(--color-text)' }}>
-          {toast.message}
-        </p>
+          style={{ color: 'var(--color-text)' }}>{toast.message}</p>
       </div>
     </div>
   )
 }
 
-// ─── Relic Card ───────────────────────────────────────────────────────────────
-
 function RelicCard({ data, onClose }) {
   const rewards = data?.rewards ?? []
   return (
-    <div
-      className="rounded-2xl overflow-hidden notif-slide-top"
+    <div className="rounded-2xl overflow-hidden notif-relic-enter"
       style={{
         background: 'var(--color-panel)',
         border: '1px solid rgba(var(--color-accent-rgb), 0.22)',
         borderTop: '3px solid var(--color-accent)',
         width: '560px',
-      }}
-    >
+      }}>
       <div className="flex items-center justify-between px-4 py-2"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="flex items-center gap-2">
           <Zap size={11} style={{ color: 'var(--color-accent)' }} />
           <span className="text-[9px] font-black uppercase tracking-widest"
-            style={{ color: 'var(--color-accent)' }}>
-            Relic Rewards
-          </span>
+            style={{ color: 'var(--color-accent)' }}>Relic Rewards</span>
         </div>
         <button onClick={onClose}
           className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
@@ -235,16 +192,10 @@ function RelicCard({ data, onClose }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[9px] font-black uppercase leading-tight line-clamp-2"
-                  style={{ color: rar.text }}>
-                  {item.name}
-                </p>
+                  style={{ color: rar.text }}>{item.name}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  {item.price != null && (
-                    <span className="text-[10px] font-black text-amber-400">{item.price}p</span>
-                  )}
-                  {item.owned > 0 && (
-                    <span className="text-[9px] text-white opacity-40">×{item.owned}</span>
-                  )}
+                  {item.price != null && <span className="text-[10px] font-black text-amber-400">{item.price}p</span>}
+                  {item.owned > 0 && <span className="text-[9px] text-white opacity-40">×{item.owned}</span>}
                 </div>
               </div>
             </div>

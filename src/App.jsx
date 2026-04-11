@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react'
+import { useState, lazy, Suspense, useEffect } from 'react'
 import { useMonitoring } from './contexts/MonitoringContext'
 import { formatLastUpdate } from './lib/warframeUtils'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -40,6 +40,16 @@ const NAV_ITEMS = [
 // It only needs ThemeProvider for CSS variable access.
 
 function OverlayApp() {
+  // The overlay URL uses ?overlay=true (not #overlay), so the index.html script
+  // that adds class="is-overlay" never fires. Set transparent backgrounds here.
+  useEffect(() => {
+    const s = 'background:transparent!important;background-color:transparent!important'
+    document.documentElement.style.cssText += ';' + s
+    document.body.style.cssText += ';' + s
+    const root = document.getElementById('root')
+    if (root) root.style.cssText += ';' + s
+  }, [])
+
   return (
     <main
       className="h-screen w-screen overflow-hidden"
@@ -164,9 +174,12 @@ function AppContent() {
 // ─── Root ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const hash = window.location.hash
+  const params = new URLSearchParams(window.location.search)
+  const isOverlay = params.get('overlay') === 'true'
+  const isCalibration = params.get('calibration') === 'true'
+  console.log('[App] App rendered, isOverlay:', isOverlay, 'isCalibration:', isCalibration)
 
-  if (hash === '#overlay') {
+  if (isOverlay) {
     return (
       <ThemeProvider>
         <OverlayApp />
@@ -174,7 +187,7 @@ export default function App() {
     )
   }
 
-  if (hash === '#calibration') {
+  if (isCalibration) {
     return (
       <ThemeProvider>
         <CalibrationWindow />

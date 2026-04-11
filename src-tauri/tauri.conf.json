@@ -70,7 +70,7 @@
         "resizable": false,
         "visible": false,
         "skipTaskbar": true,
-        "url": "/#overlay",
+        "url": "/?overlay=true",
         "acceptFirstMouse": true,
         "focus": false
       },
@@ -85,7 +85,7 @@
         "resizable": false,
         "visible": false,
         "skipTaskbar": true,
-        "url": "/#overlay",
+        "url": "/?overlay=true",
         "acceptFirstMouse": true,
         "focus": false
       },
@@ -100,7 +100,7 @@
         "resizable": false,
         "visible": false,
         "skipTaskbar": true,
-        "url": "/#overlay",
+        "url": "/?overlay=true",
         "acceptFirstMouse": true,
         "focus": false
       },
@@ -115,13 +115,13 @@
         "resizable": false,
         "visible": false,
         "skipTaskbar": true,
-        "url": "/#overlay",
+        "url": "/?overlay=true",
         "acceptFirstMouse": true,
         "focus": false
       },
       {
         "label": "calibration",
-        "title": "Kronos Overlay Setup",
+        "title": "Kronos Overlay",
         "width": 600,
         "height": 400,
         "decorations": true,
