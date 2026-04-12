@@ -700,6 +700,13 @@ fn show_overlay_window(
             let _ = window.show();
             let _ = window.set_always_on_top(true);
             let _ = window.set_ignore_cursor_events(true);
+            let wr = window.clone();
+            tauri::async_runtime::spawn(async move {
+                for ms in [60u64, 200, 500] {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
+                    let _ = wr.set_always_on_top(true);
+                }
+            });
             return Ok(());
         }
         _ => (screen_w as i32 - phys_w as i32 - phys_margin, phys_margin), // overlay-tr
@@ -716,6 +723,16 @@ fn show_overlay_window(
     let _ = window.show();
     let _ = window.set_always_on_top(true);
     let _ = window.set_ignore_cursor_events(true);
+
+    // Re-assert topmost after short delays: borderless-windowed games (Windows/Mac)
+    // reclaim TOPMOST when they regain focus. Firing a few times wins the race.
+    let w = window.clone();
+    tauri::async_runtime::spawn(async move {
+        for ms in [60u64, 200, 500] {
+            tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
+            let _ = w.set_always_on_top(true);
+        }
+    });
 
     Ok(())
 }

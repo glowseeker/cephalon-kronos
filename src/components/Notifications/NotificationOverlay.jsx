@@ -29,12 +29,16 @@ const LABEL_TO_POS = {
   'overlay-relic': 'relic',
 }
 
-const LIMITS = {
-  'top-right': 3,
-  'top-left': 3,
-  'top-center': 2,
-  'relic': 1,
-}
+// On Linux: limit every position to 1 visible notification.
+// This sidesteps the WebKit timer-batching bug that causes stacks to
+// disappear all at once — with max 1 per window there is never a stack.
+const IS_LINUX = typeof navigator !== 'undefined' &&
+  navigator.userAgent.toLowerCase().includes('linux') &&
+  !navigator.userAgent.toLowerCase().includes('android')
+
+const LIMITS = IS_LINUX
+  ? { 'top-right': 1, 'top-left': 1, 'top-center': 1, 'relic': 1 }
+  : { 'top-right': 3, 'top-left': 3, 'top-center': 2, 'relic': 1 }
 
 const FIXED_WIDTHS = {
   'top-right': 440,
@@ -53,7 +57,7 @@ export default function NotificationOverlay() {
   const [visibleToasts, setVisibleToasts] = useState([])
   const [queue, setQueue] = useState([])
   const [relic, setRelic] = useState(null)
-  
+
   const containerRef = useRef(null)
   const myLabel = appWindow.label
   const myPos = LABEL_TO_POS[myLabel] ?? 'top-right'
@@ -82,16 +86,16 @@ export default function NotificationOverlay() {
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const height = entry.target.scrollHeight
-        
-        if (height > 40) { 
-          invoke('resize_overlay_window', { 
-            label: myLabel, 
-            width: myWidth, 
-            height: height 
+
+        if (height > 40) {
+          invoke('resize_overlay_window', {
+            label: myLabel,
+            width: myWidth,
+            height: height
           }).catch(console.error)
-          invoke('set_ignore_cursor_events', { label: myLabel, ignore: true }).catch(() => {})
+          invoke('set_ignore_cursor_events', { label: myLabel, ignore: true }).catch(() => { })
         } else {
-          invoke('resize_overlay_window', { label: myLabel, width: myWidth, height: 0 }).catch(() => {})
+          invoke('resize_overlay_window', { label: myLabel, width: myWidth, height: 0 }).catch(() => { })
         }
       }
     })
@@ -108,13 +112,13 @@ export default function NotificationOverlay() {
     subs.push(listen('new-notification', (e) => {
       const { position = 'top-right', title = '', message = '', image = '' } = e.payload
       if (position !== myPos) return
-      
-      const newNotif = { 
-        id: `t-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, 
-        title, 
-        message, 
-        image, 
-        createdAt: Date.now() 
+
+      const newNotif = {
+        id: `t-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        title,
+        message,
+        image,
+        createdAt: Date.now()
       }
 
       setQueue(prev => [...prev, newNotif])
@@ -141,7 +145,7 @@ export default function NotificationOverlay() {
   }, [myPos])
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={`flex flex-col gap-2 p-10 select-none pointer-events-none ${POS_CLASSES[myPos]}`}
       style={{ width: `${myWidth}px` }}
@@ -149,7 +153,7 @@ export default function NotificationOverlay() {
       {visibleToasts.map(t => (
         <ToastCard key={t.id} toast={t} onExpire={() => removeToast(t.id)} />
       ))}
-      
+
       {queue.length > 0 && (
         <div className="notif-enter flex items-center justify-center px-4 py-1 rounded-lg bg-kronos-panel/40 border border-white/5 shadow-lg backdrop-blur-sm self-center mt-1 scale-90 opacity-60">
           <span className="text-[9px] font-black text-white uppercase tracking-[0.25em]">
@@ -177,7 +181,7 @@ function ToastCard({ toast, onExpire }) {
       const now = Date.now()
       const delta = now - lastTick.current
       lastTick.current = now
-      
+
       setRemaining(prev => {
         const next = prev - delta
         if (next <= 0) {
@@ -227,8 +231,8 @@ function ToastCard({ toast, onExpire }) {
       </div>
       <div className="h-0.5 rounded-full bg-white/10 overflow-hidden">
         <div className="h-full rounded-full transition-all duration-75"
-          style={{ 
-            width: `${progress}%`, 
+          style={{
+            width: `${progress}%`,
             background: 'var(--color-accent)',
             opacity: 0.5
           }} />
@@ -250,7 +254,7 @@ function RelicCard({ data, onClose }) {
       const now = Date.now()
       const delta = now - lastTick.current
       lastTick.current = now
-      
+
       setRemaining(prev => {
         const next = prev - delta
         if (next <= 0) {
@@ -269,7 +273,7 @@ function RelicCard({ data, onClose }) {
   const progress = (remaining / RELIC_MS) * 100
 
   return (
-    <div 
+    <div
       className={`
         rounded-2xl flex-shrink-0
         transition-all duration-300 transform
@@ -317,8 +321,8 @@ function RelicCard({ data, onClose }) {
       </div>
       <div className="h-1 rounded-b-2xl bg-white/10 overflow-hidden">
         <div className="h-full rounded-b-2xl transition-all duration-75"
-          style={{ 
-            width: `${progress}%`, 
+          style={{
+            width: `${progress}%`,
             background: 'var(--color-accent)',
             opacity: 0.5
           }} />
