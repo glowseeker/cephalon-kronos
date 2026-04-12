@@ -700,10 +700,36 @@ fn show_overlay_window(
             let _ = window.show();
             let _ = window.set_always_on_top(true);
             let _ = window.set_ignore_cursor_events(true);
+
+            // Platform Specific Fixes
+            #[cfg(target_os = "macos")]
+            {
+                use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
+                if let Ok(ns_window) = window.ns_window() {
+                    let id = ns_window as cocoa::base::id;
+                    unsafe {
+                        id.setLevel_(8);
+                        id.setCollectionBehavior_(
+                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces |
+                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
+                        );
+                    }
+                }
+            }
+            #[cfg(target_os = "windows")]
+            {
+            }
+
             let wr = window.clone();
             tauri::async_runtime::spawn(async move {
-                for ms in [60u64, 200, 500] {
+                // High-frequency re-assertion for the first 500ms
+                for ms in [20u64, 40, 60, 80, 100, 120, 140, 160, 180, 200, 250, 300, 350, 400, 450, 500] {
                     tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
+                    let _ = wr.set_always_on_top(true);
+                }
+                // Periodic re-assertion for the remaining duration
+                for _ in 0..15 {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
                     let _ = wr.set_always_on_top(true);
                 }
             });
@@ -723,13 +749,37 @@ fn show_overlay_window(
     let _ = window.show();
     let _ = window.set_always_on_top(true);
     let _ = window.set_ignore_cursor_events(true);
+    let _ = window.set_skip_taskbar(true);
 
-    // Re-assert topmost after short delays: borderless-windowed games (Windows/Mac)
-    // reclaim TOPMOST when they regain focus. Firing a few times wins the race.
+    // Platform Specific Fixes
+    #[cfg(target_os = "macos")]
+    {
+        use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
+        if let Ok(ns_window) = window.ns_window() {
+            let id = ns_window as cocoa::base::id;
+            unsafe {
+                id.setLevel_(8);
+                id.setCollectionBehavior_(
+                    NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces |
+                    NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
+                );
+            }
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+    }
+
     let w = window.clone();
+    let is_relic = label.as_str() == "overlay-relic";
     tauri::async_runtime::spawn(async move {
-        for ms in [60u64, 200, 500] {
+        let ticks = if is_relic { 15 } else { 5 };
+        for ms in [20u64, 40, 60, 80, 100, 120, 140, 160, 180, 200, 250, 300, 350, 400, 450, 500] {
             tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
+            let _ = w.set_always_on_top(true);
+        }
+        for _ in 0..ticks {
+            tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
             let _ = w.set_always_on_top(true);
         }
     });
@@ -783,6 +833,39 @@ fn resize_overlay_window(
     if height > 0 {
         let _ = window.show();
         let _ = window.set_always_on_top(true);
+
+        // Platform Specific Fixes
+        #[cfg(target_os = "macos")]
+        {
+            use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
+            if let Ok(ns_window) = window.ns_window() {
+                let id = ns_window as cocoa::base::id;
+                unsafe {
+                    id.setLevel_(8);
+                    id.setCollectionBehavior_(
+                        NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces |
+                        NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
+                    );
+                }
+            }
+        }
+        #[cfg(target_os = "windows")]
+        {
+        }
+
+        let w = window.clone();
+        let is_relic = label.as_str() == "overlay-relic";
+        tauri::async_runtime::spawn(async move {
+            let ticks = if is_relic { 15 } else { 5 };
+            for ms in [20u64, 40, 60, 80, 100, 120, 140, 160, 180, 200, 250, 300, 350, 400, 450, 500] {
+                tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
+                let _ = w.set_always_on_top(true);
+            }
+            for _ in 0..ticks {
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                let _ = w.set_always_on_top(true);
+            }
+        });
     } else {
         let _ = window.hide();
     }

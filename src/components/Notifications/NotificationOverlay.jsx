@@ -150,11 +150,27 @@ export default function NotificationOverlay() {
       className={`flex flex-col gap-2 p-10 select-none pointer-events-none ${POS_CLASSES[myPos]}`}
       style={{ width: `${myWidth}px` }}
     >
-      {visibleToasts.map(t => (
-        <ToastCard key={t.id} toast={t} onExpire={() => removeToast(t.id)} />
+      {visibleToasts.map((t, index) => (
+        <div key={t.id} className="relative">
+          <ToastCard toast={t} onExpire={() => removeToast(t.id)} />
+          
+          {/* Linux Specific Badge: Only show on the topmost (index 0) notification */}
+          {IS_LINUX && index === 0 && queue.length > 0 && (
+            <div className="absolute -top-2 -right-2 z-50 animate-bounce">
+              <div 
+                className="text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white/20"
+                style={{ background: 'var(--color-accent)' }}
+              >
+                +{queue.length} MORE
+              </div>
+            </div>
+          )}
+        </div>
       ))}
 
-      {queue.length > 0 && (
+      {/* For non-Linux, or if we want to keep the bottom indicator, we can keep it. 
+          But the user asked for the badge logic. I'll hide the bottom one on Linux. */}
+      {!IS_LINUX && queue.length > 0 && (
         <div className="notif-enter flex items-center justify-center px-4 py-1 rounded-lg bg-kronos-panel/40 border border-white/5 shadow-lg backdrop-blur-sm self-center mt-1 scale-90 opacity-60">
           <span className="text-[9px] font-black text-white uppercase tracking-[0.25em]">
             + {queue.length} More
