@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 use std::fs;
-use tauri::Manager;
+use tauri::{Manager, Size, PhysicalSize, Position, PhysicalPosition};
 use serde::Serialize;
 use std::io::BufReader;
 use std::sync::{Arc, Mutex};
@@ -654,13 +654,6 @@ fn set_notification_sound(state: tauri::State<'_, AppState>, sound: String) -> R
     Ok(())
 }
 
-/// Resize one overlay window to exactly the given physical pixel dimensions,
-/// then position it at the correct screen corner.
-/// Called by NotificationOverlay.jsx via ResizeObserver on every layout change.
-/// When height == 0, the window is hidden instead.
-/// Position and show an overlay window at the correct screen corner.
-/// The window is a fixed tall transparent strip — JS renders cards at the top,
-/// and the transparent remainder is click-through (set_ignore_cursor_events).
 #[tauri::command]
 fn show_overlay_window(
     app_handle: tauri::AppHandle,
@@ -679,11 +672,14 @@ fn show_overlay_window(
     let scale    = monitor.scale_factor();
     let margin   = (16.0 * scale) as i32;
 
-    // Each toast window is 320 logical px wide and as tall as the screen
-    // (transparent, click-through). Cards stack from the top or bottom.
-    let log_w = 320u32;
+    // Fixed widths for standard overlays (centered internally in JS)
+    let log_w = match label.as_str() {
+        "overlay-relic" => 640u32,
+        _ => 440u32,
+    };
+    
     let phys_w = (log_w as f64 * scale) as u32;
-    let phys_h = screen_h; // full screen height, transparent + click-through
+    let phys_h = screen_h; 
 
     let phys_margin = margin;
 
@@ -691,9 +687,8 @@ fn show_overlay_window(
         "overlay-tl"    => (phys_margin, phys_margin),
         "overlay-tc"    => (((screen_w as i32 - phys_w as i32) / 2), phys_margin),
         "overlay-relic" => {
-            // Relic banner: bottom-center, auto height
-            let relic_w = (600.0 * scale) as u32;
-            let relic_h = (220.0 * scale) as u32;
+            let relic_w = (640.0 * scale) as u32;
+            let relic_h = (260.0 * scale) as u32;
             let rx = (screen_w as i32 - relic_w as i32) / 2;
             let ry = screen_h as i32 - relic_h as i32 - phys_margin;
             let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
@@ -704,27 +699,90 @@ fn show_overlay_window(
             ));
             let _ = window.show();
             let _ = window.set_always_on_top(true);
-            let _ = window.set_ignore_cursor_events(false); // relic has a close button
+            let _ = window.set_ignore_cursor_events(true);
             return Ok(());
         }
         _ => (screen_w as i32 - phys_w as i32 - phys_margin, phys_margin), // overlay-tr
     };
 
-    window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+    let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
         width: phys_w, height: phys_h,
-    })).map_err(|e| e.to_string())?;
+    }));
 
-    window.set_position(tauri::Position::Physical(
+    let _ = window.set_position(tauri::Position::Physical(
         tauri::PhysicalPosition { x, y }
-    )).map_err(|e| e.to_string())?;
+    ));
 
-    window.show().map_err(|e| e.to_string())?;
-    window.set_always_on_top(true).map_err(|e| e.to_string())?;
-    // Click-through: the window covers the full screen height but cards only occupy
-    // the top portion. The transparent remainder does not block mouse input.
-    window.set_ignore_cursor_events(true).map_err(|e| e.to_string())?;
+    let _ = window.show();
+    let _ = window.set_always_on_top(true);
+    let _ = window.set_ignore_cursor_events(true);
 
     Ok(())
+}
+
+#[tauri::command]
+fn resize_overlay_window(
+    app_handle: tauri::AppHandle,
+    label: String,
+    width: u32,
+    height: u32,
+) -> Result<(), String> {
+    let window = app_handle
+        .get_window(&label)
+        .ok_or_else(|| format!("window '{}' not found", label))?;
+
+    let monitor = window.primary_monitor()
+        .map_err(|e| e.to_string())?
+        .ok_or("no primary monitor")?;
+
+    let screen_w = monitor.size().width;
+    let screen_h = monitor.size().height;
+    let scale    = monitor.scale_factor();
+    let margin   = (16.0 * scale) as i32;
+
+    let phys_w = (width as f64 * scale) as u32;
+    let phys_h = (height as f64 * scale) as u32;
+    let phys_margin = margin;
+
+    let (x, y) = match label.as_str() {
+        "overlay-tl"    => (phys_margin, phys_margin),
+        "overlay-tc"    => (((screen_w as i32 - phys_w as i32) / 2), phys_margin),
+        "overlay-relic" => {
+            let rx = (screen_w as i32 - phys_w as i32) / 2;
+            let ry = screen_h as i32 - phys_h as i32 - phys_margin;
+            (rx, ry)
+        }
+        _ => (screen_w as i32 - phys_w as i32 - phys_margin, phys_margin),
+    };
+
+    let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+        width: phys_w, height: phys_h,
+    }));
+
+    let _ = window.set_position(tauri::Position::Physical(
+        tauri::PhysicalPosition { x, y }
+    ));
+
+    if height > 0 {
+        let _ = window.show();
+        let _ = window.set_always_on_top(true);
+    } else {
+        let _ = window.hide();
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+fn set_ignore_cursor_events(
+    app_handle: tauri::AppHandle,
+    label: String,
+    ignore: bool,
+) -> Result<(), String> {
+    let window = app_handle
+        .get_window(&label)
+        .ok_or_else(|| format!("window '{}' not found", label))?;
+    window.set_ignore_cursor_events(ignore).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -819,9 +877,8 @@ async fn show_notification(
     if let Some(w) = app_handle.get_window(label) {
         let was_hidden = !w.is_visible().unwrap_or(true);
         if was_hidden {
-            // Wipe stale toasts from throttled JS runtime
-            let _ = w.emit("wipe-state", ());
-            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            // Wipe stale toasts for this specific position (not all windows)
+            let _ = w.emit("wipe-state", pos.clone());
         }
         // Always re-show and position — window may have moved between calls
         let _ = show_overlay_window(app_handle.clone(), label.to_string());
@@ -886,6 +943,8 @@ fn main() {
             show_relic_overlay,
             show_overlay_window,
             hide_overlay_window,
+            resize_overlay_window,
+            set_ignore_cursor_events,
             play_notification_sound,
             set_notification_sound,
             // --- calibration ---

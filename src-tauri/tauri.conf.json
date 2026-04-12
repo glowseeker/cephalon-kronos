@@ -67,7 +67,7 @@
         "transparent": true,
         "decorations": false,
         "alwaysOnTop": true,
-        "resizable": false,
+        "resizable": true,
         "visible": false,
         "skipTaskbar": true,
         "url": "/?overlay=true",
@@ -82,7 +82,7 @@
         "transparent": true,
         "decorations": false,
         "alwaysOnTop": true,
-        "resizable": false,
+        "resizable": true,
         "visible": false,
         "skipTaskbar": true,
         "url": "/?overlay=true",
@@ -97,7 +97,7 @@
         "transparent": true,
         "decorations": false,
         "alwaysOnTop": true,
-        "resizable": false,
+        "resizable": true,
         "visible": false,
         "skipTaskbar": true,
         "url": "/?overlay=true",
@@ -112,7 +112,7 @@
         "transparent": true,
         "decorations": false,
         "alwaysOnTop": true,
-        "resizable": false,
+        "resizable": true,
         "visible": false,
         "skipTaskbar": true,
         "url": "/?overlay=true",
@@ -127,7 +127,7 @@
         "decorations": true,
         "resizable": true,
         "visible": false,
-        "url": "/#calibration"
+        "url": "/?calibration=true"
       }
     ]
   }

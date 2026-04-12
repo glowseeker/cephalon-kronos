@@ -40,7 +40,7 @@ importers:
         version: 0.5.100
     devDependencies:
       '@tauri-apps/cli':
-        specifier: ^1.5.9
+        specifier: 1.6.3
         version: 1.6.3
       '@types/react':
         specifier: ^18.2.56
