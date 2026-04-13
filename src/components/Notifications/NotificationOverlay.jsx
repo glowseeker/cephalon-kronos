@@ -171,7 +171,7 @@ export default function NotificationOverlay() {
       {/* For non-Linux, or if we want to keep the bottom indicator, we can keep it. 
           But the user asked for the badge logic. I'll hide the bottom one on Linux. */}
       {!IS_LINUX && queue.length > 0 && (
-        <div className="notif-enter flex items-center justify-center px-4 py-1 rounded-lg bg-kronos-panel/40 border border-white/5 shadow-lg backdrop-blur-sm self-center mt-1 scale-90 opacity-60">
+        <div className="notif-enter flex items-center justify-center px-4 py-1 rounded-lg bg-kronos-panel/40 border border-white/5 self-center mt-1 scale-90 opacity-60">
           <span className="text-[9px] font-black text-white uppercase tracking-[0.25em]">
             + {queue.length} More
           </span>
@@ -227,7 +227,6 @@ function ToastCard({ toast, onExpire }) {
         background: 'var(--color-panel)',
         border: '1px solid rgba(var(--color-accent-rgb), 0.25)',
         borderLeft: '3px solid var(--color-accent)',
-        boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.6)',
       }}
     >
       <div className="flex gap-3 items-center">
@@ -291,16 +290,15 @@ function RelicCard({ data, onClose }) {
   return (
     <div
       className={`
-        rounded-2xl flex-shrink-0
+        flex flex-col gap-2 rounded-2xl flex-shrink-0
         transition-all duration-300 transform
-        ${exiting ? 'notif-exit' : 'notif-relic-enter shadow-2xl'}
+        ${exiting ? 'notif-exit' : 'notif-relic-enter'}
       `}
       style={{
         background: 'var(--color-panel)',
         border: '1px solid rgba(var(--color-accent-rgb), 0.22)',
         borderTop: '3px solid var(--color-accent)',
         width: '560px',
-        boxShadow: '0 15px 40px -10px rgba(0, 0, 0, 0.7)',
       }}>
       <div className="flex items-center justify-between px-4 py-2"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -309,8 +307,16 @@ function RelicCard({ data, onClose }) {
           <span className="text-[9px] font-black uppercase tracking-widest"
             style={{ color: 'var(--color-accent)' }}>Relic Rewards</span>
         </div>
+        <div className="h-1 w-20 rounded-full bg-white/10 overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-75"
+            style={{
+              width: `${progress}%`,
+              background: 'var(--color-accent)',
+              opacity: 0.6
+            }} />
+        </div>
       </div>
-      <div className="grid grid-cols-4 gap-2 px-4 py-3">
+      <div className="grid grid-cols-4 gap-2 px-4 pb-3">
         {rewards.slice(0, 4).map((item, i) => {
           const rar = RARITY[item.rarity] ?? RARITY.Common
           return (
@@ -334,14 +340,6 @@ function RelicCard({ data, onClose }) {
             </div>
           )
         })}
-      </div>
-      <div className="h-1 rounded-b-2xl bg-white/10 overflow-hidden">
-        <div className="h-full rounded-b-2xl transition-all duration-75"
-          style={{
-            width: `${progress}%`,
-            background: 'var(--color-accent)',
-            opacity: 0.5
-          }} />
       </div>
     </div>
   )
