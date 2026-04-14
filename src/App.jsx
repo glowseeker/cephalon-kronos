@@ -51,14 +51,16 @@ function OverlayApp() {
   }, [])
 
   return (
-    <main
-      className="h-screen w-screen overflow-hidden"
-      style={{ background: 'transparent' }}
-    >
-      <Suspense fallback={null}>
-        <NotificationOverlay />
-      </Suspense>
-    </main>
+    <ThemeProvider>
+      <main
+        className="h-screen w-screen overflow-hidden"
+        style={{ background: 'transparent' }}
+      >
+        <Suspense fallback={null}>
+          <NotificationOverlay />
+        </Suspense>
+      </main>
+    </ThemeProvider>
   )
 }
 

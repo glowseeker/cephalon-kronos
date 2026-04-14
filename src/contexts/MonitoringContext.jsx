@@ -60,6 +60,14 @@ export function MonitoringProvider({ children }) {
   const intervalRef = useRef(null)
   const busyRef = useRef(false)
   const autoStartRef = useRef(autoStart)
+  const notifiedRef = useRef({
+    arbitration: new Set(),
+    foundry: new Set(),
+    syndicate: new Set(),
+    syndicateWaste: { lastNotify: 0, count: 0 },
+    mastery: {},
+    checklist: {}
+  })
 
   const isInventoryLoading = useMemo(() => {
     return (inventoryData === undefined) || (!!rawInventory && !inventoryData) || isUpdating;
@@ -259,6 +267,138 @@ export function MonitoringProvider({ children }) {
     }
   }, [rawInventory, exportData, inventoryData, lastUpdate, applyRaw])
 
+  // Check notification conditions
+  useEffect(() => {
+    if (!inventoryData) return
+    const settings = {
+      arbitrationEnabled: localStorage.getItem('notif_arbitration_enabled') === 'true',
+      arbitrationHours: parseInt(localStorage.getItem('notif_arbitration_hours')) || 24,
+      arbitrationRemind: parseInt(localStorage.getItem('notif_arbitration_remind')) || 30,
+      foundryEnabled: localStorage.getItem('notif_foundry_enabled') === 'true',
+      foundryMinutes: parseInt(localStorage.getItem('notif_foundry_minutes')) || 5,
+      syndicateEnabled: localStorage.getItem('notif_syndicate_enabled') === 'true',
+      syndicateWasteEnabled: localStorage.getItem('notif_syndicate_waste_enabled') === 'true',
+      masteryEnabled: localStorage.getItem('notif_mastery_enabled') === 'true',
+      masteryPercent: parseInt(localStorage.getItem('notif_mastery_percent')) || 50,
+      checklistMinutes: parseInt(localStorage.getItem('notif_checklist_minutes')) || 60,
+    }
+    const doNotify = async (title, message, image = null) => {
+      const pos = localStorage.getItem('notif_position') || 'top-right'
+      await invoke('show_notification', { title, message, image, position: pos }).catch(() => {})
+    }
+
+    // Foundry: only notify if remaining time > threshold at scan time
+    if (settings.foundryEnabled) {
+      const foundryItems = inventoryData?.foundry ?? []
+      const now = Date.now() / 1000 // Unix timestamp in seconds
+      for (const item of foundryItems) {
+        if (item.ready) continue // Skip already ready items
+        const finishTime = item.finishTime ?? 0
+        if (finishTime <= 0) continue
+        const remainingSeconds = finishTime - now
+        const thresholdSeconds = settings.foundryMinutes * 60
+        // Only notify if remaining time is GREATER than threshold
+        // (i.e., item will finish AFTER the notification would fire)
+        if (remainingSeconds > thresholdSeconds && remainingSeconds <= (24 * 3600)) {
+          const itemId = item.uniqueName || item.name || String(finishTime)
+          if (!notifiedRef.current.foundry.has(itemId)) {
+            notifiedRef.current.foundry.add(itemId)
+            const timeLeft = Math.round(remainingSeconds / 60)
+            doNotify('Foundry Progress', `${item.name || 'Item'} will be ready in ${timeLeft} minutes`)
+          }
+        }
+      }
+    }
+
+    // Syndicate Capped: check if any syndicate is at max standing
+    if (settings.syndicateEnabled) {
+      const affiliations = inventoryData?.Affiliations || {}
+      for (const [tag, aff] of Object.entries(affiliations)) {
+        const standing = aff.Standing || 0
+        const rank = aff.Title || 0
+        // Get rank cap for this rank
+        const syndInfo = ES[tag]
+        const caps = syndInfo?.ranks?.[rank]?.standing
+        if (caps !== undefined) {
+          const rankCap = Math.abs(caps)
+          if (standing >= rankCap && standing > 0) {
+            if (!notifiedRef.current.syndicate.has(tag)) {
+              notifiedRef.current.syndicate.add(tag)
+              const name = syndInfo?.name || tag
+              doNotify('Syndicate Capped', `${name} has reached max daily standing`)
+            }
+          }
+        }
+      }
+    }
+
+    // Waste Reminder: check opponent of pledged faction
+    if (settings.syndicateWasteEnabled) {
+      const pledged = inventoryData?.SupportedSyndicate
+      if (pledged) {
+        const opponentTag = { 
+          'Steel Meridian': 'Perrin Seqments', 
+          'Perrin Seqments': 'Steel Meridian', 
+          'Arbiters of Hexis': 'The Society', 
+          'The Society': 'Arbiters of Hexis',
+          'New Loka': 'Red Veil', 
+          'Red Veil': 'New Loka',
+          'Cephalon Suda': 'The Vigilant', 
+          'The Vigilant': 'Cephalon Suda' 
+        }[pledged]
+        if (opponentTag) {
+          const aff = inventoryData?.Affiliations?.[opponentTag]
+          const opponentStanding = aff?.Standing || 0
+          const opponentRank = aff?.Title || 0
+          const oppSyndInfo = ES[opponentTag]
+          const oppCaps = oppSyndInfo?.ranks?.[opponentRank]?.standing
+          if (oppCaps !== undefined) {
+            const oppRankCap = Math.abs(oppCaps)
+            // Notify if opponent has more than 50% of rank cap
+            if (oppRankCap > 0 && opponentStanding > oppRankCap * 0.5) {
+              const now = Date.now()
+              const sixHours = 6 * 60 * 60 * 1000
+              const wasteData = notifiedRef.current.syndicateWaste
+              if (now - wasteData.lastNotify > sixHours && wasteData.count < 2) {
+                const oppName = oppSyndInfo?.name || opponentTag
+                const pledgedName = ES[pledged]?.name || pledged
+                wasteData.lastNotify = now
+                wasteData.count++
+                doNotify('Standing Waste Warning', `${oppName} (enemy of ${pledgedName}) has ${opponentStanding.toLocaleString()} standing`)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Checklist tasks: notify before daily/weekly reset
+    const checklistTasks = window.__checklistTasks
+    if (checklistTasks && checklistTasks.length > 0) {
+      const thresholdMs = settings.checklistMinutes * 60 * 1000
+      const cooldownMs = Math.min(settings.checklistMinutes * 30 * 1000, 30 * 60 * 1000) // 30% of threshold, max 30min
+      const nowMs = Date.now()
+      for (const task of checklistTasks) {
+        if (!task.notifEnabled) continue
+        const timeUntilReset = task.nextResetTime - nowMs
+        // Notify if less than threshold left and not yet notified for this cycle
+        if (timeUntilReset > 0 && timeUntilReset <= thresholdMs) {
+          const lastNotified = notifiedRef.current.checklist[task.id] || 0
+          // Only notify if haven't notified within the cooldown for this task
+          if (nowMs - lastNotified > cooldownMs) {
+            notifiedRef.current.checklist[task.id] = nowMs
+            const timeLeft = Math.round(timeUntilReset / 60000)
+            doNotify('Task Reminder', `${task.label} resets in ${timeLeft} minutes`)
+          }
+        }
+        // Clear notification state if reset has passed
+        if (timeUntilReset <= 0 && notifiedRef.current.checklist[task.id]) {
+          delete notifiedRef.current.checklist[task.id]
+        }
+      }
+    }
+  }, [inventoryData, ES])
+
   const callApiHelper = useCallback(async () => {
     if (busyRef.current) return
     busyRef.current = true
@@ -334,6 +474,18 @@ export function MonitoringProvider({ children }) {
       dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENW, ENWRawRewards, ExportImages, ExportTextIcons, arbyTiers: ARBY_TIERS,
       isMonitoring, monitorResult, autoStart, setAutoStart, lastUpdate, rawInventory, inventoryData, isInventoryLoading, worldState, setWorldState, statusText,
       startMonitoring, stopMonitoring, manualRefresh, callApiHelper,
+      notifSettings: {
+        arbitrationEnabled: localStorage.getItem('notif_arbitration_enabled') === 'true',
+        arbitrationHours: parseInt(localStorage.getItem('notif_arbitration_hours')) || 24,
+        arbitrationRemind: parseInt(localStorage.getItem('notif_arbitration_remind')) || 30,
+        foundryEnabled: localStorage.getItem('notif_foundry_enabled') === 'true',
+        foundryMinutes: parseInt(localStorage.getItem('notif_foundry_minutes')) || 5,
+        syndicateEnabled: localStorage.getItem('notif_syndicate_enabled') === 'true',
+        syndicateWasteEnabled: localStorage.getItem('notif_syndicate_waste_enabled') === 'true',
+        masteryEnabled: localStorage.getItem('notif_mastery_enabled') === 'true',
+        masteryPercent: parseInt(localStorage.getItem('notif_mastery_percent')) || 50,
+      },
+      notifiedRef
     }}>
       {children}
     </MonitoringContext.Provider>

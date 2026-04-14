@@ -321,4 +321,53 @@
     animation: notif-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
+  /* ── Custom Select Dropdowns ───────────────────────────────────────── */
+  .kronos-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: var(--color-panel) !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    padding: 10px 36px 10px 14px !important;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: var(--color-text) !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    min-height: 42px;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+  }
+
+  .kronos-select:hover {
+    border-color: rgba(255, 255, 255, 0.35) !important;
+  }
+
+  .kronos-select:focus {
+    outline: none;
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 0 0 2px rgba(85, 144, 171, 0.25), inset 0 1px 2px rgba(0,0,0,0.2) !important;
+  }
+
+  /* Native dropdown options - use CSS variables for theme support */
+  .kronos-select option {
+    background-color: var(--color-panel) !important;
+    color: var(--color-text) !important;
+    padding: 12px 14px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+  }
+
+  /* Dropdown arrow - use white to match theme */
+  .kronos-select::-webkit-select-arrow {
+    display: none;
+  }
+
+  /* Popup/dropdown container styling - only works in some browsers */
+  .kronos-select::-webkit-select-dropdown {
+    background-color: var(--color-panel) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  }
 }

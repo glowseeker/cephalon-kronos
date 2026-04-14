@@ -19,7 +19,7 @@
  * - Auto-resets based on time (daily/weekly).
  */
 import { useState, useEffect, useMemo } from 'react'
-import { Check, Circle, Eye, EyeOff } from 'lucide-react'
+import { Check, Circle, Eye, EyeOff, Bell, BellOff } from 'lucide-react'
 import { PageLayout } from '../components/UI'
 import { useMonitoring } from '../contexts/MonitoringContext'
 import { invoke } from '@tauri-apps/api/tauri'
@@ -271,7 +271,7 @@ const formatTimeLeft = (ms) => {
   return `${minutes}m`
 }
 
-const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextResetTime }) => {
+const TaskCard = ({ task, completed, hidden, onToggle, onHide, onToggleNotif, notifEnabled, timeLeft, nextResetTime }) => {
   const resetLabels = { daily: 'Daily', weekly: 'Weekly', biweekly: 'Biweekly', other: '8h', baro: 'Trader' }
   const getIntervalMs = (resetType) => {
     if (resetType === 'daily') return 24 * 60 * 60 * 1000
@@ -306,35 +306,45 @@ const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextRes
             : 'rgba(255,255,255,0.05)',
       }}
     >
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-start justify-between mb-1">
         <span className={`text-[14px] ${completed ? 'line-through text-kronos-dim' : ''}`}>
           {task.label}
         </span>
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] px-1.5 py-0.5 rounded text-kronos-accent" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.2)' }}>
-            {resetLabels[task.reset]}
-          </span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded text-kronos-accent flex-shrink-0" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.2)' }}>
+          {resetLabels[task.reset]}
+        </span>
+      </div>
+      <div className="flex items-center justify-between mt-2">
+        <span className="text-[12px] text-kronos-dim">{displayTime}</span>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={onToggleNotif}
+            className="p-1 rounded hover:bg-white/10"
+            title={notifEnabled ? 'Notifications on' : 'Notifications off'}
+          >
+            {notifEnabled 
+              ? <Bell className="text-kronos-accent" size={14} /> 
+              : <BellOff className="text-kronos-dim" size={14} />
+            }
+          </button>
           <button
             onClick={onHide}
             className="p-1 rounded hover:bg-white/10"
             title={hidden ? 'Show' : 'Hide'}
           >
-            {hidden ? <Eye size={12} /> : <EyeOff size={12} />}
+            {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
+          </button>
+          <button
+            onClick={onToggle}
+            className="p-1 rounded hover:bg-white/10"
+          >
+            {completed ? (
+              <Check className="text-kronos-accent" size={16} />
+            ) : (
+              <Circle className="text-kronos-dim" size={16} />
+            )}
           </button>
         </div>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-[12px] text-kronos-dim">{displayTime}</span>
-        <button
-          onClick={onToggle}
-          className="p-1 rounded hover:bg-white/10"
-        >
-          {completed ? (
-            <Check className="text-kronos-accent" size={16} />
-          ) : (
-            <Circle className="text-kronos-dim" size={16} />
-          )}
-        </button>
       </div>
     </div>
   )
@@ -395,6 +405,7 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
   const overlayBadge = isAlly ? '+' : isEnemy ? '−' : null
   const hoverBg = isAlly ? '#166534' : isEnemy ? '#991b1b' : null
   const iconSrc = iconUrl || localIconUrl
+  const showWasteTip = isFaction && isPledged
 
   const handleMouseEnter = () => { if (isFaction) onHover?.(tagKey) }
   const handleMouseLeave = () => { if (isFaction) onHover?.(null) }
@@ -427,7 +438,7 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
       )}
 
       {/* Content */}
-      <div className="flex-1 min-w-0 p-3 flex flex-col gap-1.5">
+      <div className="flex-1 min-w-0 p-3 flex flex-col gap-1.5 relative">
         {/* Row 1: Name — Rank X */}
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-[13px] font-mono font-bold truncate" style={{ color: config.accent }}>
@@ -460,6 +471,18 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
             Daily: {dailyCap.toLocaleString()}
           </span>
         )}
+
+        {/* Waste tip tooltip */}
+        {showWasteTip && (
+          <div className="absolute bottom-2 right-2 z-50">
+            <div className="group relative">
+              <span className="text-base text-kronos-dim cursor-help">ⓘ</span>
+              <div className="absolute right-0 bottom-full mb-2 w-72 p-4 rounded-lg bg-kronos-panel border border-white/20 text-sm text-kronos-dim opacity-0 group-hover:opacity-100 transition-opacity shadow-xl z-[100] pointer-events-none">
+                If you&apos;re planning to rank up this faction and have standing with their enemies, consider spending it instead of letting it go to waste.
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -481,20 +504,13 @@ export default function Checklist() {
       return JSON.parse(localStorage.getItem('checklist_hidden') || '{}')
     } catch { return {} }
   })
+  const [notifMap, setNotifMap] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('checklist_notif') || '{}')
+    } catch { return {} }
+  })
   const [showHiddenTasks, setShowHiddenTasks] = useState(false)
   const [cdnBase, setCdnBase] = useState('')
-
-  useEffect(() => {
-    localStorage.setItem('checklist_completed', JSON.stringify(completed))
-  }, [completed])
-
-  useEffect(() => {
-    localStorage.setItem('checklist_hidden', JSON.stringify(hiddenMap))
-  }, [hiddenMap])
-
-  useEffect(() => {
-    invoke('get_cdn_base_url').then(setCdnBase).catch(() => { })
-  }, [])
 
   const hasInventory = !!inventoryData
   const masteryRank = hasInventory ? (inventoryData?.account?.mastery_rank || 16) : 16
@@ -506,6 +522,23 @@ export default function Checklist() {
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
+  }, [])
+
+  // Local storage persistence
+  useEffect(() => {
+    localStorage.setItem('checklist_completed', JSON.stringify(completed))
+  }, [completed])
+
+  useEffect(() => {
+    localStorage.setItem('checklist_hidden', JSON.stringify(hiddenMap))
+  }, [hiddenMap])
+
+  useEffect(() => {
+    localStorage.setItem('checklist_notif', JSON.stringify(notifMap))
+  }, [notifMap])
+
+  useEffect(() => {
+    invoke('get_cdn_base_url').then(setCdnBase).catch(() => { })
   }, [])
 
   const getNextReset = (taskId, resetType) => {
@@ -670,6 +703,10 @@ export default function Checklist() {
     setHiddenMap(prev => ({ ...prev, [taskId]: !prev[taskId] }))
   }
 
+  const toggleNotif = (taskId) => {
+    setNotifMap(prev => ({ ...prev, [taskId]: !prev[taskId] }))
+  }
+
   const allTasks = tasks.map(task => {
     const taskReset = getNextReset(task.id, task.reset)
     const isCompleted = completed[task.id]
@@ -685,6 +722,22 @@ export default function Checklist() {
 
   const visibleTasks = allTasks.filter(t => showHiddenTasks || !hiddenMap[t.id])
   const completedTasks = visibleTasks.filter(t => completed[t.id]).length
+
+  // Expose checklist data for notification system
+  useEffect(() => {
+    window.__checklistTasks = allTasks.map(t => ({
+      id: t.id,
+      label: t.label,
+      reset: t.reset,
+      nextResetTime: t.nextResetTime,
+      notifEnabled: notifMap[t.id] || false
+    }))
+    window.__checklistNotifMap = notifMap
+    return () => {
+      delete window.__checklistTasks
+      delete window.__checklistNotifMap
+    }
+  }, [allTasks, notifMap])
 
   return (
     <>
@@ -791,8 +844,10 @@ export default function Checklist() {
                 task={task}
                 completed={completed[task.id] || false}
                 hidden={hiddenMap[task.id] || false}
+                notifEnabled={notifMap[task.id] || false}
                 onToggle={() => toggleTask(task.id)}
                 onHide={() => toggleHidden(task.id)}
+                onToggleNotif={() => toggleNotif(task.id)}
                 timeLeft={task.timeLeft}
                 nextResetTime={task.nextResetTime}
               />
