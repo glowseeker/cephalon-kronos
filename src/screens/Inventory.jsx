@@ -530,7 +530,15 @@ export default function Inventory() {
                   {item.image && <img src={item.image} alt="" className={`max-w-full max-h-full object-contain relative z-10 transition-all duration-500 group-hover:scale-110 ${isUnowned ? 'grayscale opacity-40' : ''}`} loading="lazy" />}
                 </div>
                 <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
-                  <div><div className="flex justify-between items-start mb-1"><span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest truncate mr-2">{item.weapon_type || item.vehicle_type || (isPrimePart ? 'Prime' : item.category)}</span></div><h4 className="font-bold text-sm uppercase truncate text-kronos-text leading-tight" title={item.name}>{item.name}</h4></div>
+                  <div><div className="flex justify-between items-start mb-1"><span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest truncate mr-2">{item.weapon_type || item.vehicle_type || (isPrimePart ? 'Prime' : item.category)}</span></div><h4 className="font-bold text-sm uppercase truncate text-kronos-text leading-tight" title={item.name}>{item.name}</h4>
+                    {item.components && item.components.length > 0 && (
+                      <div className="flex flex-col gap-0.5 mt-1.5">
+                        {item.components.map((comp, ci) => (
+                          <span key={ci} className="text-[10px] text-kronos-dim">{comp}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   {!isModOrResource && <div className="flex flex-col gap-1.5">{item.mastered ? <div className="flex items-center gap-1 text-blue-400"><Gem size={10} /><span className="text-[10px] font-bold uppercase tracking-tighter">Mastered</span></div> : <div className={`flex items-center gap-1 ${isUnowned ? 'text-kronos-dim/20' : 'text-kronos-dim'}`}><Gem size={10} /><span className="text-[10px] font-bold uppercase tracking-tighter">{item.owned ? 'Unmastered' : 'Unowned'}</span></div>}</div>}
                   {item.subsumed && <div className="text-[10px] flex items-center gap-1 text-purple-400 font-bold uppercase"><span className="text-xs">⚗</span><span>Subsumed</span></div>}
                   {(isModOrResource || isPrimePart || item.veiled) && item.quantity !== undefined && <div className="text-[10px] font-black uppercase text-kronos-accent mt-1">{item.quantity > 0 ? `${item.quantity} In Stock` : 'Unowned'}</div>}
