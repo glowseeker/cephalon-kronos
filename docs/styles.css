@@ -318,36 +318,41 @@ h2 {
     display: flex;
     justify-content: center;
     align-items: center;
-    aspect-ratio: 16 / 10;
+    /* No fixed aspect-ratio: the box fits the actual image size */
     max-width: 100%;
     background: transparent;
-    overflow: visible; /* Prevent button clipping */
+    overflow: visible;
 }
 
-/* Inner wrapper to handle rounded corners safely */
+/* Inner wrapper — sizes to the image, border clips to it */
 .image-stack-inner {
-    width: 100%;
-    height: 100%;
     position: relative;
-    border-radius: 32px;
+    border-radius: 12px;
     overflow: hidden;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    line-height: 0;
 }
 
 .hit-zone {
     position: absolute;
     top: 0;
-    width: 20%; /* Narrower as requested */
+    width: 20%;
+    /* Narrower as requested */
     height: 100%;
     z-index: 100;
     cursor: pointer;
     background: transparent;
 }
 
-.hit-zone.left { left: 0; }
-.hit-zone.right { right: 0; }
+.hit-zone.left {
+    left: 0;
+}
+
+.hit-zone.right {
+    right: 0;
+}
 
 .feature-row.reverse .feature-image {
     justify-content: center;
@@ -355,16 +360,12 @@ h2 {
 
 /* Base image styling for floating deck effect or standalones */
 .feature-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    /* Ensure full image is visible in box */
-    border-radius: 32px;
-    border: none;
-    /* Removed for invisible effect */
+    /* Display at natural size, constrained to the flex container */
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
     background: transparent;
-    box-shadow: none;
-    /* Removed for invisible effect */
     transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
@@ -384,58 +385,41 @@ h2 {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: var(--accent);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    font-size: 1.4rem;
-    font-weight: 200;
+    font-size: 1.1rem;
+    font-weight: 400;
     cursor: pointer;
     z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
     line-height: 0;
-    /* Help centering characters */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    opacity: 0;
-    pointer-events: none; /* Let hit-zones handle clicks when buttons are hidden */
-}
-
-.feature-image:hover .stack-nav-btn {
-    opacity: 0.6;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    opacity: 0.5;
     pointer-events: auto;
 }
 
-.stack-nav-btn.prev {
-    left: -22px; /* Float outside since we fixed clipping */
-    padding-right: 3px;
-}
-
-.stack-nav-btn.next {
-    right: -22px; /* Float outside since we fixed clipping */
-    padding-left: 3px;
-}
-
 .stack-nav-btn:hover {
-    transform: translateY(-50%) scale(1.05);
     opacity: 1;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     border-color: var(--accent);
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+    transform: translateY(-50%) scale(1.1);
 }
 
 .stack-nav-btn.prev {
-    left: -16px;
+    left: -22px;
 }
 
 .stack-nav-btn.next {
-    right: -16px;
+    right: -22px;
 }
 
 /* Wiki */
@@ -492,7 +476,7 @@ h2 {
 
 .wiki-content {
     flex: 1;
-    padding: 3rem;
+    padding: 3rem 5rem;
     background: transparent;
 }
 
@@ -505,10 +489,123 @@ h2 {
     display: block;
 }
 
+.wiki-panel .feature-image {
+    margin-top: 2rem;
+    position: relative;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-subtle);
+    overflow: visible;
+}
+
+.wiki-panel .feature-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 12px;
+    transform: none !important;
+    opacity: 1 !important;
+    z-index: 1;
+}
+
+.wiki-panel .feature-image img:nth-child(n+2) {
+    transform: scale(0.98) translate(4px, 4px);
+    opacity: 0;
+    z-index: 0;
+}
+
+.wiki-panel .feature-image:hover img:nth-child(n+2) {
+    opacity: 0;
+}
+
+.wiki-panel .feature-image:hover .stack-nav-btn {
+    opacity: 1;
+}
+
+.wiki-panel .stack-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: var(--accent);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    font-weight: 400;
+    cursor: pointer;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+    transition: all 0.2s ease;
+}
+
+.wiki-panel .stack-nav-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.wiki-panel .stack-nav-btn.prev {
+    left: -50px;
+}
+
+.wiki-panel .stack-nav-btn.next {
+    right: -50px;
+}
+
+.wiki-panel .hit-zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 30%;
+    z-index: 999;
+    cursor: pointer;
+}
+
+.wiki-panel .hit-zone.left {
+    left: 0;
+}
+
+.wiki-panel .hit-zone.right {
+    right: 0;
+}
+
 .wiki-panel h3 {
     font-size: 1.75rem;
     margin-bottom: 1.5rem;
     color: var(--text-main);
+}
+
+.wiki-panel .notes-example {
+    background: var(--panel-bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.wiki-panel .notes-example pre {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+    margin: 0;
+    background: transparent;
+}
+
+.wiki-panel .notes-example pre code {
+    background: transparent;
+    padding: 0;
+    color: var(--text-dim);
+    font-size: inherit;
 }
 
 .wiki-panel h4 {

@@ -21,7 +21,8 @@
     <nav class="navbar">
         <div class="nav-content">
             <div class="logo">
-                <img src="IconKronos.png" alt="Cephalon Kronos Logo" width="24" height="24" style="filter: brightness(0) invert(1);">
+                <img src="IconKronos.png" alt="Cephalon Kronos Logo" width="24" height="24"
+                    style="filter: brightness(0) invert(1);">
                 <span>Cephalon Kronos</span>
             </div>
             <div class="nav-links">
@@ -37,7 +38,8 @@
     <header class="hero">
         <div class="hero-content">
             <h1><span class="text-gradient">Cephalon Kronos</span></h1>
-            <p>An open-source, cross-platform companion app to track your inventory, relics and rivens, monitor foundry
+            <p>An open-source, cross-platform companion app for Warframe to track your inventory, relics and rivens,
+                monitor foundry
                 progress and stay up to date with the worldstate. </p>
             <div class="hero-actions">
                 <a href="https://github.com/glowseeker/cephalon-kronos/releases/latest" class="btn btn-primary">Download
@@ -47,107 +49,100 @@
         </div>
     </header>
 
-    <!-- Showcase Carousel Section -->
+    <!-- Showcase Section -->
     <section id="showcase" class="showcase">
         <h2><span class="text-gradient">Features</span></h2>
-        <div class="features-stack">
-            <div class="feature-row">
-                <div class="feature-content">
+        <div class="wiki-container">
+            <div class="wiki-sidebar">
+                <button class="wiki-tab active" data-target="dashboard">Dashboard</button>
+                <button class="wiki-tab" data-target="inventory">Inventory</button>
+                <button class="wiki-tab" data-target="rivens">Rivens</button>
+                <button class="wiki-tab" data-target="relics">Relics</button>
+                <button class="wiki-tab" data-target="mastery">Mastery</button>
+                <button class="wiki-tab" data-target="notes">Notes</button>
+                <button class="wiki-tab" data-target="maps">Maps</button>
+                <button class="wiki-tab" data-target="checklist">Checklist</button>
+                <button class="wiki-tab" data-target="settings">Settings</button>
+            </div>
+            <div class="wiki-content">
+                <div id="inventory" class="wiki-panel active">
                     <h3>Inventory</h3>
                     <p>Comb through your automatically updated inventory with filters and track pending items in your
                         foundry.</p>
+                    <div class="feature-image">
+                        <img src="screenshots/inventory.png" alt="Inventory Sync">
+                        <img src="screenshots/inventory2.png" alt="Inventory Sync">
+                    </div>
                 </div>
-                <div class="feature-image">
-                    <img src="screenshots/inventory.png" alt="Inventory Sync">
-                    <img src="screenshots/inventory2.png" alt="Inventory Sync">
-                    <img src="screenshots/inventory3.png" alt="Inventory Sync">
-                    <img src="screenshots/inventory4.png" alt="Inventory Sync">
-                </div>
-            </div>
 
-            <div class="feature-row reverse">
-                <div class="feature-content">
+                <div id="mastery" class="wiki-panel">
                     <h3>Mastery Progress</h3>
                     <p>Displays your mastery progress with categories and shows everything yet to be mastered.</p>
+                    <div class="feature-image">
+                        <img src="screenshots/mastery.png" alt="Mastery Progress">
+                        <img src="screenshots/mastery2.png" alt="Mastery Progress">
+                    </div>
                 </div>
-                <div class="feature-image">
-                    <img src="screenshots/mastery.png" alt="Mastery Progress">
-                    <img src="screenshots/mastery2.png" alt="Mastery Progress">
-                    <img src="screenshots/mastery3.png" alt="Mastery Progress">
-                </div>
-            </div>
 
-            <div class="feature-row">
-                <div class="feature-content">
+                <div id="dashboard" class="wiki-panel">
                     <h3>Dashboard</h3>
                     <p>Provides live updates on alerts and events, world timers, fissures and arbitrations.</p>
+                    <div class="feature-image">
+                        <img src="screenshots/dashboard.png" alt="Dashboard">
+                    </div>
                 </div>
-                <div class="feature-image">
-                    <img src="screenshots/dashboard.png" alt="Dashboard">
-                    <img src="screenshots/dashboard2.png" alt="Dashboard2">
-                </div>
-            </div>
 
-            <div class="feature-row reverse">
-                <div class="feature-content">
+                <div id="relics" class="wiki-panel">
                     <h3>Relic Tracker</h3>
                     <p>Track your relics and refinement and search for their drops.</p>
+                    <div class="feature-image">
+                        <img src="screenshots/relics.png" alt="Relic tracker">
+                        <img src="screenshots/relics2.png" alt="Relic tracker">
+                    </div>
                 </div>
-                <div class="feature-image">
-                    <img src="screenshots/relics.png" alt="Relic tracker">
-                    <img src="screenshots/relics2.png" alt="Relic tracker">
-                </div>
-            </div>
 
-            <div class="feature-row">
-                <div class="feature-content">
+                <div id="rivens" class="wiki-panel">
                     <h3>Riven Tracker</h3>
                     <p>Track your riven mods, inspect their stats and see challenges of veiled rivens.</p>
+                    <div class="feature-image">
+                        <img src="screenshots/riven.png" alt="Riven tracker">
+                        <img src="screenshots/riven2.png" alt="Riven tracker">
+                    </div>
                 </div>
-                <div class="feature-image">
-                    <img src="screenshots/riven.png" alt="Riven tracker">
-                    <img src="screenshots/riven2.png" alt="Riven tracker">
-                </div>
-            </div>
 
-            <div class="feature-row reverse">
-                <div class="feature-content">
+                <div id="notes" class="wiki-panel">
                     <h3>Markdown Notes</h3>
                     <p>Write down notes, farming goals, strategies or paste in guides from elsewhere to make use of the
                         markdown support.</p>
+                    <div class="feature-image">
+                        <img src="screenshots/notes.png" alt="Markdown Notes">
+                    </div>
                 </div>
-                <div class="feature-image">
-                    <img src="screenshots/notes.png" alt="Markdown Notes">
-                </div>
-            </div>
 
-            <div class="feature-row">
-                <div class="feature-content">
+                <div id="maps" class="wiki-panel">
                     <h3>Maps</h3>
                     <p>Check out the maps of all open worlds.</p>
+                    <div class="feature-image">
+                        <img src="screenshots/maps.png" alt="Maps">
+                        <img src="screenshots/maps2.png" alt="Maps">
+                    </div>
                 </div>
-                <div class="feature-image">
-                    <img src="screenshots/maps.png" alt="Maps">
-                </div>
-            </div>
 
-            <div class="feature-row reverse">
-                <div class="feature-content">
+                <div id="checklist" class="wiki-panel">
                     <h3>Checklists</h3>
                     <p>Track your progress on daily and weekly tasks.</p>
+                    <div class="feature-image">
+                        <img src="screenshots/checklist.png" alt="Checklists">
+                    </div>
                 </div>
-                <div class="feature-image">
-                    <img src="screenshots/checklist.png" alt="Checklists">
-                </div>
-            </div>
 
-            <div class="feature-row">
-                <div class="feature-content">
-                    <h3>Theme Support</h3>
-                    <p>Choose between multiple color themes to match your preference.</p>
-                </div>
-                <div class="feature-image">
-                    <img src="screenshots/themes.png" alt="Theme support">
+                <div id="settings" class="wiki-panel">
+                    <h3>Theme and Overlay Support</h3>
+                    <p>Choose between multiple color themes to match your preference. You can also enable overlays
+                        to receive notifications.</p>
+                    <div class="feature-image">
+                        <img src="screenshots/settings.png" alt="Theme support">
+                    </div>
                 </div>
             </div>
         </div>
@@ -231,14 +226,28 @@
     </footer>
 
     <script>
-        // Simple tabs interaction for Wiki
-        const tabs = document.querySelectorAll('.wiki-tab');
-        const panels = document.querySelectorAll('.wiki-panel');
+        // Features section tabs
+        const featureTabs = document.querySelectorAll('#showcase .wiki-tab');
+        const featurePanels = document.querySelectorAll('#showcase .wiki-panel');
 
-        tabs.forEach(tab => {
+        featureTabs.forEach(tab => {
             tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                panels.forEach(p => p.classList.remove('active'));
+                featureTabs.forEach(t => t.classList.remove('active'));
+                featurePanels.forEach(p => p.classList.remove('active'));
+
+                tab.classList.add('active');
+                document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+            });
+        });
+
+        // Wiki section tabs
+        const wikiTabs = document.querySelectorAll('#wiki .wiki-tab');
+        const wikiPanels = document.querySelectorAll('#wiki .wiki-panel');
+
+        wikiTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                wikiTabs.forEach(t => t.classList.remove('active'));
+                wikiPanels.forEach(p => p.classList.remove('active'));
 
                 tab.classList.add('active');
                 document.getElementById(tab.getAttribute('data-target')).classList.add('active');
@@ -282,15 +291,16 @@
                     const currentImages = Array.from(inner.querySelectorAll('img'));
                     currentImages.forEach((img, i) => {
                         if (i === 0) {
-                            img.style.transform = 'scale(1)';
-                            img.style.zIndex = currentImages.length;
+                            img.style.position = 'relative';
+                            img.style.display = 'block';
+                            img.style.zIndex = '1';
                             img.style.opacity = '1';
-                            img.style.cursor = 'zoom-in';
+                            img.style.cursor = 'pointer';
                         } else {
-                            img.style.transform = 'scale(0.98)';
-                            img.style.zIndex = 0;
+                            img.style.position = 'absolute';
+                            img.style.display = 'none';
+                            img.style.zIndex = '0';
                             img.style.opacity = '0';
-                            img.style.cursor = 'default';
                         }
                     });
                 };
