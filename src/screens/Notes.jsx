@@ -179,7 +179,6 @@ export default function Notes() {
 
   const confirmDelete = async () => {
     if (!fileToDelete) return
-    console.log('[DEBUG] Deleting note:', fileToDelete)
     try {
       const wasActive = fileToDelete === activeFileRef.current
       if (wasActive) {
@@ -190,7 +189,6 @@ export default function Notes() {
       }
       
       await invoke('delete_note', { filename: fileToDelete })
-      console.log('[DEBUG] Delete successful')
       const list = await invoke('list_notes')
       setFiles(list)
       
@@ -199,7 +197,7 @@ export default function Notes() {
         else { setActiveFile(null); setContent(''); latestContentRef.current = ''; activeFileRef.current = null }
       }
     } catch (err) { 
-      console.error('[DEBUG] Delete failed:', err)
+      console.error('Delete failed:', err)
     }
     finally { setFileToDelete(null) }
   }

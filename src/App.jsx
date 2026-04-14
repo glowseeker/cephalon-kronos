@@ -177,7 +177,6 @@ export default function App() {
   const params = new URLSearchParams(window.location.search)
   const isOverlay = params.get('overlay') === 'true'
   const isCalibration = params.get('calibration') === 'true'
-  console.log('[App] App rendered, isOverlay:', isOverlay, 'isCalibration:', isCalibration)
 
   if (isOverlay) {
     return (

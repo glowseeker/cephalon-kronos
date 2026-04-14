@@ -32,12 +32,8 @@ fn get_app_root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
     } else if let Ok(appimage_path) = std::env::var("APPIMAGE") {
         let path = PathBuf::from(appimage_path);
-        // For AppImage, the bundled resources are inside the squashfs mount
-        // We can't access them directly - need to return the parent for bundled fallback
-        println!("[DEBUG] APPIMAGE detected, returning parent: {:?}", path.parent());
         path.parent().map(|p| p.to_path_buf()).unwrap_or(PathBuf::from("."))
     } else {
-        println!("[DEBUG] No APPIMAGE, using current_exe");
         std::env::current_exe()
             .map(|p| p.parent().unwrap_or(Path::new(".")).to_path_buf())
             .unwrap_or_else(|_| PathBuf::from("."))
@@ -50,26 +46,19 @@ fn get_app_root() -> PathBuf {
 /// - macOS .app: directory containing the .app bundle
 /// - Everything else: directory containing the binary
 fn get_data_root() -> PathBuf {
-    // Detect AppImage via APPIMAGE env var — it points to the real .AppImage path
     if let Ok(appimage_path) = std::env::var("APPIMAGE") {
-        println!("[DEBUG] APPIMAGE env var detected: {}", appimage_path);
         return PathBuf::from(appimage_path)
             .parent()
             .unwrap_or(Path::new("."))
             .to_path_buf();
-    } else {
-        println!("[DEBUG] APPIMAGE env var NOT set");
     }
 
-    // On macOS inside a .app bundle, the binary is at .app/Contents/MacOS/binary
-    // We want data next to the .app, not inside it
     #[cfg(target_os = "macos")]
     {
         if let Ok(exe) = std::env::current_exe() {
             let path_str = exe.to_string_lossy();
             if let Some(app_pos) = path_str.find(".app/") {
-                // Go up from .app/Contents/MacOS/binary to the directory containing the .app
-                let app_path = PathBuf::from(&path_str[..app_pos + 4]); // include ".app"
+                let app_path = PathBuf::from(&path_str[..app_pos + 4]);
                 if let Some(parent) = app_path.parent() {
                     return parent.to_path_buf();
                 }
@@ -189,7 +178,6 @@ async fn check_exports() -> Result<String, String> {
             } else {
                 format!("{}/{}", BASE_URL, file_name)
             };
-            println!("Downloading {}", url);
             download_file(&client, &url, &path).await.map_err(|e| {
                 format!("Failed to download {}: {}", file_name, e)
             })?;
@@ -203,7 +191,6 @@ async fn check_exports() -> Result<String, String> {
         let needs_update = !path.exists() || file_age_secs(&path) > 21_600;
 
         if needs_update {
-            println!("Downloading {}", url);
             match download_file(&client, url, &path).await {
                 Ok(_) => updated_count += 1,
                 Err(e) => eprintln!("Warning: could not download {}: {}", file_name, e),
@@ -278,10 +265,8 @@ async fn call_api_helper(app_handle: tauri::AppHandle) -> Result<Value, String> 
     let writable_bin = resolve_path(&relative_bin);
     let bundled_bin = resolve_bundled_path(&app_handle, &relative_bin);
     let bin_path = if writable_bin.exists() {
-        println!("[DEBUG] Using writable bin: {:?}", writable_bin);
         writable_bin
     } else if let Some(b) = bundled_bin.clone().filter(|p| p.exists()) {
-        println!("[DEBUG] Using bundled bin: {:?}", b);
         b
     } else {
         return Err(format!(
@@ -436,13 +421,10 @@ async fn save_note(filename: String, content: String) -> Result<(), String> {
 #[tauri::command]
 async fn delete_note(app_handle: tauri::AppHandle, filename: String) -> Result<(), String> {
     let path = resolve_path("data/user/notes").join(&filename);
-    println!("[DEBUG] delete_note: path={:?}, exists={}", path, path.exists());
     if path.exists() {
         fs::remove_file(path).map_err(|e| e.to_string())
     } else {
-        // Try bundled path as fallback
         if let Some(bundled) = resolve_bundled_path(&app_handle, &format!("data/user/notes/{}", filename)) {
-            println!("[DEBUG] delete_note: bundled path={:?}, exists={}", bundled, bundled.exists());
             if bundled.exists() {
                 fs::remove_file(bundled).map_err(|e| e.to_string())
             } else {
@@ -648,7 +630,6 @@ fn hide_overlay_window(
 
 #[tauri::command]
 fn set_notification_sound(state: tauri::State<'_, AppState>, sound: String) -> Result<(), String> {
-    println!("[Rust] set_notification_sound: {}", sound);
     let mut current = state.notif_sound.lock().unwrap();
     *current = sound;
     Ok(())
@@ -887,13 +868,10 @@ fn set_ignore_cursor_events(
 
 #[tauri::command]
 fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) -> Result<(), String> {
-    println!("[Rust] play_notification_sound called with arg: {:?}", sound);
     if sound == "none" {
         return Ok(());
     }
 
-    // In dev, the files are in public/audio/
-    // In production, they are bundled in the resource path.
     let resource_path = if cfg!(debug_assertions) {
         get_app_root().parent().unwrap().join("public/audio").join(&sound)
     } else {
@@ -903,8 +881,6 @@ fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) -> Resul
     };
 
     std::thread::spawn(move || {
-        println!("[Audio] Initializing playback for: {:?}", resource_path);
-        
         match OutputStream::try_default() {
             Ok((_stream, stream_handle)) => {
                 match Sink::try_new(&stream_handle) {
@@ -913,21 +889,19 @@ fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) -> Resul
                             Ok(file) => {
                                 match Decoder::new(BufReader::new(file)) {
                                     Ok(source) => {
-                                        println!("[Audio] Playback started...");
                                         sink.append(source);
                                         sink.sleep_until_end();
-                                        println!("[Audio] Playback finished.");
                                     }
-                                    Err(e) => eprintln!("[Audio] Decoder error: {}", e),
+                                    Err(e) => eprintln!("Audio decoder error: {}", e),
                                 }
                             }
-                            Err(e) => eprintln!("[Audio] File open error: {}", e),
+                            Err(e) => eprintln!("Audio file error: {}", e),
                         }
                     }
-                    Err(e) => eprintln!("[Audio] Sink error: {}", e),
+                    Err(e) => eprintln!("Audio sink error: {}", e),
                 }
             }
-            Err(e) => eprintln!("[Audio] OutputStream error: {}", e),
+            Err(e) => eprintln!("Audio output error: {}", e),
         }
     });
 

@@ -1,20 +1,33 @@
 /**
  * NotificationOverlay.jsx
- * Unified overlay for all positions (tr, tl, tc, relic).
- * Implements a Queue System to limit visible notifications.
- * Notifications are now click-through to avoid gameplay interference.
+ * 
+ * Displays toast notifications and relic reward overlays in separate
+ * transparent, always-on-top windows. Runs in overlay-tr, overlay-tl,
+ * overlay-tc, and overlay-relic Tauri windows.
+ * 
+ * Linux limits visible notifications to 1 per window to work around
+ * WebKit timer batching issues. Other platforms show up to 3.
+ * 
+ * Listens for events:
+ * - new-notification: { position, title, message, image }
+ * - show-relic-rewards: { rewards[] }
+ * - wipe-state: Clear all notifications
  */
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/tauri'
 import { appWindow } from '@tauri-apps/api/window'
 import { Bell, Star, Zap } from 'lucide-react'
 
+// Toast notification duration in milliseconds
 const TOAST_MS = 5000
+
+// Relic rewards overlay duration in milliseconds
 const RELIC_MS = 15000
 
-// We use items-center for ALL positions because the window itself is 
-// positioned by Rust. This gives maximum shadow clearance on both sides.
+// Flex alignment classes for each overlay position
+// Window positioning handled by Rust, JS handles vertical alignment
 const POS_CLASSES = {
   'top-right': 'items-center',
   'top-left': 'items-center',
@@ -29,9 +42,6 @@ const LABEL_TO_POS = {
   'overlay-relic': 'relic',
 }
 
-// On Linux: limit every position to 1 visible notification.
-// This sidesteps the WebKit timer-batching bug that causes stacks to
-// disappear all at once — with max 1 per window there is never a stack.
 const IS_LINUX = typeof navigator !== 'undefined' &&
   navigator.userAgent.toLowerCase().includes('linux') &&
   !navigator.userAgent.toLowerCase().includes('android')
@@ -64,8 +74,6 @@ export default function NotificationOverlay() {
   const myLimit = LIMITS[myPos] ?? 3
   const myWidth = FIXED_WIDTHS[myPos] ?? 440
 
-  // ─── Queue Management ──────────────────────────────────────────────────────
-
   const removeToast = useCallback((id) => {
     setVisibleToasts(prev => prev.filter(t => t.id !== id))
   }, [])
@@ -77,8 +85,6 @@ export default function NotificationOverlay() {
       setVisibleToasts(prev => [...prev, next])
     }
   }, [visibleToasts.length, queue, myLimit])
-
-  // ─── Window Management ──────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -103,8 +109,6 @@ export default function NotificationOverlay() {
     observer.observe(containerRef.current)
     return () => observer.disconnect()
   }, [myLabel, myWidth])
-
-  // ─── Event Listeners ────────────────────────────────────────────────────────
 
   useEffect(() => {
     const subs = []
@@ -154,11 +158,10 @@ export default function NotificationOverlay() {
         <div key={t.id} className="relative">
           <ToastCard toast={t} onExpire={() => removeToast(t.id)} />
           
-          {/* Linux Specific Badge: Only show on the topmost (index 0) notification */}
           {IS_LINUX && index === 0 && queue.length > 0 && (
             <div className="absolute -top-2 -right-2 z-50 animate-bounce">
               <div 
-                className="text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg border border-white/20"
+                className="text-white text-[10px] font-black px-2 py-0.5 rounded-full border border-white/20"
                 style={{ background: 'var(--color-accent)' }}
               >
                 +{queue.length} MORE
@@ -168,8 +171,6 @@ export default function NotificationOverlay() {
         </div>
       ))}
 
-      {/* For non-Linux, or if we want to keep the bottom indicator, we can keep it. 
-          But the user asked for the badge logic. I'll hide the bottom one on Linux. */}
       {!IS_LINUX && queue.length > 0 && (
         <div className="notif-enter flex items-center justify-center px-4 py-1 rounded-lg bg-kronos-panel/40 border border-white/5 self-center mt-1 scale-90 opacity-60">
           <span className="text-[9px] font-black text-white uppercase tracking-[0.25em]">
