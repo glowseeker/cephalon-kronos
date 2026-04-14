@@ -172,18 +172,43 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!initialized1999 && worldstate?.calendar1999?.length > 0) {
-      const cal = worldstate.calendar1999[0]
+      const cal = worldstate.calendar1999.find(s => {
+        const now = Date.now()
+        const start = s.activation instanceof Date ? s.activation.getTime() : new Date(s.activation).getTime()
+        const end = s.expiry instanceof Date ? s.expiry.getTime() : new Date(s.expiry).getTime()
+        return now >= start && now < end
+      }) || worldstate.calendar1999[0]
+
       const year = new Date().getFullYear()
       const jan1 = new Date(year, 0, 1)
-      const days = (cal.days || []).map(d => {
+      const allDays = (cal.days || []).map(d => {
         const dDate = new Date(jan1)
         dDate.setDate(d.day)
-        return { ...d, date: dDate }
+        const mName = dDate.toLocaleDateString('en-US', { month: 'long' }).toUpperCase()
+        return { ...d, date: dDate, monthName: mName }
       }).sort((a, b) => a.day - b.day)
-      const firstEventDay = days.findIndex(d => d.events?.length > 0)
-      if (firstEventDay !== -1) {
-        setSelected1999Day(firstEventDay)
+
+      const seasonMonths = [...new Set(allDays.map(d => d.monthName))]
+      
+      const firstEventIdx = allDays.findIndex(d => d.events?.length > 0)
+      if (firstEventIdx !== -1) {
+        setSelected1999Day(firstEventIdx)
+        const eventMonth = allDays[firstEventIdx].monthName
+        const mIdx = seasonMonths.indexOf(eventMonth)
+        if (mIdx !== -1) {
+          setSelected1999Month(mIdx)
+        }
+      } else {
+        // Fallback to current month if no events found at all
+        const currentMonthName = new Date().toLocaleDateString('en-US', { month: 'long' }).toUpperCase()
+        const mIdx = seasonMonths.indexOf(currentMonthName)
+        if (mIdx !== -1) {
+          setSelected1999Month(mIdx)
+        } else if (seasonMonths.length > 0) {
+          setSelected1999Month(0)
+        }
       }
+      
       setInitialized1999(true)
     }
   }, [worldstate, initialized1999])
@@ -645,13 +670,12 @@ export default function Dashboard() {
     if (!cal) return <p className="text-xs text-kronos-dim italic text-center py-4">No 1999 data…</p>
 
     const seasonMap = {
-      'CST_WINTER': { name: 'Winter', color: 'text-blue-300', months: ['OCTOBER', 'NOVEMBER', 'DECEMBER'] },
-      'CST_SPRING': { name: 'Spring', color: 'text-green-300', months: ['JANUARY', 'FEBRUARY', 'MARCH'] },
-      'CST_SUMMER': { name: 'Summer', color: 'text-yellow-300', months: ['APRIL', 'MAY', 'JUNE'] },
-      'CST_FALL': { name: 'Autumn', color: 'text-orange-300', months: ['OCTOBER', 'NOVEMBER', 'DECEMBER'] }
+      'CST_WINTER': { name: 'Winter', color: 'text-blue-300' },
+      'CST_SPRING': { name: 'Spring', color: 'text-green-300' },
+      'CST_SUMMER': { name: 'Summer', color: 'text-yellow-300' },
+      'CST_FALL': { name: 'Autumn', color: 'text-orange-300' }
     }
-    const seasonInfo = seasonMap[cal.season] || { name: cal.season, color: 'text-kronos-accent', months: [] }
-    const seasonMonths = seasonInfo.months
+    const seasonInfo = seasonMap[cal.season] || { name: cal.season, color: 'text-kronos-accent' }
 
     const year = new Date().getFullYear()
     const jan1 = new Date(year, 0, 1)
@@ -662,6 +686,9 @@ export default function Dashboard() {
       const mName = dDate.toLocaleDateString('en-US', { month: 'long' }).toUpperCase()
       return { ...d, date: dDate, monthName: mName }
     }).sort((a, b) => a.day - b.day)
+
+    // Dynamically derive months from the days in this season
+    const seasonMonths = [...new Set(allDays.map(d => d.monthName))]
 
     const nextExpiry = cal.expiry instanceof Date ? cal.expiry : new Date(cal.expiry)
 
@@ -1507,73 +1534,57 @@ export default function Dashboard() {
           {isVisible('inv') && worldstate?.invasions?.length > 0 && (
             <Card glow className="p-3">
               <CardHeader icon={Swords} title="Invasions" />
-              <div className="space-y-3 mt-2">
+              <div className="space-y-6 mt-4">
                 {worldstate.invasions.filter(i => !i.completed).slice(0, 5).map((inv, idx) => {
                   const completionPercentage = Math.max(0, Math.min(100, inv.completion));
                   return (
-                    <div key={idx} className="bg-kronos-panel/40 rounded-lg p-3 border border-white/5 relative overflow-hidden group/inv">
-                      {/* Background faction hint */}
-                      <div className="absolute inset-0 opacity-[0.03] pointer-events-none flex justify-between px-4 items-center">
-                         <span className="text-6xl font-black italic">{inv.attacker.faction[0]}</span>
-                         <span className="text-6xl font-black italic">{inv.defender.faction[0]}</span>
+                    <div key={idx} className="relative group/inv">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest">{inv.node}</span>
+                        <span className="text-[9px] font-mono text-kronos-dim/60 uppercase">{inv.missionType || 'Conflict'}</span>
                       </div>
 
-                      <div className="flex justify-between items-center mb-1.5">
-                        <span className="text-[10px] font-black text-kronos-dim uppercase tracking-tighter">{inv.node}</span>
-                        <span className="text-[9px] font-mono text-kronos-dim/80">{inv.missionType || 'Conflict'}</span>
-                      </div>
-
-                      <div className="flex items-center gap-3 relative z-10">
+                      <div className="space-y-2">
                         {/* Attacker */}
-                        <div className="flex-1 flex flex-col items-start min-w-0">
-                          <div className="flex items-center gap-2 w-full">
-                            <div className="w-8 h-8 bg-black/40 rounded flex items-center justify-center p-1 border border-blue-500/20">
-                              <img src={resolveAnyImage(inv.attacker.reward, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" />
-                            </div>
-                            <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 bg-blue-500/10 rounded flex items-center justify-center p-1 border border-blue-500/20">
+                            <img src={resolveAnyImage(inv.attacker.reward, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-2">
                               <p className="text-[11px] font-bold text-blue-400 leading-tight truncate">{inv.attacker.rewardText}</p>
-                              <p className="text-[8px] text-kronos-dim uppercase font-black">{inv.attacker.faction}</p>
+                              <p className="text-[8px] text-kronos-dim uppercase font-black opacity-40">{inv.attacker.faction}</p>
                             </div>
                           </div>
                         </div>
 
-                        <div className="text-[10px] font-black text-kronos-dim/40 italic">VS</div>
-
                         {/* Defender */}
-                        <div className="flex-1 flex flex-col items-end min-w-0 text-right">
-                          <div className="flex items-center justify-end gap-2 w-full">
-                            <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 bg-red-500/10 rounded flex items-center justify-center p-1 border border-red-500/20">
+                            <img src={resolveAnyImage(inv.defender.reward, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-2">
                               <p className="text-[11px] font-bold text-red-400 leading-tight truncate">{inv.defender.rewardText}</p>
-                              <p className="text-[8px] text-kronos-dim uppercase font-black">{inv.defender.faction}</p>
-                            </div>
-                            <div className="w-8 h-8 bg-black/40 rounded flex items-center justify-center p-1 border border-red-500/20">
-                              <img src={resolveAnyImage(inv.defender.reward, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" />
+                              <p className="text-[8px] text-kronos-dim uppercase font-black opacity-40">{inv.defender.faction}</p>
                             </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Tug of war bar */}
-                      <div className="mt-2.5 h-1.5 bg-black/40 rounded-full overflow-hidden flex border border-white/5 p-[0.5px]">
+                      <div className="mt-3 h-1 bg-white/5 rounded-full overflow-hidden flex border border-white/5">
                         <div 
-                          className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-500 rounded-l-full" 
+                          className="h-full bg-blue-500 transition-all duration-500" 
                           style={{ width: `${completionPercentage}%` }} 
                         />
                         <div 
-                          className="h-full bg-gradient-to-l from-red-600 to-red-400 transition-all duration-500 rounded-r-full" 
+                          className="h-full bg-red-500 transition-all duration-500" 
                           style={{ width: `${100 - completionPercentage}%` }} 
                         />
                       </div>
                       
-                      {/* Completion marker */}
-                      <div className="flex justify-between mt-1 px-1">
-                        <span className={`text-[8px] font-mono ${completionPercentage > 50 ? 'text-blue-400 font-bold' : 'text-kronos-dim'}`}>
-                          {completionPercentage.toFixed(1)}%
-                        </span>
-                        <span className={`text-[8px] font-mono ${completionPercentage <= 50 ? 'text-red-400 font-bold' : 'text-kronos-dim'}`}>
-                          {(100 - completionPercentage).toFixed(1)}%
-                        </span>
-                      </div>
+                      {idx < 4 && <div className="absolute -bottom-3 left-0 right-0 h-px bg-white/5" />}
                     </div>
                   );
                 })}

@@ -131,13 +131,21 @@ export function MonitoringProvider({ children }) {
       return null
     }
 
-    const indexEntry = (e, keyFromMap) => {
+    const indexEntry = (e, keyFromMap, tableSource) => {
       if (!e || typeof e !== 'object') return
       const un = e.uniqueName || e.ItemType || keyFromMap
       if (!un) return
       const url = toBrowseWf(e.icon ?? e.texture ?? '')
       if (url) EI[un] = url
-      uniqueNameToName[un] = e.name ?? e.displayName ?? ''
+      
+      // Use direct name if available, otherwise if it's a recipe, try to inherit from result
+      let nameKey = e.name ?? e.displayName ?? ''
+      if (!nameKey && tableSource === 'ExportRecipes' && e.resultType) {
+        // We'll resolve this in a second pass or check if already indexed
+        nameKey = e.resultType 
+      }
+      
+      uniqueNameToName[un] = nameKey
       const locKey = uniqueNameToName[un]
       if (locKey) {
         const resolved = (dict[locKey] || dict['/' + locKey] || '').replace(/<[^>]*>/g, '').trim()
@@ -149,12 +157,30 @@ export function MonitoringProvider({ children }) {
     for (const tbl of tableNames) {
       const data = exportData[tbl]
       if (!data) continue
-      if (Array.isArray(data)) { data.forEach(e => indexEntry(e)); continue }
+      if (Array.isArray(data)) { data.forEach(e => indexEntry(e, null, tbl)); continue }
       if (typeof data === 'object') {
         const nested = data[tbl] ?? (Object.keys(data).length === 1 && typeof Object.values(data)[0] === 'object' ? Object.values(data)[0] : null)
-        if (Array.isArray(nested)) nested.forEach(e => indexEntry(e))
-        else Object.entries(data).forEach(([k, v]) => indexEntry(v, k))
+        if (Array.isArray(nested)) nested.forEach(e => indexEntry(e, null, tbl))
+        else Object.entries(data).forEach(([k, v]) => indexEntry(v, k, tbl))
       }
+    }
+
+    // Second pass for recipes to resolve names AND icons that point to uniqueNames (resultType)
+    if (exportData.ExportRecipes) {
+      Object.entries(exportData.ExportRecipes).forEach(([un, e]) => {
+        const target = e.resultType
+        if (!target) return
+        
+        // Inherit name mapping if missing or internal
+        if (uniqueNameToName[target] && (!uniqueNameToName[un] || uniqueNameToName[un].startsWith('/Lotus/'))) {
+          uniqueNameToName[un] = uniqueNameToName[target]
+        }
+        
+        // Inherit icon if recipe doesn't have one
+        if (!EI[un] && EI[target]) {
+          EI[un] = EI[target]
+        }
+      })
     }
     return { EI, nameToImage, uniqueNameToName }
   }, [exportData, dict])

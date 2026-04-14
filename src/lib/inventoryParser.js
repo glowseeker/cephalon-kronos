@@ -121,8 +121,15 @@ const RIVEN_AFFIXES = {
 // ─── Rank / XP Helpers ───────────────────────────────────────────────────────
 
 /** Return the maximum possible rank for an item (30 for most things, 40 for
- *  special cases like Necramechs, Kuva/Tenet weapons, and Paracesis). */
-function getRankLimit(un, category) {
+ *  special cases like Necramechs, Kuva/Tenet weapons, and Paracesis). 
+ *  For mods and arcanes, looks up fusionLimit or levelStats in export data. */
+function getRankLimit(un, category, EM = {}, EA = {}) {
+  if (category === 'mods') {
+    return EM[un]?.fusionLimit ?? 0;
+  }
+  if (category === 'arcanes') {
+    return EA[un]?.levelStats?.length ? EA[un].levelStats.length - 1 : 5;
+  }
   if (category === 'necramechs') return 40;
   if (un?.includes('Paracesis')) return 40;
   if (un?.includes('Kuva') || un?.includes('Tenet')) return 40;
@@ -489,7 +496,7 @@ export function parseInventory(raw, exports) {
   // Resolves name, image, rank, mastery XP, and metadata for one item instance.
   const createItem = (un, category, nameTbls, imgTbls, sourceItem = null) => {
     const xp = sourceItem?.XP ?? xpMap[un] ?? 0;
-    const limit = getRankLimit(un, category);
+    const limit = getRankLimit(un, category, EM, EA);
 
     // For mods, prioritize rank from Fingerprint or Item data over XP calculation
     const fp = sourceItem?.UpgradeFingerprint ? parseFP(sourceItem.UpgradeFingerprint) : null;
@@ -547,7 +554,9 @@ export function parseInventory(raw, exports) {
       category,
       xp,
       rank,
+      max_rank: limit,
       mastery_xp,
+      max_mastery_xp,
       owned: !!sourceItem || !!xpMap[un],
       mastered,
       subsumed: subsumedSet.has(un),
@@ -1328,7 +1337,7 @@ export function parseInventory(raw, exports) {
 
       // Build ingredient inventory map for quick lookup
       const resourceCounts = {};
-      
+
       // Count resources from raw
       (raw.Resources ?? []).forEach(r => {
         resourceCounts[r.ItemType] = (resourceCounts[r.ItemType] ?? 0) + (r.ItemCount ?? 1);
@@ -1336,7 +1345,7 @@ export function parseInventory(raw, exports) {
 
       // Get player's owned blueprints from inventory (with counts)
       // Note: raw.Recipes is included in inventoryArrays below, so we use ownedItemCounts
-      
+
       // Build map of all owned items (for checking components, etc.)
       const ownedItemCounts = {};
       const inventoryArrays = [
@@ -1345,7 +1354,7 @@ export function parseInventory(raw, exports) {
         raw.SpaceMelee, raw.SpaceGuns, raw.MechSuits, raw.OperatorAmps,
         raw.SpaceSuits, raw.Hoverboards, raw.MiscItems, raw.Recipes, raw.Consumables
       ];
-      
+
       for (const arr of inventoryArrays) {
         if (arr) {
           for (const item of arr) {
@@ -1382,14 +1391,14 @@ export function parseInventory(raw, exports) {
 
         // Skip component blueprints (Helmet/Chassis/Systems/Wings Blueprint) - they're shown as components in main BP
         if (bpKey.includes('HelmetBlueprint') || bpKey.includes('ChassisBlueprint') || bpKey.includes('SystemsBlueprint') || bpKey.includes('HarnessBlueprint') || bpKey.includes('WingsBlueprint')) return;
-        
+
         // Check if this is a main BP that could have components (warframes, archwings, etc)
         const isMainItemBP = (bpKey.includes('/Recipes/WarframeRecipes/') || bpKey.includes('/Recipes/ArchwingRecipes/')) && !bpKey.includes('Component');
         const isOwned = bpKey in ownedItemCounts;
-        
+
         // Show if owned, OR if it's a main item BP with owned components
         let showBP = isOwned;
-        
+
         // If it's a main BP and player doesn't own it, check if they own any component BPs for it
         if (isMainItemBP && !isOwned) {
           const base = bpKey.replace('/Lotus/Types/Recipes/WarframeRecipes/', '').replace('/Lotus/Types/Recipes/ArchwingRecipes/', '').replace('Blueprint', '');
@@ -1403,12 +1412,12 @@ export function parseInventory(raw, exports) {
           ];
           showBP = componentBPs.some(cb => cb in ownedItemCounts);
         }
-        
+
         if (!showBP) return;
-        
+
         // Get count of this BP owned
         const bpCount = ownedItemCounts[bpKey] ?? 0;
-        
+
         const baseName = resultName.replace(' Blueprint', '').replace(' Prime', ' Prime');
 
         // Check if player has the full item (owned)
@@ -1431,12 +1440,12 @@ export function parseInventory(raw, exports) {
         // Check all ingredients - separate crafted vs blueprints
         const ingredients = (recipe.ingredients ?? []).map(ing => {
           const ingName = resolveName(ing.ItemType, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe);
-          
+
           let have = 0;
           let bpOwned = 0;
           let bpReady = false;
           let subIngredients = null;
-          
+
           // For component blueprints (Helmet/Chassis/Systems/etc), separate crafted from BPs
           const isComponent = ing.ItemType.includes('Component');
           if (isComponent) {
@@ -1445,7 +1454,7 @@ export function parseInventory(raw, exports) {
             // Blueprint count (separate)
             const bpKey = ing.ItemType.replace('Component', 'Blueprint');
             bpOwned = ownedItemCounts[bpKey] ?? 0;
-            
+
             // Check if component blueprint is ready to craft
             const bpRecipe = ERecipe?.[bpKey];
             if (bpRecipe?.ingredients) {
@@ -1453,7 +1462,7 @@ export function parseInventory(raw, exports) {
                 const subHave = (resourceCounts[subIng.ItemType] ?? 0) + (ownedItemCounts[subIng.ItemType] ?? 0);
                 return subHave >= (subIng.ItemCount ?? 1);
               });
-              
+
               // Get sub-ingredients for tooltip
               subIngredients = bpRecipe.ingredients.map(subIng => ({
                 name: resolveName(subIng.ItemType, dict, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe),
@@ -1466,7 +1475,7 @@ export function parseInventory(raw, exports) {
             // For regular resources/items - count both resources and owned items
             have = (resourceCounts[ing.ItemType] ?? 0) + (ownedItemCounts[ing.ItemType] ?? 0);
           }
-          
+
           const need = ing.ItemCount ?? 1;
           const image = resolveImage(ing.ItemType, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe);
           return { name: ingName, have, need, itemType: ing.ItemType, image, bpOwned, isComponent, bpReady, subIngredients };

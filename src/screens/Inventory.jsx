@@ -335,9 +335,9 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
                                 {item.ingredients.map((ing, i) => {
                                   const met = ing.have >= ing.need
                                   const hasSubIngredients = ing.isComponent && ing.bpOwned > 0 && ing.subIngredients && ing.subIngredients.length > 0;
-                                  
+
                                   const ingredientContent = (
-                                    <div 
+                                    <div
                                       className={`flex flex-col items-center justify-center gap-1.5 p-3 h-full ${met ? 'bg-green-500/5' : 'bg-black/20'} relative group ${hasSubIngredients ? 'cursor-help' : ''}`}
                                     >
                                       <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 relative">
@@ -360,8 +360,8 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
 
                                   if (hasSubIngredients) {
                                     return (
-                                      <Tooltip 
-                                        key={i} 
+                                      <Tooltip
+                                        key={i}
                                         position="top"
                                         content={
                                           <div className="min-w-[200px]">
@@ -440,7 +440,10 @@ export default function Inventory() {
     let items = tabItems
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
-      items = items.filter(item => (item.name ?? '').toLowerCase().includes(q))
+      items = items.filter(item => 
+        (item.name ?? '').toLowerCase().includes(q) ||
+        (item.components ?? []).some(comp => comp.toLowerCase().includes(q))
+      )
     }
     const filters = FILTER_CONFIG[activeTab] ?? []
     const activeF = filters.filter(f => currentFilters[f])
@@ -497,12 +500,35 @@ export default function Inventory() {
         </div>
         {showFilterSortPanel && (
           <Card glow className="p-4 border-kronos-accent/30 animate-in slide-in-from-top-4 duration-300">
-            <div className="flex flex-col gap-6">
-              <div><p className="text-[10px] font-black text-kronos-accent uppercase tracking-widest mb-3">Filters</p>
-                <div className="flex flex-wrap gap-2">{(FILTER_CONFIG[activeTab] ?? []).map(f => <button key={f} onClick={() => setCurrentFilters(prev => ({ ...prev, [f]: !prev[f] }))} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${currentFilters[f] ? 'bg-kronos-accent text-kronos-bg' : 'bg-white/5 text-kronos-dim hover:text-white'}`}>{f.replace(/_/g, ' ')}</button>)}</div>
+            <div className="flex flex-row flex-wrap gap-12">
+              <div className="flex-1">
+                <p className="text-[10px] font-black text-kronos-accent uppercase tracking-widest mb-3">Filters</p>
+                <div className="flex flex-wrap gap-2">
+                  {(FILTER_CONFIG[activeTab] ?? []).map(f => (
+                    <button 
+                      key={f} 
+                      onClick={() => setCurrentFilters(prev => ({ ...prev, [f]: !prev[f] }))} 
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${currentFilters[f] ? 'bg-kronos-accent text-kronos-bg' : 'bg-white/5 text-kronos-dim hover:text-white'}`}
+                    >
+                      {f.replace(/_/g, ' ')}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div><p className="text-[10px] font-black text-kronos-accent uppercase tracking-widest mb-3">Sort By</p>
-                <div className="flex flex-wrap gap-2">{[{ id: 'name', label: 'Name' }, { id: 'owned', label: 'Ownership' }, { id: 'mastered', label: 'Mastery' }].map(c => <button key={c.id} onClick={() => { if (sortCriteria === c.id) setSortDirection(d => d === 'asc' ? 'desc' : 'asc'); else { setSortCriteria(c.id); setSortDirection('asc') } }} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-2 ${sortCriteria === c.id ? 'bg-kronos-accent text-kronos-bg' : 'bg-white/5 text-kronos-dim hover:text-white'}`}>{c.label}{sortCriteria === c.id && <ArrowUpDown size={12} className={sortDirection === 'desc' ? 'rotate-180' : ''} />}</button>)}</div>
+              <div className="flex-1 border-l border-white/5 pl-12">
+                <p className="text-[10px] font-black text-kronos-accent uppercase tracking-widest mb-3">Sort By</p>
+                <div className="flex flex-wrap gap-2">
+                  {[{ id: 'name', label: 'Name' }, { id: 'owned', label: 'Ownership' }, { id: 'mastered', label: 'Mastery' }].map(c => (
+                    <button 
+                      key={c.id} 
+                      onClick={() => { if (sortCriteria === c.id) setSortDirection(d => d === 'asc' ? 'desc' : 'asc'); else { setSortCriteria(c.id); setSortDirection('asc') } }} 
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-2 ${sortCriteria === c.id ? 'bg-kronos-accent text-kronos-bg' : 'bg-white/5 text-kronos-dim hover:text-white'}`}
+                    >
+                      {c.label}
+                      {sortCriteria === c.id && <ArrowUpDown size={12} className={sortDirection === 'desc' ? 'rotate-180' : ''} />}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </Card>
@@ -518,36 +544,94 @@ export default function Inventory() {
             <div className="text-center py-20 text-kronos-dim">No items found in {tabLabel.toLowerCase()}.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pb-4">
-          {visibleItems.map((item, idx) => {
-            const isUnowned = !item.owned
-            const isPrimePart = item.category === 'prime_parts'
-            const isModOrResource = ['mods', 'resources', 'arcanes'].includes(item.category)
-            return (
-              <Card key={item.unique_name + idx} glow={!isUnowned} className={`relative p-0 overflow-hidden flex h-40 group transition-all duration-300 ${isUnowned ? 'bg-kronos-panel/10 border-2 border-dashed border-kronos-accent opacity-100' : 'border-kronos-panel/40'}`}>
-                {!isUnowned && item.formas > 0 && <div className="absolute top-2 left-2 z-20 flex items-center gap-0.5 bg-kronos-accent text-kronos-bg px-1.5 py-0.5 rounded-full shadow-lg border border-white/20"><span className="text-[10px] font-black">{item.formas}</span><span className="text-[8px]">★</span></div>}
-                <div className="w-32 bg-kronos-panel/30 flex-shrink-0 p-4 flex items-center justify-center relative overflow-hidden border-r border-white/5">
-                  <Box className="text-kronos-panel absolute w-20 h-20 opacity-10" />
-                  {item.image && <img src={item.image} alt="" className={`max-w-full max-h-full object-contain relative z-10 transition-all duration-500 group-hover:scale-110 ${isUnowned ? 'grayscale opacity-40' : ''}`} loading="lazy" />}
-                </div>
-                <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
-                  <div><div className="flex justify-between items-start mb-1"><span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest truncate mr-2">{item.weapon_type || item.vehicle_type || (isPrimePart ? 'Prime' : item.category)}</span></div><h4 className="font-bold text-sm uppercase truncate text-kronos-text leading-tight" title={item.name}>{item.name}</h4>
-                    {item.components && item.components.length > 0 && (
-                      <div className="flex flex-col gap-0.5 mt-1.5">
-                        {item.components.map((comp, ci) => (
-                          <span key={ci} className="text-[10px] text-kronos-dim">{comp}</span>
-                        ))}
+              {visibleItems.map((item, idx) => {
+                const isUnowned = !item.owned
+                const isPrimePart = item.category === 'prime_parts'
+                const isModOrResource = ['mods', 'resources', 'arcanes'].includes(item.category)
+                return (
+                  <Card key={item.unique_name + idx} glow={!isUnowned} className={`relative p-0 overflow-hidden flex h-40 group transition-all duration-300 ${isUnowned ? 'bg-kronos-panel/10 border-2 border-dashed border-kronos-accent' : 'border-kronos-panel/40'}`}>
+
+                    {/* Image column */}
+                    <div className="w-32 bg-kronos-panel/30 flex-shrink-0 p-3 flex items-center justify-center relative overflow-hidden border-r border-white/5">
+                      <Box className="text-kronos-panel absolute w-20 h-20 opacity-10" />
+                      {item.image && <img src={item.image} alt="" className={`max-w-full max-h-full object-contain relative z-10 transition-all duration-500 group-hover:scale-110 ${isUnowned ? 'grayscale opacity-40' : ''}`} loading="lazy" />}
+                      
+                      {/* Forma badge - Top Left and Larger */}
+                      {!isUnowned && item.formas > 0 && (
+                        <div className="absolute top-2 left-2 z-20 flex items-center gap-0.5 bg-kronos-accent text-kronos-bg px-2 py-0.5 rounded shadow-lg border border-white/20 backdrop-blur-sm">
+                          <span className="text-[11px] font-black">{item.formas}</span>
+                          <span className="text-[9px]">★</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info column */}
+                    <div className="flex-1 px-4 py-3 flex flex-col justify-between min-w-0 overflow-hidden">
+
+                      {/* Top: category label + name */}
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-black text-kronos-accent uppercase tracking-widest block truncate leading-none mb-1">
+                          {item.weapon_type || item.vehicle_type || (isPrimePart ? 'Prime Part' : item.category?.replace(/_/g, ' '))}
+                        </span>
+                        <h4 className="font-bold text-sm uppercase truncate text-kronos-text leading-tight mt-0.5" title={item.name}>
+                          {item.name}
+                        </h4>
                       </div>
-                    )}
-                  </div>
-                  {!isModOrResource && <div className="flex flex-col gap-1.5">{item.mastered ? <div className="flex items-center gap-1 text-blue-400"><Gem size={10} /><span className="text-[10px] font-bold uppercase tracking-tighter">Mastered</span></div> : <div className={`flex items-center gap-1 ${isUnowned ? 'text-kronos-dim/20' : 'text-kronos-dim'}`}><Gem size={10} /><span className="text-[10px] font-bold uppercase tracking-tighter">{item.owned ? 'Unmastered' : 'Unowned'}</span></div>}</div>}
-                  {item.subsumed && <div className="text-[10px] flex items-center gap-1 text-purple-400 font-bold uppercase"><span className="text-xs">⚗</span><span>Subsumed</span></div>}
-                  {(isModOrResource || isPrimePart || item.veiled) && item.quantity !== undefined && <div className="text-[10px] font-black uppercase text-kronos-accent mt-1">{item.quantity > 0 ? `${item.quantity} In Stock` : 'Unowned'}</div>}
-                  {item.is_incarnon && <div className="absolute top-2 right-2 flex items-center gap-0.5 bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20"><Zap size={10} className="text-orange-400" /><span className="text-[8px] font-black text-orange-400 uppercase">Incarnon</span></div>}
-                </div>
-              </Card>
-            )
-          })}
-        </div>)
+
+                      {/* Middle: Sub-components (centered and larger) */}
+                      <div className="flex-1 flex flex-col justify-center py-1">
+                        {item.components && item.components.length > 0 && (
+                          <div className="flex flex-wrap gap-x-2 gap-y-1">
+                            {item.components.map((comp, ci) => (
+                              <span key={ci} className="text-[11px] font-bold text-kronos-dim uppercase tracking-tight leading-none bg-white/5 px-1.5 py-0.5 rounded border border-white/5">{comp}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bottom: status row */}
+                      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 pt-2 border-t border-white/5">
+
+                        {/* Rank — shown for equipment and mods */}
+                        {!isUnowned && item.rank !== undefined && item.max_rank !== undefined && item.max_rank > 0 && (
+                          <span className={`text-[10px] font-black uppercase ${item.rank === item.max_rank ? 'text-blue-400' : 'text-kronos-dim'}`}>
+                            R{item.rank}/{item.max_rank}
+                          </span>
+                        )}
+
+                        {/* Mastery (equipment) */}
+                        {!isModOrResource && (
+                          item.mastered
+                            ? <span className="text-[10px] font-black uppercase text-blue-400 flex items-center gap-1"><Gem size={10} className="fill-current/20" />Mastered</span>
+                            : <span className={`text-[10px] font-black uppercase flex items-center gap-1 ${isUnowned ? 'text-kronos-dim/30' : 'text-kronos-dim'}`}><Gem size={10} />{item.owned ? 'Unmastered' : 'Unowned'}</span>
+                        )}
+
+                        {/* Subsumed (warframes) */}
+                        {item.subsumed && (
+                          <span className="text-[10px] font-black uppercase text-purple-400 flex items-center gap-1">
+                            <span className="text-xs">⚗</span>Subsumed
+                          </span>
+                        )}
+
+                        {/* Stock count (mods, resources, arcanes, prime parts, veiled rivens) */}
+                        {(isModOrResource || isPrimePart || item.veiled) && item.quantity !== undefined && (
+                          <span className={`text-[10px] font-black uppercase ${item.quantity > 0 ? 'text-kronos-accent' : 'text-kronos-dim/30'}`}>
+                            {item.quantity > 0 ? `×${item.quantity}` : 'Unowned'}
+                          </span>
+                        )}
+
+                        {/* Incarnon badge */}
+                        {item.is_incarnon && (
+                          <span className="text-[10px] font-black uppercase text-orange-400 flex items-center gap-1">
+                            <Zap size={10} className="fill-current" />Incarnon
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                )
+              })}
+            </div>)
         )}
         {visibleCount < filteredItems.length && <div className="flex justify-center py-8"><Button onClick={() => setVisibleCount(prev => prev + ITEMS_PER_PAGE)}>Load More Items</Button></div>}
       </div>

@@ -402,6 +402,8 @@ function nameFromPath(path = '') {
 export function resolveItemName(path, dict, uniqueNameToName) {
   if (!path) return ''
 
+  const isBlueprint = path.includes('/Recipes/') || path.endsWith('Blueprint');
+
   // Handle StoreItem paths by trying to resolve the actual item
   let actualPath = path;
   if (path.startsWith('/Lotus/StoreItems/')) {
@@ -417,23 +419,33 @@ export function resolveItemName(path, dict, uniqueNameToName) {
     return null;
   };
 
-  // 1. Try actualPath (mapped)
-  const r1 = lookup(actualPath);
-  if (r1) return r1;
+  let resolved = null;
 
+  // 1. Try actualPath (mapped)
+  resolved = lookup(actualPath);
+  
   // 2. Try raw path
-  const r2 = lookup(path);
-  if (r2) return r2;
+  if (!resolved) resolved = lookup(path);
 
   // 3. Try dict directly
-  const d1 = dict[actualPath] || dict['/' + actualPath] || dict[path] || dict['/' + path];
-  if (d1 && typeof d1 === 'string' && !d1.startsWith('/Lotus/')) return clean(d1);
+  if (!resolved) {
+    const d1 = dict[actualPath] || dict['/' + actualPath] || dict[path] || dict['/' + path];
+    if (d1 && typeof d1 === 'string' && !d1.startsWith('/Lotus/')) resolved = clean(d1);
+  }
 
   // 4. nameFromPath (fallback)
-  const n = nameFromPath(actualPath);
-  if (n && !n.startsWith('/Lotus/')) return n;
+  if (!resolved) {
+    const n = nameFromPath(actualPath);
+    if (n && !n.startsWith('/Lotus/')) resolved = n;
+  }
 
-  return clean(path);
+  if (!resolved) resolved = clean(path);
+
+  if (isBlueprint && !resolved.toLowerCase().includes('blueprint')) {
+    return resolved + ' Blueprint';
+  }
+
+  return resolved;
 }
 
 
