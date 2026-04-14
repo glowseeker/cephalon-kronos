@@ -52,14 +52,14 @@ pnpm tauri build
 ## Known Issues
 
 - Descendia levels / modifiers aren't parsed yet.
-- App awaiting day-to-day testing.
+- GNOME on Linux currently unsupported.
+- App awaiting crossplatform day-to-day testing.
 
 ## Planned Features
 
 - **Warframe.Market Integration**: Evaluate relics, check prices on prime parts, and use the Ducanator.
 - **Live Relic Overlay**: Show value and already owned quantity of relic rewards on fissure reward screens.
-- **Auto-Syncing Checklists**: Automatically identify finished tasks and cross them off.
-- **Notification System**: Get notifications for events like Arbitrations, Fissures, and Sorties.
+- **Auto-Syncing Checklists**: Automatically identify finished tasks.
 - **Localization**: Add support for other languages beyond English.
 - **Maps Markers**: Add markers to maps for points of interest.
 
