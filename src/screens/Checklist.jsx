@@ -412,7 +412,7 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
 
   return (
     <div
-      className="rounded-lg border relative overflow-hidden transition-all duration-200 flex min-w-[280px]"
+      className="rounded-lg border relative transition-all duration-200 flex min-w-[280px]"
       style={{
         backgroundColor: hoverBg || config.bg,
         borderColor: config.accent + '44',
@@ -422,7 +422,7 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
       onMouseLeave={handleMouseLeave}
     >
       {overlayBadge && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-hidden rounded-lg">
           <span className="text-[150px] font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">{overlayBadge}</span>
         </div>
       )}
