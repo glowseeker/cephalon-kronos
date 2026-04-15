@@ -498,7 +498,13 @@ export function parseInventory(raw, exports) {
   // Central factory used by every category processor.
   // Resolves name, image, rank, mastery XP, and metadata for one item instance.
   const createItem = (un, category, nameTbls, imgTbls, sourceItem = null) => {
-    const xp = sourceItem?.XP ?? xpMap[un] ?? 0;
+    // For un-polarized overlevelable weapons, use capped XP from xpMap
+    // XPInfo caps XP at 30² × 500 = 450000 for un-polarized weapons
+    const isOverlevelable = getRankLimit(un, category, EM, EA, EW) === 40;
+    const hasPolarization = (sourceItem?.Polarized ?? 0) > 0;
+    const useCappedXP = isOverlevelable && !hasPolarization;
+    
+    const xp = useCappedXP ? (xpMap[un] ?? 0) : (sourceItem?.XP ?? xpMap[un] ?? 0);
     const limit = getRankLimit(un, category, EM, EA, EW);
 
     // For mods, prioritize rank from Fingerprint or Item data over XP calculation
@@ -506,7 +512,9 @@ export function parseInventory(raw, exports) {
     let rank = parseInt(fp?.lvl ?? sourceItem?.UpgradeLevel ?? -1, 10);
 
     if (rank === -1) {
-      rank = calculateRank(xp, category, un, limit);
+      // For un-polarized overlevelable weapons, cap rank at 30
+      const effectiveLimit = useCappedXP ? 30 : limit;
+      rank = calculateRank(xp, category, un, effectiveLimit);
     }
 
     // Mastery XP: rank * (100 for weapons, 200 for heavy)
@@ -519,13 +527,6 @@ export function parseInventory(raw, exports) {
     
     // Get polarization count from sourceItem
     const polarizeCount = sourceItem?.Polarized ?? 0;
-    
-    // For overlevelable weapons (limit 40):
-    // - If polarized, base mastery is locked at rank 30 value (3000 for weapons)
-    // - Each forma adds 2 extra ranks (max 40 at 5 forma)
-    // - Extra ranks beyond 30 give base + 100 per rank
-    const isOverlevelable = limit === 40;
-    const hasPolarization = polarizeCount > 0;
     
     let mastery_xp, max_mastery_xp, mastered;
     if (isOverlevelable && hasPolarization) {

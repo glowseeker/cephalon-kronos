@@ -216,7 +216,7 @@ export default function Mastery() {
   const xpNeeded = getXPNeededFor(nextRank)
   const xpIntoRank = Math.max(0, totalXP - xpAtCurrent)
   const xpUntilNext = Math.max(0, xpNeeded - xpIntoRank)
-  const progress = xpNeeded > 0 ? Math.min(100, (xpIntoRank / xpNeeded) * 100) : 100
+  const progress = xpNeeded > 0 ? Math.min(100, (xpIntoRank / xpNeeded) * 100) : 100;
   const isRankUpReady = progress >= 100
   const currentTitle = getMRTitle(currentRank)
   const nextTitle = getMRTitle(nextRank)
@@ -350,7 +350,7 @@ export default function Mastery() {
                   {/* Floating Label (Top) */}
                   <div
                     className="absolute top-0 flex flex-col items-center -translate-x-1/2 transition-all duration-1000 ease-out"
-                    style={{ left: `${progress}%` }}
+                    style={{ left: `${Math.min(Math.max(progress, 15), 85)}%` }}
                   >
                     <div className="text-xs font-black text-kronos-accent uppercase whitespace-nowrap bg-kronos-bg/80 backdrop-blur-md px-3 py-1 rounded border border-kronos-accent/30 mb-1 shadow-lg">
                       {totalXP.toLocaleString()} mastery | {xpUntilNext.toLocaleString()} left
