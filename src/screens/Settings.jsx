@@ -300,38 +300,36 @@ export default function SettingsScreen() {
             </div>
           </div>
 
-          {/* Test buttons - dev builds only */}
-          {import.meta.env.DEV && (
-            <div className="mb-5 pt-4 border-t border-white/5">
-              <p className="text-sm font-black uppercase tracking-widest text-kronos-dim mb-3">Test Notifications</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <button
-                  onClick={() => handleTestNotification(notifPosition)}
-                  className="py-2 px-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20"
-                >
-                  Test notification
-                </button>
-                <button
-                  onClick={() => handleTestNotification(notifPosition, 5000)}
-                  className="py-2 px-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20"
-                >
-                  test notification in 5 seconds
-                </button>
-                <button
-                  onClick={handleTestRelic}
-                  className="py-2 px-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20"
-                >
-                  test relic overlay
-                </button>
-                <button
-                  onClick={handleToggleCalibrate}
-                  className="py-2 px-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20"
-                >
-                  Linux Calibration (KDE)
-                </button>
-              </div>
+          {/* Test buttons - always available */}
+          <div className="mb-5 pt-4 border-t border-white/5">
+            <p className="text-sm font-black uppercase tracking-widest text-kronos-dim mb-3">Test Notifications</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                onClick={() => handleTestNotification(notifPosition)}
+                className="py-2 px-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20"
+              >
+                Test notification
+              </button>
+              <button
+                onClick={() => handleTestNotification(notifPosition, 5000)}
+                className="py-2 px-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20"
+              >
+                test notification in 5 seconds
+              </button>
+              <button
+                onClick={handleTestRelic}
+                className="py-2 px-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20"
+              >
+                test relic overlay
+              </button>
+              <button
+                onClick={handleToggleCalibrate}
+                className="py-2 px-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20"
+              >
+                Linux Calibration (KDE)
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Alert toggles */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
