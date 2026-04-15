@@ -123,7 +123,7 @@ const RIVEN_AFFIXES = {
 /** Return the maximum possible rank for an item (30 for most things, 40 for
  *  special cases like Necramechs, Kuva/Tenet weapons, and Paracesis). 
  *  For mods and arcanes, looks up fusionLimit or levelStats in export data. */
-function getRankLimit(un, category, EM = {}, EA = {}) {
+function getRankLimit(un, category, EM = {}, EA = {}, EW = {}) {
   if (category === 'mods') {
     return EM[un]?.fusionLimit ?? 0;
   }
@@ -132,7 +132,10 @@ function getRankLimit(un, category, EM = {}, EA = {}) {
   }
   if (category === 'necramechs') return 40;
   if (un?.includes('Paracesis')) return 40;
-  if (un?.includes('Kuva') || un?.includes('Tenet')) return 40;
+  if (un?.includes('Kuva') || un?.includes('Tenet') || un?.includes('Coda')) return 40;
+  // Check export for maxLevelCap
+  const exportEntry = EW[un];
+  if (exportEntry?.maxLevelCap === 40) return 40;
   return 30;
 }
 
@@ -496,7 +499,7 @@ export function parseInventory(raw, exports) {
   // Resolves name, image, rank, mastery XP, and metadata for one item instance.
   const createItem = (un, category, nameTbls, imgTbls, sourceItem = null) => {
     const xp = sourceItem?.XP ?? xpMap[un] ?? 0;
-    const limit = getRankLimit(un, category, EM, EA);
+    const limit = getRankLimit(un, category, EM, EA, EW);
 
     // For mods, prioritize rank from Fingerprint or Item data over XP calculation
     const fp = sourceItem?.UpgradeFingerprint ? parseFP(sourceItem.UpgradeFingerprint) : null;
@@ -506,15 +509,45 @@ export function parseInventory(raw, exports) {
       rank = calculateRank(xp, category, un, limit);
     }
 
-    // Mastery XP is rank * (100 for weapons, 200 for heavy)
+    // Mastery XP: rank * (100 for weapons, 200 for heavy)
+    // For overlevelable weapons, polarization affects mastery calculation
     const heavyCategories = [
       'warframes', 'companions', 'necramechs', 'archwings',
       'sentinels', 'moas', 'hounds', 'beasts', 'robotics', 'plexus', 'kdrives'
     ];
-    const masteryPerRank = heavyCategories.includes(category) ? 200 : 100;
-    const mastery_xp = rank * masteryPerRank;
-    const max_mastery_xp = limit * masteryPerRank;
-    const mastered = rank >= limit;
+    const baseMasteryPerRank = heavyCategories.includes(category) ? 200 : 100;
+    
+    // Get polarization count from sourceItem
+    const polarizeCount = sourceItem?.Polarized ?? 0;
+    
+    // For overlevelable weapons (limit 40):
+    // - If polarized, base mastery is locked at rank 30 value (3000 for weapons)
+    // - Each forma adds 2 extra ranks (max 40 at 5 forma)
+    // - Extra ranks beyond 30 give base + 100 per rank
+    const isOverlevelable = limit === 40;
+    const hasPolarization = polarizeCount > 0;
+    
+    let mastery_xp, max_mastery_xp, mastered;
+    if (isOverlevelable && hasPolarization) {
+      // Polarized overlevelable: base is 30 * baseMasteryPerRank
+      const baseXP = 30 * baseMasteryPerRank;
+      if (rank <= 30) {
+        // If still at or below 30, mastery is locked at base value
+        mastery_xp = baseXP;
+      } else {
+        // Beyond 30: base + extra per rank beyond 30 (still 100 per rank)
+        mastery_xp = baseXP + (rank - 30) * baseMasteryPerRank;
+      }
+      // Max rank depends on polarization (2 extra per forma, max 10 extra = 40)
+      const effectiveMaxRank = 30 + Math.min(polarizeCount * 2, 10);
+      max_mastery_xp = baseXP + Math.max(0, effectiveMaxRank - 30) * baseMasteryPerRank;
+      mastered = rank >= effectiveMaxRank;
+    } else {
+      // Normal weapons or un-polarized overlevelable
+      mastery_xp = rank * baseMasteryPerRank;
+      max_mastery_xp = limit * baseMasteryPerRank;
+      mastered = rank >= limit;
+    }
 
     let baseName = resolveName(un, dict, ...nameTbls);
     if (un.includes('/BoardSuit')) baseName = 'Merulina';

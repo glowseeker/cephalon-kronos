@@ -25,10 +25,6 @@ import { convertFileSrc, invoke } from '@tauri-apps/api/tauri'
 
 // Each MR1–30 rank costs a flat 75,000 XP. Cumulative at MR30 = 2,250,000.
 // Legendary ranks (MR31+) each cost 147,500 XP.
-// Verified: user at MR30 with 2,336,733 XP needs 60,767 → LR1 threshold = 2,397,500 ✓
-const MR_RANK_COST = 75000
-const LR_RANK_COST = 147500
-const MR30_CUM = 30 * MR_RANK_COST   // 2,250,000
 
 // MR title lookup - wiki Module:MasteryRank
 const MR_CLASSES = ['Unranked', 'Initiate', 'Novice', 'Disciple', 'Seeker', 'Hunter', 'Eagle', 'Tiger', 'Dragon', 'Sage', 'Master']
@@ -66,13 +62,17 @@ function getMRIcon(rank, basePath) {
 
 function getXPForRank(rank) {
   if (rank <= 0) return 0
-  if (rank <= 30) return rank * MR_RANK_COST
-  return MR30_CUM + (rank - 30) * LR_RANK_COST
+  // MR1-30: quadratic formula (wiki) - rank² × 2500
+  // Cumulative at MR30 = 2,250,000
+  if (rank <= 30) return rank * rank * 2500
+  // Legendary ranks: 2,250,000 + 147,500 per legendary level
+  return 2250000 + (rank - 30) * 147500
 }
 function getXPNeededFor(rank) {
   if (rank <= 0) return 0
-  if (rank <= 30) return MR_RANK_COST
-  return LR_RANK_COST
+  // XP needed for next rank: (2r+1) × 2500
+  if (rank <= 30) return (2 * rank + 1) * 2500
+  return 147500
 }
 
 export default function Mastery() {
@@ -244,7 +244,7 @@ export default function Mastery() {
             </span>
             {item.earnedXP > 0 && (
               <span className="text-[10px] text-kronos-dim uppercase font-bold truncate w-full px-1">
-                ({item.earnedXP.toLocaleString()} XP)
+                ({item.earnedXP.toLocaleString()} MP)
               </span>
             )}
           </div>
@@ -278,7 +278,7 @@ export default function Mastery() {
 
                   <div className="relative">
                     <img src={getMRIcon(nextRank, iconsPath)} alt="" className="w-32 h-32 drop-shadow-[0_0_30px_rgba(var(--color-accent-rgb),0.4)]" />
-                    <p className="text-xs text-kronos-accent uppercase font-black mt-2 tracking-[0.2em]">Next: {nextRank}</p>
+                    <p className="text-xs text-kronos-accent uppercase font-black mt-2 tracking-[0.2em]">Next: {nextRank > 30 ? `LR${nextRank - 30}` : `MR${nextRank}`}</p>
                   </div>
                 </div>
 
@@ -321,7 +321,7 @@ export default function Mastery() {
                   <div>
                     <div className="text-[10px] text-kronos-accent uppercase font-black tracking-[0.3em] mb-1 opacity-80">Current Rank</div>
                     <h2 className="text-4xl font-black text-kronos-text leading-none tracking-tight">
-                      {isLegendary ? `Legendary ${currentRank - 30}` : `Mastery Rank ${currentRank}`}
+                      {currentRank > 30 ? `Legendary Rank ${currentRank - 30}` : `Mastery Rank ${currentRank}`}
                     </h2>
                     <p className="text-lg text-kronos-dim mt-1 font-bold italic tracking-wider flex items-center gap-2">
                       {currentTitle}
@@ -334,7 +334,7 @@ export default function Mastery() {
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <div className="text-2xl font-black text-kronos-accent uppercase tracking-wide leading-none">
-                        {isLegendary ? `Legendary ${nextRank - 30}` : `MR ${nextRank}`}
+                        {nextRank > 30 ? `LR${nextRank - 30}` : `MR${nextRank}`}
                       </div>
                       <div className="text-[10px] text-kronos-dim uppercase font-bold tracking-tighter mt-1 opacity-60">
                         {nextTitle}
@@ -353,7 +353,7 @@ export default function Mastery() {
                     style={{ left: `${progress}%` }}
                   >
                     <div className="text-xs font-black text-kronos-accent uppercase whitespace-nowrap bg-kronos-bg/80 backdrop-blur-md px-3 py-1 rounded border border-kronos-accent/30 mb-1 shadow-lg">
-                      {xpIntoRank.toLocaleString()} mastery | {xpUntilNext.toLocaleString()} left
+                      {totalXP.toLocaleString()} mastery | {xpUntilNext.toLocaleString()} left
                     </div>
                     <div className="w-px h-3 bg-kronos-accent/60" />
                   </div>
@@ -497,7 +497,7 @@ export default function Mastery() {
 
                               <div className="text-[10px] font-mono text-right">
                                 {hasXP ? (
-                                  <span className="text-kronos-accent">+{node.mastery_xp.toLocaleString()} XP</span>
+                                  <span className="text-kronos-accent">+{node.mastery_xp.toLocaleString()} MP</span>
                                 ) : (
                                   <span className="text-kronos-dim/30 italic uppercase text-[9px]">Non-Mastery</span>
                                 )}
@@ -532,7 +532,7 @@ export default function Mastery() {
                       <div className="text-xs font-mono text-kronos-dim text-right">
                         <div>Rank {item.rank || 0}</div>
                         <div className="text-[10px] opacity-75">
-                          {item.mastery_xp ? `${item.mastery_xp.toLocaleString()} XP` : '0 XP'}
+                          {item.mastery_xp ? `${item.mastery_xp.toLocaleString()} MP` : '0 MP'}
                         </div>
                       </div>
                     </div>
