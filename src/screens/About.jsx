@@ -11,15 +11,28 @@
  */
 import { AlertTriangle, Github, Box, Globe, Database, Layers, Palette, Terminal, BookOpen } from 'lucide-react'
 import { PageLayout, Card } from '../components/UI'
+import { open } from '@tauri-apps/api/shell'
 
 const CREDITS = [
   { name: 'warframe-api-helper', desc: 'Credential extraction from game memory', href: 'https://github.com/Obsidian-Jackal/warframe-api-helper/' },
   { name: 'browse.wf', desc: 'Worldstate, bounty cycle, arbitration and incursion data', href: 'https://browse.wf' },
   { name: 'warframe-items', desc: 'Item database', href: 'https://github.com/wfcd/warframe-items' },
+  { name: 'warframe-public-export-plus', desc: 'Data exports for the game', href: 'https://github.com/calamity-inc/warframe-public-export-plus' },
   { name: 'Warframe Checklist', desc: 'Inspiration for the checklist feature', href: 'https://warframetools.com/Task-Checklist/' },
 ]
 
 export default function About() {
+  const handleOpenLink = async (e, url) => {
+    e.preventDefault()
+    try {
+      await open(url)
+    } catch (err) {
+      console.error('Failed to open link:', err)
+      // Fallback for web/dev environment
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
   return (
     <PageLayout title="About">
       <div className="space-y-6">
@@ -44,8 +57,7 @@ export default function About() {
           </p>
           <a
             href="https://github.com/glowseeker/cephalon-kronos"
-            target="_blank"
-            rel="noopener noreferrer"
+            onClick={(e) => handleOpenLink(e, 'https://github.com/glowseeker/cephalon-kronos')}
             className="inline-flex items-center gap-2 text-kronos-accent hover:text-kronos-accent-secondary transition-colors text-sm font-medium"
           >
             <Github size={18} />
@@ -61,7 +73,13 @@ export default function About() {
               <li key={name} className="flex items-start gap-2 text-sm">
                 <span className="text-kronos-accent font-bold flex-shrink-0">•</span>
                 <span>
-                  <a href={href} target="_blank" rel="noopener noreferrer" className="font-bold text-kronos-accent hover:underline">{name}</a>
+                  <a
+                    href={href}
+                    onClick={(e) => handleOpenLink(e, href)}
+                    className="font-bold text-kronos-accent hover:underline"
+                  >
+                    {name}
+                  </a>
                   <span className="text-kronos-dim ml-1.5">- {desc}</span>
                 </span>
               </li>
@@ -77,7 +95,13 @@ export default function About() {
               <h3 className="text-base font-semibold text-red-400 mb-2">Important Disclaimer</h3>
               <p className="text-kronos-text/90 text-sm leading-relaxed mb-2">
                 This app uses{' '}
-                <a href="https://github.com/Obsidian-Jackal/warframe-api-helper" className="text-kronos-accent hover:underline" target="_blank" rel="noopener noreferrer">warframe-api-helper</a>
+                <a
+                  href="https://github.com/Obsidian-Jackal/warframe-api-helper"
+                  onClick={(e) => handleOpenLink(e, 'https://github.com/Obsidian-Jackal/warframe-api-helper')}
+                  className="text-kronos-accent hover:underline"
+                >
+                  warframe-api-helper
+                </a>
                 {' '}to extract your session tokens from game memory.
               </p>
               <ul className="text-kronos-text/80 text-xs space-y-0.5 mb-2 list-disc list-inside">
@@ -94,3 +118,4 @@ export default function About() {
     </PageLayout>
   )
 }
+
