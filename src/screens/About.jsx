@@ -27,9 +27,9 @@ export default function About() {
     try {
       await open(url)
     } catch (err) {
-      console.error('Failed to open link:', err)
-      // Fallback for web/dev environment
-      window.open(url, '_blank', 'noopener,noreferrer')
+      console.error('Failed to open link with Tauri shell API:', err)
+      // Removed window.open fallback as it leads to inconsistent behavior in packaged applications
+      // and does not open external links correctly. The Tauri shell API should be used exclusively.
     }
   }
 

@@ -9,6 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 use std::fs;
 use tauri::Manager;
+use tauri::api::shell;
 use std::io::BufReader;
 use std::sync::{Arc, Mutex};
 use rodio::{Decoder, OutputStream, Sink};
@@ -1022,6 +1023,13 @@ fn main() {
                 }
             }
             _ => {}
+        })
+        .on_new_window_request(|window, new_window_request| {
+            // Prevent the app from opening new webview windows
+            let url = new_window_request.uri();
+            if let Err(e) = shell::open(&window.shell_scope(), url, None) {
+                eprintln!("Failed to open URL {} in external browser: {}", url, e);
+            }
         })
         .invoke_handler(tauri::generate_handler![
             // --- data ---
