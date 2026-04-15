@@ -908,7 +908,7 @@ fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) -> Resul
     }
 
     let resource_path = app_handle.path_resolver()
-        .resolve_resource(format!("public/audio/{}", sound))
+        .resolve_resource(format!("audio/{}", sound))
         .ok_or_else(|| format!("Could not find sound file: {}", sound))?;
 
     std::thread::spawn(move || {
