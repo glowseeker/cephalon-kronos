@@ -363,16 +363,43 @@ async fn list_notes(app_handle: tauri::AppHandle) -> Result<Vec<String>, String>
     let mut notes = Vec::new();
     
     // Read from writable location first
-    if notes_dir.exists() {
-        if let Ok(entries) = fs::read_dir(&notes_dir) {
-            for entry in entries.flatten() {
-                if let Some(name) = entry.file_name().to_str() {
-                    if name.ends_with(".md") {
-                        notes.push(name.to_string());
-                    }
+    if let Ok(entries) = fs::read_dir(&notes_dir) {
+        for entry in entries.flatten() {
+            if let Some(name) = entry.file_name().to_str() {
+                if name.ends_with(".md") {
+                    notes.push(name.to_string());
                 }
             }
         }
+    }
+
+    // If no notes exist, create the Welcome note
+    if notes.is_empty() {
+        let welcome_name = "Welcome.md".to_string();
+        let welcome_content = r#"# Welcome to Cephalon Kronos
+
+This is a showcase of the **Notes** feature. You can use this space to either write your own notes or import guides from elsewhere.
+
+Basic text formatting like **bold**, *italic*, <u>underscore</u>
+
+* Bulletpoint lists
+
+1. Numbered lists
+
+* [ ] Checkmarks
+
+`inline code`
+
+***
+
+| Support for tables |   |   |
+| ------------------ | - | - |
+|                    |   |   |
+|                    |   |   |
+"#;
+        let welcome_path = notes_dir.join(&welcome_name);
+        let _ = fs::write(welcome_path, welcome_content);
+        notes.push(welcome_name);
     }
     
     // Also check bundled location for notes that haven't been copied yet

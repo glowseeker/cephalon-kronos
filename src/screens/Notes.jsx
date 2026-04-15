@@ -92,62 +92,74 @@ export default function Notes() {
   const [editName, setEditName] = useState('')
   const [fileToDelete, setFileToDelete] = useState(null)
   const latestContentRef = useRef('')
+  const isDirtyRef = useRef(false)
   const activeFileRef = useRef(null)
 
   const loadFiles = async () => {
     try {
       const list = await invoke('list_notes')
       setFiles(list)
-      if (list.length > 0) selectFile(list[0])
+      if (list.length > 0 && !activeFileRef.current) selectFile(list[0])
     } catch (err) { console.error('list_notes failed:', err) }
   }
 
   useEffect(() => { loadFiles() }, [])
 
-  // Save note when switching to another tab or unmounting
-  useEffect(() => {
-    return () => {
-      if (activeFileRef.current && latestContentRef.current) {
-        invoke('save_note', { filename: activeFileRef.current, content: latestContentRef.current }).catch(() => {})
-      }
+  const saveIfDirty = useCallback(async (filename, currentContent) => {
+    if (!filename || !isDirtyRef.current) return
+    try {
+      await invoke('save_note', { filename, content: currentContent })
+      isDirtyRef.current = false
+      return true
+    } catch (err) {
+      console.error('save_note failed:', err)
+      return false
     }
   }, [])
 
+  // Save note when switching to another tab or unmounting
+  useEffect(() => {
+    return () => {
+      if (activeFileRef.current) {
+        saveIfDirty(activeFileRef.current, latestContentRef.current).catch(() => {})
+      }
+    }
+  }, [saveIfDirty])
+
   const selectFile = useCallback(async (filename) => {
     if (activeFileRef.current && activeFileRef.current !== filename) {
-      try { await invoke('save_note', { filename: activeFileRef.current, content: latestContentRef.current }) }
-      catch { }
+      await saveIfDirty(activeFileRef.current, latestContentRef.current)
     }
     if (!filename) {
       setActiveFile(null); setContent('')
-      latestContentRef.current = ''; activeFileRef.current = null
+      latestContentRef.current = ''; isDirtyRef.current = false; activeFileRef.current = null
       return
     }
     try {
       const text = await invoke('read_note', { filename })
       latestContentRef.current = text
+      isDirtyRef.current = false
       activeFileRef.current = filename
       setContent(text)
       setActiveFile(filename)
     } catch (err) { console.error('read_note failed:', err) }
-  }, [])
-
-  useEffect(() => () => {
-    if (activeFileRef.current)
-      invoke('save_note', { filename: activeFileRef.current, content: latestContentRef.current }).catch(console.error)
-  }, [])
+  }, [saveIfDirty])
 
   useEffect(() => {
     if (!activeFile) return
     const iv = setInterval(async () => {
-      if (!activeFileRef.current) return
+      if (!activeFileRef.current || !isDirtyRef.current) return
+
       setSaving(true)
-      try { await invoke('save_note', { filename: activeFileRef.current, content: latestContentRef.current }) }
-      catch { }
-      finally { setTimeout(() => setSaving(false), 2000) }
+      const saved = await saveIfDirty(activeFileRef.current, latestContentRef.current)
+      if (saved) {
+        setTimeout(() => setSaving(false), 2000)
+      } else {
+        setSaving(false)
+      }
     }, 15_000)
     return () => clearInterval(iv)
-  }, [activeFile])
+  }, [activeFile, saveIfDirty])
 
   const newFile = async () => {
     let name = 'New Note.md', n = 2
@@ -164,6 +176,7 @@ export default function Notes() {
     const finalName = newName.endsWith('.md') ? newName : `${newName}.md`
     if (files.includes(finalName)) { alert('A note with that name already exists'); return }
     try {
+      // If the renamed file is active, save its current (possibly unsaved) state to the new name
       const src = activeFile === oldName ? latestContentRef.current : await invoke('read_note', { filename: oldName })
       await invoke('save_note', { filename: finalName, content: src })
       await invoke('delete_note', { filename: oldName })
@@ -172,6 +185,7 @@ export default function Notes() {
       if (activeFile === oldName) {
         activeFileRef.current = finalName
         setActiveFile(finalName)
+        isDirtyRef.current = false // Content was just saved to the new file
       }
     } catch (err) { console.error('rename failed:', err) }
     finally { if (editingFile) setEditingFile(null) }
@@ -464,7 +478,10 @@ export default function Notes() {
                   <MDXEditor
                     key={activeFile}
                     markdown={content}
-                    onChange={val => { latestContentRef.current = val }}
+                    onChange={val => { 
+                      latestContentRef.current = val;
+                      isDirtyRef.current = true;
+                    }}
                     plugins={plugins}
                     className="dark-theme dark-editor kronos-editor h-full"
                     contentEditableClassName="prose-kronos-content"
