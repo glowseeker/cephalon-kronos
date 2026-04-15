@@ -292,10 +292,18 @@ async fn call_api_helper(app_handle: tauri::AppHandle) -> Result<Value, String> 
         }
     }
 
-    let output = std::process::Command::new(&bin_path)
-        .arg(format!("--output={}", inv_path.to_string_lossy()))
-        .current_dir(&inv_dir) // helper writes session .dat files here
-        .output()
+    let mut cmd = std::process::Command::new(&bin_path);
+    cmd.arg(format!("--output={}", inv_path.to_string_lossy()))
+       .current_dir(&inv_dir);
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let output = cmd.output()
         .map_err(|e| format!("Failed to launch warframe-api-helper: {e}"))?;
 
     if !output.status.success() {
