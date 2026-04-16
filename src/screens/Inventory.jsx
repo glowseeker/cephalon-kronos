@@ -486,17 +486,17 @@ export default function Inventory() {
         <div className="flex gap-3">
           <div className="relative flex-1 group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-kronos-dim group-focus-within:text-kronos-accent transition-colors" size={20} />
-            <Input placeholder={`Search in ${tabLabel}...`} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-12" />
+            <Input placeholder={`Search ${tabLabel}...`} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-12" />
           </div>
-          <Tooltip content="Filters">
-            <Button variant="secondary" onClick={() => setShowFilterSortPanel(v => !v)}><Filter size={20} className={showFilterSortPanel ? 'text-kronos-accent' : ''} /></Button>
-          </Tooltip>
-          <Tooltip content="Foundry">
-            <Button variant="secondary" onClick={() => setShowFoundry(true)} className="relative">
+            <Button variant="secondary" onClick={() => setShowFilterSortPanel(v => !v)} className="flex items-center gap-1">
+              <Filter size={20} className={showFilterSortPanel ? 'text-kronos-accent' : ''} />
+              <span>Filters</span>
+            </Button>
+            <Button variant="secondary" onClick={() => setShowFoundry(true)} className="relative flex items-center gap-1">
               <img src="/IconFoundry.png" alt="Foundry" className="w-6 h-6 object-contain" />
+              <span>Foundry</span>
               {inventoryData?.foundry?.some(i => i.ready) && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-kronos-bg" />}
             </Button>
-          </Tooltip>
         </div>
         {showFilterSortPanel && (
           <Card glow className="p-4 border-kronos-accent/30 animate-in slide-in-from-top-4 duration-300">
