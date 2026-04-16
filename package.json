@@ -1,6 +1,6 @@
 {
   "name": "cephalon-kronos",
-  "version": "0.2.0",
+  "version": "0.2.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "build:appimage": "NO_STRIP=1 tauri build --bundles appimage"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.0.0",
