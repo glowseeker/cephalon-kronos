@@ -664,8 +664,28 @@ fn hide_overlay_window(
 
 #[tauri::command]
 fn set_notification_sound(state: tauri::State<'_, AppState>, sound: String) -> Result<(), String> {
+    // Update in-memory state
     let mut current = state.notif_sound.lock().unwrap();
-    *current = sound;
+    *current = sound.clone();
+    
+    // Also persist to settings file
+    let settings_path = resolve_path("data/user/settings.json");
+    let mut settings: Value = if settings_path.exists() {
+        let content = std::fs::read_to_string(&settings_path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).unwrap_or_default()
+    } else {
+        serde_json::json!({})
+    };
+    settings["notif_sound"] = serde_json::json!(sound);
+    let content = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
+    
+    // Ensure directory exists
+    if let Some(parent) = settings_path.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+    std::fs::write(&settings_path, content).map_err(|e| e.to_string())?;
+    
+    println!("[set_notification_sound] Saved: {}", sound);
     Ok(())
 }
 
@@ -1073,7 +1093,7 @@ fn main() {
     
     tauri::Builder::default()
         .manage(AppState {
-            notif_sound: Arc::new(Mutex::new("notification1.ogg".to_string())),
+            notif_sound: Arc::new(Mutex::new(saved_sound.to_string())),
         })
         .on_window_event(|event| match event.event() {
             tauri::WindowEvent::CloseRequested { api, .. } => {

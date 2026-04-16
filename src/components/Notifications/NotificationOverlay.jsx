@@ -93,15 +93,28 @@ export default function NotificationOverlay() {
       for (const entry of entries) {
         const height = entry.target.scrollHeight
 
-        if (height > 40) {
-          invoke('resize_overlay_window', {
-            label: myLabel,
-            width: myWidth,
-            height: height
-          }).catch(console.error)
-          invoke('set_ignore_cursor_events', { label: myLabel, ignore: true }).catch(() => { })
-        } else {
-          invoke('resize_overlay_window', { label: myLabel, width: myWidth, height: 0 }).catch(() => { })
+        // Don't collapse if we have relic rewards
+        if (relic && relic.rewards && relic.rewards.length > 0) {
+          if (height > 40) {
+            invoke('resize_overlay_window', {
+              label: myLabel,
+              width: myWidth,
+              height: height
+            }).catch(console.error)
+            invoke('set_ignore_cursor_events', { label: myLabel, ignore: true }).catch(() => { })
+          } else {
+            invoke('resize_overlay_window', { label: myLabel, width: myWidth, height: 0 }).catch(() => { })
+          }
+        }
+        // For toasts, always resize normally
+        else if (visibleToasts.length > 0) {
+          if (height > 40) {
+            invoke('resize_overlay_window', {
+              label: myLabel,
+              width: myWidth,
+              height: height
+            }).catch(console.error)
+          }
         }
       }
     })
