@@ -4,6 +4,8 @@ import { formatLastUpdate } from './lib/warframeUtils'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { MonitoringProvider } from './contexts/MonitoringContext'
 import { Tooltip } from './components/UI'
+import { AlertTriangle } from 'lucide-react'
+import { open } from '@tauri-apps/api/shell'
 
 // Screens (lazy-loaded, main window only)
 const Dashboard = lazy(() => import('./screens/Dashboard'))
@@ -40,16 +42,8 @@ const NAV_ITEMS = [
 // It only needs ThemeProvider for CSS variable access.
 
 function OverlayApp() {
-  // The overlay URL uses ?overlay=true (not #overlay), so the index.html script
-  // that adds class="is-overlay" never fires. Set transparent backgrounds here.
-  useEffect(() => {
-    const s = 'background:transparent!important;background-color:transparent!important'
-    document.documentElement.style.cssText += ';' + s
-    document.body.style.cssText += ';' + s
-    const root = document.getElementById('root')
-    if (root) root.style.cssText += ';' + s
-  }, [])
-
+  // Transparency is set synchronously in index.html before React renders,
+  // so no useEffect is needed here — eliminating the Linux first-frame black flash.
   return (
     <ThemeProvider>
       <main
@@ -61,6 +55,69 @@ function OverlayApp() {
         </Suspense>
       </main>
     </ThemeProvider>
+  )
+}
+
+// ─── First-run Disclaimer Modal ────────────────────────────────────────────────
+// Shown exactly once on first launch; acceptance stored in localStorage.
+
+function DisclaimerModal() {
+  const [show, setShow] = useState(false)
+  const [checked, setChecked] = useState(false)
+
+  useEffect(() => {
+    if (!localStorage.getItem('disclaimer-accepted')) setShow(true)
+  }, [])
+
+  const accept = () => {
+    if (!checked) return
+    localStorage.setItem('disclaimer-accepted', 'true')
+    setShow(false)
+  }
+
+  if (!show) return null
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="bg-kronos-bg border border-red-500/40 rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl">
+        <div className="flex items-start gap-3 mb-4">
+          <AlertTriangle className="text-red-500 flex-shrink-0 mt-0.5" size={24} />
+          <h2 className="text-lg font-black uppercase tracking-tight text-red-400">Important Disclaimer</h2>
+        </div>
+        <p className="text-sm text-kronos-text/90 mb-3 leading-relaxed">
+          This app uses{' '}
+          <button
+            onClick={() => open('https://github.com/Obsidian-Jackal/warframe-api-helper').catch(() => {})}
+            className="text-kronos-accent hover:underline"
+          >
+            warframe-api-helper
+          </button>
+          {' '}to extract your session tokens from game memory.
+        </p>
+        <ul className="text-xs text-kronos-text/80 space-y-1 mb-3 list-disc list-inside">
+          <li>I am not the developer of the software linked above.</li>
+          <li>Digital Extremes has not approved this application.</li>
+        </ul>
+        <p className="text-red-400 font-medium text-xs mb-1">Use at your own risk — potential ban risk always exists.</p>
+        <p className="text-kronos-dim text-xs mb-6">The app never modifies game files or memory, only reads authentication tokens.</p>
+        <label className="flex items-start gap-3 cursor-pointer mb-6">
+          <div
+            onClick={() => setChecked(v => !v)}
+            className={`w-5 h-5 flex-shrink-0 rounded border-2 flex items-center justify-center transition-all mt-0.5 ${checked ? 'bg-kronos-accent border-kronos-accent' : 'border-white/20 hover:border-white/40'}`}
+          >
+            {checked && <span className="text-kronos-bg text-xs font-black">✓</span>}
+          </div>
+          <span className="text-sm text-kronos-text/90">I understand and accept the risks described above.</span>
+        </label>
+        <button
+          onClick={accept}
+          disabled={!checked}
+          className={`w-full py-3 rounded-xl font-black uppercase tracking-wider text-sm transition-all ${checked ? 'bg-kronos-accent text-kronos-bg hover:brightness-110' : 'bg-white/5 text-kronos-dim cursor-not-allowed'}`}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -199,6 +256,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <MonitoringProvider>
+        <DisclaimerModal />
         <AppContent />
       </MonitoringProvider>
     </ThemeProvider>
