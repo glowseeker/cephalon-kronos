@@ -534,8 +534,13 @@ export default function Inventory() {
           </Card>
         )}
         <Tabs tabs={INVENTORY_TABS} activeTab={activeTab} onChange={(id) => { setActiveTab(id); setCurrentFilters({}) }} />
-        {inventoryData && <p className="text-xs text-kronos-dim">Showing {visibleItems.length} of {filteredItems.length} items</p>}
-        {isInventoryLoading ? (
+        {inventoryData && (
+          <p className="text-xs text-kronos-dim flex items-center gap-2">
+            Showing {visibleItems.length} of {filteredItems.length} items
+            {isInventoryLoading && <span className="w-3 h-3 border border-kronos-accent/40 border-t-kronos-accent rounded-full animate-spin" />}
+          </p>
+        )}
+        {inventoryData === undefined ? (
           <MonitorState isLoading className="py-20" />
         ) : inventoryData === null ? (
           <MonitorState className="py-20" />
