@@ -702,10 +702,15 @@ fn show_overlay_window(
         "overlay-tl"    => (phys_margin, phys_margin),
         "overlay-tc"    => (((screen_w as i32 - phys_w as i32) / 2), phys_margin),
         "overlay-relic" => {
-            let relic_w = (640.0 * scale) as u32;
-            let relic_h = (260.0 * scale) as u32;
-            let rx = (screen_w as i32 - relic_w as i32) / 2;
-            let ry = screen_h as i32 - relic_h as i32 - phys_margin;
+            let relic_w_f = 640.0 * scale;
+            let relic_h_f = 140.0 * scale;
+            let margin_f  = 16.0 * scale;
+
+            let rx = ((screen_w as f64 - relic_w_f) / 2.0).round() as i32;
+            let ry = (screen_h as f64 - relic_h_f - margin_f).round() as i32;
+
+            let relic_w = relic_w_f.round() as u32;
+            let relic_h = relic_h_f.round() as u32;
             let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
                 width: relic_w, height: relic_h,
             }));
@@ -830,24 +835,29 @@ fn resize_overlay_window(
         "overlay-tl"    => (phys_margin, phys_margin),
         "overlay-tc"    => (((screen_w as i32 - phys_w as i32) / 2), phys_margin),
         "overlay-relic" => {
-            let rx = (screen_w as i32 - phys_w as i32) / 2;
-            let ry = screen_h as i32 - phys_h as i32 - phys_margin;
+            let relic_w_f = width as f64 * scale;
+            let relic_h_f = height as f64 * scale;
+            let margin_f  = 16.0 * scale;
+
+            let rx = ((screen_w as f64 - relic_w_f) / 2.0).round() as i32;
+            let ry = (screen_h as f64 - relic_h_f - margin_f).round() as i32;
             (rx, ry)
         }
         _ => (screen_w as i32 - phys_w as i32 - phys_margin, phys_margin),
     };
 
-    let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-        width: phys_w, height: phys_h,
-    }));
-
-    let _ = window.set_position(tauri::Position::Physical(
-        tauri::PhysicalPosition { x, y }
-    ));
-
     if height > 0 {
+        let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
+            width: phys_w, height: phys_h,
+        }));
+
+        let _ = window.set_position(tauri::Position::Physical(
+            tauri::PhysicalPosition { x, y }
+        ));
+
         let _ = window.show();
         let _ = window.set_always_on_top(true);
+        // ... rest of the logic ...
 
         // Platform Specific Fixes
         #[cfg(target_os = "macos")]

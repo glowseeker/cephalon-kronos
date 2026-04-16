@@ -151,7 +151,7 @@ export default function NotificationOverlay() {
   return (
     <div
       ref={containerRef}
-      className={`flex flex-col gap-2 p-10 select-none pointer-events-none ${POS_CLASSES[myPos]}`}
+      className={`flex flex-col gap-2 select-none pointer-events-none ${POS_CLASSES[myPos]} ${myPos === 'relic' ? 'p-0' : 'p-10'}`}
       style={{ width: `${myWidth}px` }}
     >
       {visibleToasts.map((t, index) => (
@@ -299,7 +299,7 @@ function RelicCard({ data, onClose }) {
         background: 'var(--color-panel)',
         border: '1px solid rgba(var(--color-accent-rgb), 0.22)',
         borderTop: '3px solid var(--color-accent)',
-        width: '560px',
+        width: '640px',
       }}>
       <div className="flex items-center justify-between px-4 py-2"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
