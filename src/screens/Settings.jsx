@@ -1,25 +1,14 @@
-/**
- * Settings.jsx
- *
- * Interface for global application configuration and monitoring control.
- *
- * RESPONSIBILITIES
- * ─────────────────────────────────────────
- * 1. Theme Management (via ThemeContext): Allows switching between predefined
- *    Warframe-themed colour palettes.
- * 2. Monitoring Control (via MonitoringContext): Starts/stops the worldstate
- *    polling and inventory scan process.
- * 3. Status Display: Shows real-time backend connection status and last
- *    update timestamps.
- */
+// Remove duplicate - using App.jsx version instead
 import { useState, useEffect } from 'react'
-import { Wifi, WifiOff, RefreshCw, Palette, Bell } from 'lucide-react'
-import { PageLayout, Card, Button, Toggle } from '../components/UI'
+import { Palette, Bell, Clock, AlertTriangle, Star, CheckCircle, Settings as SettingsIcon, Zap, Save, RefreshCw, Play, X, WifiOff } from 'lucide-react'
+import { open } from '@tauri-apps/api/shell'
+import { invoke } from '@tauri-apps/api/tauri'
+import { listen } from '@tauri-apps/api/event'
+import { getSetting, setSetting } from '../lib/settings'
 import { useTheme } from '../contexts/ThemeContext'
 import { useMonitoring } from '../contexts/MonitoringContext'
 import { formatLastUpdate } from '../lib/warframeUtils'
-import { invoke } from '@tauri-apps/api/tauri'
-import { listen } from '@tauri-apps/api/event'
+import { PageLayout, Card, Button, Toggle } from '../components/UI'
 
 export default function SettingsScreen() {
   const { theme, setTheme, themes } = useTheme()
@@ -28,47 +17,47 @@ export default function SettingsScreen() {
   const [error, setError] = useState(null)
   const [isCalibrationOpen, setIsCalibrationOpen] = useState(false)
 
+  // Notification settings
   const [notifPosition, setNotifPosition] = useState(
-    () => localStorage.getItem('notif_position') || 'top-right'
+    () => getSetting('notif_position', 'top-right')
   )
   const [notifSound, setNotifSound] = useState(
-    () => localStorage.getItem('notif_sound') || 'notification1.ogg'
+    () => getSetting('notif_sound', 'notification1.ogg')
   )
 
-  // Notification settings
   const [notifArbitrationEnabled, setNotifArbitrationEnabled] = useState(
-    () => localStorage.getItem('notif_arbitration_enabled') === 'true'
+    () => getSetting('notif_arbitration_enabled', false)
   )
   const [notifArbitrationHours, setNotifArbitrationHours] = useState(
-    () => parseInt(localStorage.getItem('notif_arbitration_hours')) || 24
+    () => parseInt(getSetting('notif_arbitration_hours', 24))
   )
   const [notifArbitrationRemind, setNotifArbitrationRemind] = useState(
-    () => parseInt(localStorage.getItem('notif_arbitration_remind')) || 30
+    () => parseInt(getSetting('notif_arbitration_remind', 30))
   )
 
   const [notifFoundryEnabled, setNotifFoundryEnabled] = useState(
-    () => localStorage.getItem('notif_foundry_enabled') === 'true'
+    () => getSetting('notif_foundry_enabled', false)
   )
   const [notifFoundryMinutes, setNotifFoundryMinutes] = useState(
-    () => parseInt(localStorage.getItem('notif_foundry_minutes')) || 5
+    () => parseInt(getSetting('notif_foundry_minutes', 5))
   )
 
   const [notifSyndicateEnabled, setNotifSyndicateEnabled] = useState(
-    () => localStorage.getItem('notif_syndicate_enabled') === 'true'
+    () => getSetting('notif_syndicate_enabled', false)
   )
   const [notifSyndicateWasteEnabled, setNotifSyndicateWasteEnabled] = useState(
-    () => localStorage.getItem('notif_syndicate_waste_enabled') === 'true'
+    () => getSetting('notif_syndicate_waste_enabled', false)
   )
 
   const [notifMasteryEnabled, setNotifMasteryEnabled] = useState(
-    () => localStorage.getItem('notif_mastery_enabled') === 'true'
+    () => getSetting('notif_mastery_enabled', false)
   )
   const [notifMasteryPercent, setNotifMasteryPercent] = useState(
-    () => parseInt(localStorage.getItem('notif_mastery_percent')) || 50
+    () => parseInt(getSetting('notif_mastery_percent', 50))
   )
 
   const [notifChecklistMinutes, setNotifChecklistMinutes] = useState(
-    () => parseInt(localStorage.getItem('notif_checklist_minutes')) || 60
+    () => parseInt(getSetting('notif_checklist_minutes', 60))
   )
 
   // Listen for calibration window close from X button
@@ -94,76 +83,76 @@ export default function SettingsScreen() {
     }
   }
 
-  const handleSetPosition = (pos) => {
+  const handleSetPosition = async (pos) => {
     setNotifPosition(pos)
-    localStorage.setItem('notif_position', pos)
+    await setSetting('notif_position', pos)
   }
 
   useEffect(() => {
     // Sync current sound to Rust backend on mount
-    const savedSound = localStorage.getItem('notif_sound') || 'notification1.ogg'
+    const savedSound = getSetting('notif_sound', 'notification1.ogg')
     invoke('set_notification_sound', { sound: savedSound }).catch(console.error)
   }, [])
 
-  const handleSetSound = (sound) => {
+  const handleSetSound = async (sound) => {
     setNotifSound(sound)
-    localStorage.setItem('notif_sound', sound)
+    await setSetting('notif_sound', sound)
 
     // Update Rust state for ALL future notifications
-    invoke('set_notification_sound', { sound }).catch(console.error)
+    await invoke('set_notification_sound', { sound }).catch(console.error)
 
     // Preview sound via Rust (one-time manual play)
     if (sound !== 'none') {
-      invoke('play_notification_sound', { sound }).catch(console.error)
+      await invoke('play_notification_sound', { sound }).catch(console.error)
     }
   }
 
   // Arbitration settings handlers
-  const handleSetArbitrationEnabled = (val) => {
+  const handleSetArbitrationEnabled = async (val) => {
     setNotifArbitrationEnabled(val)
-    localStorage.setItem('notif_arbitration_enabled', String(val))
+    await setSetting('notif_arbitration_enabled', val)
   }
-  const handleSetArbitrationHours = (val) => {
+  const handleSetArbitrationHours = async (val) => {
     setNotifArbitrationHours(val)
-    localStorage.setItem('notif_arbitration_hours', String(val))
+    await setSetting('notif_arbitration_hours', val)
   }
-  const handleSetArbitrationRemind = (val) => {
+  const handleSetArbitrationRemind = async (val) => {
     setNotifArbitrationRemind(val)
-    localStorage.setItem('notif_arbitration_remind', String(val))
+    await setSetting('notif_arbitration_remind', val)
   }
 
   // Foundry settings handlers
-  const handleSetFoundryEnabled = (val) => {
+  const handleSetFoundryEnabled = async (val) => {
     setNotifFoundryEnabled(val)
-    localStorage.setItem('notif_foundry_enabled', String(val))
+    await setSetting('notif_foundry_enabled', val)
   }
-  const handleSetFoundryMinutes = (val) => {
+  const handleSetFoundryMinutes = async (val) => {
     setNotifFoundryMinutes(val)
-    localStorage.setItem('notif_foundry_minutes', String(val))
+    await setSetting('notif_foundry_minutes', val)
   }
 
   // Syndicate settings handlers
-  const handleSetSyndicateEnabled = (val) => {
+  const handleSetSyndicateEnabled = async (val) => {
     setNotifSyndicateEnabled(val)
-    localStorage.setItem('notif_syndicate_enabled', String(val))
+    await setSetting('notif_syndicate_enabled', val)
   }
-  const handleSetSyndicateWasteEnabled = (val) => {
+  const handleSetSyndicateWasteEnabled = async (val) => {
     setNotifSyndicateWasteEnabled(val)
-    localStorage.setItem('notif_syndicate_waste_enabled', String(val))
+    await setSetting('notif_syndicate_waste_enabled', val)
   }
 
   // Mastery settings handlers
-  const handleSetMasteryEnabled = (val) => {
+  const handleSetMasteryEnabled = async (val) => {
     setNotifMasteryEnabled(val)
-    localStorage.setItem('notif_mastery_enabled', String(val))
+    await setSetting('notif_mastery_enabled', val)
   }
-  const handleSetMasteryPercent = (val) => {
+  const handleSetMasteryPercent = async (val) => {
     setNotifMasteryPercent(val)
-    localStorage.setItem('notif_mastery_percent', String(val))
+    await setSetting('notif_mastery_percent', val)
   }
-  const handleSetChecklistMinutes = (val) => {
+  const handleSetChecklistMinutes = async (val) => {
     setNotifChecklistMinutes(val)
-    localStorage.setItem('notif_checklist_minutes', String(val))
+    await setSetting('notif_checklist_minutes', val)
   }
 
   const handleTestNotification = (position, delay = 0) => {
@@ -257,7 +246,7 @@ export default function SettingsScreen() {
             <Bell className="text-kronos-accent" size={24} />
             <h2 className="text-xl font-semibold uppercase tracking-tight">App Notifications</h2>
           </div>
-          
+
           {/* Position & Sound - side by side on wide, stacked on narrow */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
             <div>

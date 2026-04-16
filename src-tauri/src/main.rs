@@ -1028,9 +1028,49 @@ async fn show_notification(
     Ok(())
 }
 
+/// Save a JSON settings object to data/user/settings.json.
+#[tauri::command]
+async fn save_settings(settings: Value) -> Result<(), String> {
+    let settings_dir = resolve_path("data/user");
+    if !settings_dir.exists() {
+        fs::create_dir_all(&settings_dir).map_err(|e| e.to_string())?;
+    }
+    let content = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
+    fs::write(settings_dir.join("settings.json"), content).map_err(|e| e.to_string())
+}
+
+/// Load the JSON settings object from data/user/settings.json.
+/// Returns an empty object if the file doesn't exist.
+#[tauri::command]
+async fn load_settings() -> Result<Value, String> {
+    let path = resolve_path("data/user/settings.json");
+    if !path.exists() {
+        return Ok(serde_json::json!({}));
+    }
+    let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&content).map_err(|e| e.to_string())
+}
+
 // ─── Entry Point ──────────────────────────────────────────────────────────────
 
 fn main() {
+    // Load settings at startup to get saved notif_sound and notif_position
+    let saved_settings = std::fs::read_to_string(resolve_path("data/user/settings.json"))
+        .ok()
+        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+        .unwrap_or_default();
+    
+    let saved_sound = saved_settings.get("notif_sound")
+        .and_then(|v| v.as_str())
+        .unwrap_or("notification1.ogg");
+    
+    let saved_theme = saved_settings.get("kronos-theme")
+        .and_then(|v| v.as_str())
+        .unwrap_or("vitruvian");
+    
+    println!("[Startup] Loaded theme: {}", saved_theme);
+    println!("[Startup] Loaded sound: {}", saved_sound);
+    
     tauri::Builder::default()
         .manage(AppState {
             notif_sound: Arc::new(Mutex::new("notification1.ogg".to_string())),
@@ -1078,6 +1118,8 @@ fn main() {
             set_ignore_cursor_events,
             play_notification_sound,
             set_notification_sound,
+            save_settings,
+            load_settings,
             // --- calibration ---
             toggle_calibration,
         ])

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { emit, listen } from '@tauri-apps/api/event'
 import { appWindow } from '@tauri-apps/api/window'
+import { loadSettings, getSetting, setSetting } from '../lib/settings'
 
 const ThemeContext = createContext()
 
@@ -22,17 +23,31 @@ export const THEMES = [
 ]
 
 export function ThemeProvider({ children }) {
-  const [theme, setThemeState] = useState(() => {
-    return localStorage.getItem('kronos-theme') || 'vitruvian'
-  })
+  const [loaded, setLoaded] = useState(false)
+  const [theme, setThemeState] = useState('vitruvian') // Start with default, update after load
   
-  // Use a ref to keep track of the current theme for the listener closure
-  const themeRef = useRef(theme)
+  const themeRef = useRef('vitruvian')
+  
+  // Load settings and set theme on mount
   useEffect(() => {
+    loadSettings().then(() => {
+      const saved = getSetting('kronos-theme', 'vitruvian')
+      setThemeState(saved)
+      themeRef.current = saved
+      document.documentElement.setAttribute('data-theme', saved)
+      setLoaded(true)
+    }).catch(err => {
+      console.error('Failed to load settings:', err)
+      setLoaded(true)
+    })
+  }, [])
+  
+  useEffect(() => {
+    if (!loaded) return // Don't save until loaded
     themeRef.current = theme
     document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('kronos-theme', theme)
-  }, [theme])
+    setSetting('kronos-theme', theme) // Persist theme change
+  }, [theme, loaded])
 
   const setTheme = (newTheme, remote = false) => {
     if (newTheme === themeRef.current) return
