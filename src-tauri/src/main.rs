@@ -1024,28 +1024,7 @@ fn main() {
             _ => {}
         })
         .setup(|app| {
-            // Get the main window
-            let main_window = app.get_window("main").unwrap();
-
-            // Set up on_navigation for the main window's webview
-            main_window.on_navigation(|url| {
-                let url_str = url.as_str();
-                let is_internal_tauri = url_str.starts_with("tauri://");
-                let is_internal_localhost_http = url_str.starts_with("http://localhost");
-                let is_internal_localhost_https = url_str.starts_with("https://localhost");
-
-                if !is_internal_tauri && !is_internal_localhost_http && !is_internal_localhost_https {
-                    // It's an external URL, open in default browser
-                    if let Err(e) = shell::open(&main_window.shell_scope(), url_str, None) {
-                        eprintln!("Failed to open external URL {}: {}", url_str, e);
-                    }
-                    // Prevent navigation in webview
-                    false
-                } else {
-                    // Allow navigation for internal Tauri URLs or localhost (dev server) URLs
-                    true
-                }
-            });
+            let _ = app.get_window("main").unwrap();
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
