@@ -642,8 +642,11 @@ async fn show_relic_overlay(
         "persistent": persistent.unwrap_or(false)
     });
 
-    // Show and position the relic window
+    // Show and position the relic window first
     let _ = show_overlay_window(app_handle.clone(), "overlay-relic".to_string());
+    
+    // Longer delay - window needs time to actually appear and JS to be ready
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
 
     app_handle.emit_all("show-relic-rewards", payload)
         .map_err(|e| e.to_string())?;
@@ -694,10 +697,12 @@ fn show_overlay_window(
     app_handle: tauri::AppHandle,
     label: String,
 ) -> Result<(), String> {
+    eprintln!("[show_overlay_window] Called for: {}", label);
+    
     let window = app_handle
         .get_window(&label)
         .ok_or_else(|| format!("window '{}' not found", label))?;
-
+    
     let monitor = window.primary_monitor()
         .map_err(|e| e.to_string())?
         .ok_or("no primary monitor")?;
@@ -728,6 +733,10 @@ fn show_overlay_window(
 
             let rx = ((screen_w as f64 - relic_w_f) / 2.0).round() as i32;
             let ry = (screen_h as f64 - relic_h_f - margin_f).round() as i32;
+            eprintln!(
+                "[Relic Overlay] Initial position: x={}, y={}, width={}, height={}",
+                rx, ry, relic_w_f, relic_h_f
+            );
 
             let relic_w = relic_w_f.round() as u32;
             let relic_h = relic_h_f.round() as u32;
@@ -861,6 +870,10 @@ fn resize_overlay_window(
 
             let rx = ((screen_w as f64 - relic_w_f) / 2.0).round() as i32;
             let ry = (screen_h as f64 - relic_h_f - margin_f).round() as i32;
+            eprintln!(
+                "[Relic Overlay] Resizing: height={}, scale={}, rx={}, ry={}",
+                height, scale, rx, ry
+            );
             (rx, ry)
         }
         _ => (screen_w as i32 - phys_w as i32 - phys_margin, phys_margin),
