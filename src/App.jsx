@@ -6,6 +6,7 @@ import { MonitoringProvider } from './contexts/MonitoringContext'
 import { Tooltip } from './components/UI'
 import { AlertTriangle } from 'lucide-react'
 import { open } from '@tauri-apps/api/shell'
+import { loadSettings, getSetting, setSetting } from './lib/settings'
 
 // Screens (lazy-loaded, main window only)
 const Dashboard = lazy(() => import('./screens/Dashboard'))
@@ -64,18 +65,25 @@ function OverlayApp() {
 function DisclaimerModal() {
   const [show, setShow] = useState(false)
   const [checked, setChecked] = useState(false)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem('disclaimer-accepted')) setShow(true)
+    loadSettings().then(() => {
+      if (!getSetting('disclaimer-accepted')) setShow(true)
+      setReady(true)
+    })
   }, [])
 
-  const accept = () => {
+  const accept = async () => {
+    console.log('Accept clicked, checked:', checked)
     if (!checked) return
-    localStorage.setItem('disclaimer-accepted', 'true')
+    console.log('Saving disclaimer...')
+    await setSetting('disclaimer-accepted', 'true')
+    console.log('Saved, closing...')
     setShow(false)
   }
 
-  if (!show) return null
+  if (!ready || !show) return null
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
@@ -87,7 +95,7 @@ function DisclaimerModal() {
         <p className="text-sm text-kronos-text/90 mb-3 leading-relaxed">
           This app uses{' '}
           <button
-            onClick={() => open('https://github.com/Obsidian-Jackal/warframe-api-helper').catch(() => {})}
+            onClick={() => open('https://github.com/Obsidian-Jackal/warframe-api-helper').catch(err => console.error('Link error:', err))}
             className="text-kronos-accent hover:underline"
           >
             warframe-api-helper
@@ -98,7 +106,7 @@ function DisclaimerModal() {
           <li>I am not the developer of the software linked above.</li>
           <li>Digital Extremes has not approved this application.</li>
         </ul>
-        <p className="text-red-400 font-medium text-xs mb-1">Use at your own risk — potential ban risk always exists.</p>
+        <p className="text-red-400 font-medium text-xs mb-1">Use at your own risk - potential ban risk always exists.</p>
         <p className="text-kronos-dim text-xs mb-6">The app never modifies game files or memory, only reads authentication tokens.</p>
         <label className="flex items-start gap-3 cursor-pointer mb-6">
           <div
