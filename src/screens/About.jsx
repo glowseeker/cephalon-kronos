@@ -56,7 +56,7 @@ export default function About() {
             Track your inventory, relics, rivens and mastery alongside a live worldstate with timers, fissures, arbitrations and more.
           </p>
           <a
-            href="https://github.com/glowseeker/cephalon-kronos"
+            href="#"
             onClick={(e) => handleOpenLink(e, 'https://github.com/glowseeker/cephalon-kronos')}
             className="inline-flex items-center gap-2 text-kronos-accent hover:text-kronos-accent-secondary transition-colors text-sm font-medium"
           >
@@ -74,7 +74,7 @@ export default function About() {
                 <span className="text-kronos-accent font-bold flex-shrink-0">•</span>
                 <span>
                   <a
-                    href={href}
+                    href="#"
                     onClick={(e) => handleOpenLink(e, href)}
                     className="font-bold text-kronos-accent hover:underline"
                   >
@@ -96,7 +96,7 @@ export default function About() {
               <p className="text-kronos-text/90 text-sm leading-relaxed mb-2">
                 This app uses{' '}
                 <a
-                  href="https://github.com/Obsidian-Jackal/warframe-api-helper"
+                  href="#"
                   onClick={(e) => handleOpenLink(e, 'https://github.com/Obsidian-Jackal/warframe-api-helper')}
                   className="text-kronos-accent hover:underline"
                 >

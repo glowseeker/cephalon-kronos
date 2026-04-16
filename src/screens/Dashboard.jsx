@@ -32,6 +32,7 @@ import {
   Settings, Check, MoreHorizontal, Trophy, Star
 } from 'lucide-react'
 import { useMonitoring } from '../contexts/MonitoringContext'
+import { open } from '@tauri-apps/api/shell'
 import {
   resolveNode,
   resolveMissionType,
@@ -1600,14 +1601,12 @@ export default function Dashboard() {
                 {worldstate.news.slice(0, 3).map((item, idx) => (
                   <div key={idx} className="text-xs">
                     {item.link ? (
-                      <a
-                        href={item.link}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-bold hover:text-kronos-accent transition-colors block leading-tight"
+                      <button
+                        onClick={() => open(item.link).catch(console.error)}
+                        className="font-bold hover:text-kronos-accent transition-colors block leading-tight text-left w-full"
                       >
                         {item.message}
-                      </a>
+                      </button>
                     ) : (
                       <p className="font-bold leading-tight">{item.message}</p>
                     )}

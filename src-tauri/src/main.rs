@@ -9,7 +9,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 use std::fs;
 use tauri::Manager;
-use tauri::api::shell;
 use std::io::BufReader;
 use std::sync::{Arc, Mutex};
 use rodio::{Decoder, OutputStream, Sink};
