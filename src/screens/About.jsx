@@ -28,9 +28,11 @@ export default function About() {
       await invoke('open_url', { url })
     } catch (err) {
       console.error('Failed to open link with custom open_url command:', err)
-      // Removed window.open fallback as it leads to inconsistent behavior in packaged applications
-      // and does not open external links correctly. The Tauri shell API should be used exclusively.
     }
+  }
+
+  const handleDragStart = (e, url) => {
+    e.dataTransfer.setData('text/plain', url);
   }
 
   return (
@@ -56,8 +58,11 @@ export default function About() {
             Track your inventory, relics, rivens and mastery alongside a live worldstate with timers, fissures, arbitrations and more.
           </p>
           <a
-            href="#"
+            href="https://github.com/glowseeker/cephalon-kronos"
+            target="_blank"
+            rel="noopener noreferrer"
             onClick={(e) => handleOpenLink(e, 'https://github.com/glowseeker/cephalon-kronos')}
+            onDragStart={(e) => handleDragStart(e, 'https://github.com/glowseeker/cephalon-kronos')}
             className="inline-flex items-center gap-2 text-kronos-accent hover:text-kronos-accent-secondary transition-colors text-sm font-medium"
           >
             <Github size={18} />
@@ -74,8 +79,11 @@ export default function About() {
                 <span className="text-kronos-accent font-bold flex-shrink-0">•</span>
                 <span>
                   <a
-                    href="#"
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={(e) => handleOpenLink(e, href)}
+                    onDragStart={(e) => handleDragStart(e, href)}
                     className="font-bold text-kronos-accent hover:underline"
                   >
                     {name}
@@ -96,8 +104,11 @@ export default function About() {
               <p className="text-kronos-text/90 text-sm leading-relaxed mb-2">
                 This app uses{' '}
                 <a
-                  href="#"
+                  href="https://github.com/Obsidian-Jackal/warframe-api-helper"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   onClick={(e) => handleOpenLink(e, 'https://github.com/Obsidian-Jackal/warframe-api-helper')}
+                  onDragStart={(e) => handleDragStart(e, 'https://github.com/Obsidian-Jackal/warframe-api-helper')}
                   className="text-kronos-accent hover:underline"
                 >
                   warframe-api-helper

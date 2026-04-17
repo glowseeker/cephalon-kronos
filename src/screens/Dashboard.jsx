@@ -1601,12 +1601,16 @@ export default function Dashboard() {
                 {worldstate.news.slice(0, 3).map((item, idx) => (
                   <div key={idx} className="text-xs">
                     {item.link ? (
-                      <button
-                        onClick={() => invoke('open_url', { url: item.link }).catch(console.error)}
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => { e.preventDefault(); invoke('open_url', { url: item.link }).catch(console.error) }}
+                        onDragStart={(e) => e.dataTransfer.setData('text/plain', item.link)}
                         className="font-bold hover:text-kronos-accent transition-colors block leading-tight text-left w-full"
                       >
                         {item.message}
-                      </button>
+                      </a>
                     ) : (
                       <p className="font-bold leading-tight">{item.message}</p>
                     )}

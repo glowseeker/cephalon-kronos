@@ -94,12 +94,16 @@ function DisclaimerModal() {
         </div>
         <p className="text-sm text-kronos-text/90 mb-3 leading-relaxed">
           This app uses{' '}
-          <button
-            onClick={() => invoke('open_url', { url: 'https://github.com/Obsidian-Jackal/warframe-api-helper' }).catch(err => console.error('Link error:', err))}
+          <a
+            href="https://github.com/Obsidian-Jackal/warframe-api-helper"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => { e.preventDefault(); invoke('open_url', { url: 'https://github.com/Obsidian-Jackal/warframe-api-helper' }).catch(err => console.error('Link error:', err)) }}
+            onDragStart={(e) => e.dataTransfer.setData('text/plain', 'https://github.com/Obsidian-Jackal/warframe-api-helper')}
             className="text-kronos-accent hover:underline"
           >
             warframe-api-helper
-          </button>
+          </a>
           {' '}to extract your session tokens from game memory.
         </p>
         <ul className="text-xs text-kronos-text/80 space-y-1 mb-3 list-disc list-inside">
