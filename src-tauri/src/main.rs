@@ -633,9 +633,7 @@ async fn show_relic_overlay(
     rewards: Value,
     persistent: Option<bool>,
 ) -> Result<(), String> {
-    // Play sound
-    let sound = state.notif_sound.lock().unwrap().clone();
-    let _ = play_notification_sound(app_handle.clone(), sound);
+    let app = app_handle.clone();
 
     let payload = serde_json::json!({
         "rewards": rewards,
@@ -643,13 +641,35 @@ async fn show_relic_overlay(
     });
 
     // Show and position the relic window first
-    let _ = show_overlay_window(app_handle.clone(), "overlay-relic".to_string());
-    
+    let _ = show_overlay_window(app.clone(), "overlay-relic".to_string());
+
     // Longer delay - window needs time to actually appear and JS to be ready
     tokio::time::sleep(std::time::Duration::from_millis(300)).await;
 
-    app_handle.emit_all("show-relic-rewards", payload)
+    app.emit_all("show-relic-rewards", payload)
         .map_err(|e| e.to_string())?;
+
+    // On Linux, also schedule removal via Rust timer (JS timers get throttled on Wayland)
+    #[cfg(target_os = "linux")]
+    {
+        let app_for_timer = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_secs(15));
+            let _ = app_for_timer.emit_all("remove-relic-rewards", ());
+            if let Some(w) = app_for_timer.get_window("overlay-relic") {
+                let _ = w.hide();
+            }
+        });
+    }
+
+    // Also auto-hide after 15 seconds if not persistent
+    if !persistent.unwrap_or(false) {
+        let app_for_hide = app.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_secs(15)).await;
+            let _ = hide_overlay_window(app_for_hide, "overlay-relic".to_string());
+        });
+    }
 
     Ok(())
 }
@@ -944,56 +964,75 @@ fn set_ignore_cursor_events(
 }
 
 #[tauri::command]
-fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) -> Result<(), String> {
+async fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) -> Result<(), String> {
     if sound == "none" {
         return Ok(());
     }
 
-    // Candidate paths for the audio file:
-    // 1. Bundled resource (production)
-    // 2. Local dev path (relative to binary)
-    // 3. Local dev path (relative to CARGO_MANIFEST_DIR)
-    let candidates = [
-        app_handle.path_resolver().resolve_resource(&format!("audio/{}", sound)),
-        app_handle.path_resolver().resolve_resource(&sound),
-        std::env::current_exe().ok().and_then(|exe| {
-            exe.ancestors().nth(4).map(|root| root.join("public/audio").join(&sound))
-        }),
-        Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../public/audio").join(&sound)),
-    ];
+    let sound_path = app_handle.path_resolver().resolve_resource(&format!("audio/{}", sound));
+    if let Some(path) = sound_path {
+        if path.exists() {
+            let path_clone = path.clone();
+            tokio::task::spawn_blocking(move || {
+                use std::process::Command;
 
-    let resource_path = candidates.into_iter()
-        .flatten()
-        .find(|p| p.exists())
-        .ok_or_else(|| format!("Could not find sound file: {}", sound))?;
-
-    eprintln!("[Audio] Using path: {:?}", resource_path);
-
-    std::thread::spawn(move || {
-        match OutputStream::try_default() {
-            Ok((_stream, stream_handle)) => {
-                match Sink::try_new(&stream_handle) {
-                    Ok(sink) => {
-                        match fs::File::open(&resource_path) {
-                            Ok(file) => {
-                                match Decoder::new(BufReader::new(file)) {
-                                    Ok(source) => {
-                                        sink.append(source);
-                                        sink.sleep_until_end();
-                                    }
-                                    Err(e) => eprintln!("Audio decoder error: {}", e),
-                                }
+                #[cfg(target_os = "linux")]
+                {
+                    eprintln!("[Audio] Trying ogg123: {:?}", path_clone);
+                    if let Ok(output) = Command::new("ogg123")
+                        .arg("-q")
+                        .arg(&path_clone)
+                        .output()
+                    {
+                        if output.status.success() {
+                            eprintln!("[Audio] Played via ogg123");
+                        } else {
+                            eprintln!("[Audio] ogg123 failed: {:?}", String::from_utf8_lossy(&output.stderr));
+                            // Try paplay as fallback
+                            if std::process::Command::new("paplay")
+                                .arg(&path_clone)
+                                .spawn()
+                                .is_ok()
+                            {
+                                eprintln!("[Audio] Played via paplay");
                             }
-                            Err(e) => eprintln!("Audio file error: {}", e),
+                        }
+                        return;
+                    }
+                    // Try ffplay as another option
+                    let path_str = path_clone.to_string_lossy().to_string();
+                    if std::process::Command::new("ffplay")
+                        .args(["-nodisp", "-autoexit", "-loglevel", "quiet", &path_str])
+                        .spawn()
+                        .is_ok()
+                    {
+                        eprintln!("[Audio] Played via ffplay");
+                        return;
+                    }
+                }
+
+                // Fallback to rodio
+                eprintln!("[Audio] Falling back to rodio");
+                use rodio::{OutputStream, Sink, Decoder};
+
+                if let Ok((_stream, handle)) = OutputStream::try_default() {
+                    if let Ok(sink) = Sink::try_new(&handle) {
+                        if let Ok(file) = std::fs::File::open(&path_clone) {
+                            match Decoder::new(file) {
+                                Ok(source) => {
+                                    eprintln!("[Audio] Playing via rodio");
+                                    sink.append(source);
+                                    sink.sleep_until_end();
+                                    eprintln!("[Audio] Done");
+                                }
+                                Err(e) => eprintln!("Audio decoder error: {}", e),
+                            }
                         }
                     }
-                    Err(e) => eprintln!("Audio sink error: {}", e),
                 }
-            }
-            Err(e) => eprintln!("Audio output error: {}", e),
+            }).await.ok();
         }
-    });
-
+    }
     Ok(())
 }
 
@@ -1047,11 +1086,73 @@ async fn show_notification(
         let _ = show_overlay_window(app_handle.clone(), label.to_string());
     }
 
-    // Play sound
+    // Play sound (blocking on tokio runtime)
     let sound = state.notif_sound.lock().unwrap().clone();
-    let _ = play_notification_sound(app_handle.clone(), sound);
+    let sound_path = app_handle.path_resolver().resolve_resource(&format!("audio/{}", sound));
+    if let Some(path) = sound_path {
+        if path.exists() {
+            let path_clone = path.clone();
+            tokio::task::spawn_blocking(move || {
+                use std::process::Command;
+
+                #[cfg(target_os = "linux")]
+                {
+                    // Try ffplay first (works better on AppImage)
+                    let path_str = path_clone.to_string_lossy().to_string();
+                    if std::process::Command::new("ffplay")
+                        .args(["-nodisp", "-autoexit", "-loglevel", "quiet", &path_str])
+                        .spawn()
+                        .is_ok()
+                    {
+                        eprintln!("[Audio] Played via ffplay");
+                        return;
+                    }
+                    // Try ogg123
+                    if std::process::Command::new("ogg123")
+                        .arg("-q")
+                        .arg(&path_clone)
+                        .spawn()
+                        .is_ok()
+                    {
+                        eprintln!("[Audio] Played via ogg123");
+                        return;
+                    }
+                    // Try paplay
+                    if std::process::Command::new("paplay")
+                        .arg(&path_clone)
+                        .spawn()
+                        .is_ok()
+                    {
+                        eprintln!("[Audio] Played via paplay");
+                        return;
+                    }
+                }
+
+                // Fallback to rodio
+                eprintln!("[Audio] Falls back to rodio");
+                use rodio::{OutputStream, Sink, Decoder};
+
+                if let Ok((_stream, handle)) = OutputStream::try_default() {
+                    if let Ok(sink) = Sink::try_new(&handle) {
+                        if let Ok(file) = std::fs::File::open(&path_clone) {
+                            match Decoder::new(file) {
+                                Ok(source) => {
+                                    eprintln!("[Audio] Playing via rodio");
+                                    sink.append(source);
+                                    sink.sleep_until_end();
+                                    eprintln!("[Audio] Done");
+                                }
+                                Err(e) => eprintln!("Audio decoder error: {}", e),
+                            }
+                        }
+                    }
+                }
+            }).await.ok();
+        }
+    }
 
     // Emit the notification — the matching overlay window renders it
+    let position = pos.clone();
     app_handle.emit_all("new-notification", NotificationPayload {
         id: notif_id,
         title,
@@ -1060,6 +1161,24 @@ async fn show_notification(
         position: pos,
         persistent: persist,
     }).map_err(|e| e.to_string())?;
+
+    // On Linux, schedule removal via Rust timer (JS timers get throttled on Wayland)
+    #[cfg(target_os = "linux")]
+    {
+        if !persist {
+            let app = app_handle.clone();
+            let position = position.clone();
+            let label = label.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(6));
+                // Hide window FIRST to prevent animation ghost, then wipe state
+                if let Some(w) = app.get_window(&label) {
+                    let _ = w.hide();
+                }
+                let _ = app.emit_all("wipe-state", position.clone());
+            });
+        }
+    }
 
     Ok(())
 }

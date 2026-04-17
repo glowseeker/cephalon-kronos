@@ -147,6 +147,11 @@ export default function NotificationOverlay() {
       setRelic({ rewards, id: Date.now() })
     }))
 
+    subs.push(listen('remove-relic-rewards', () => {
+      if (myPos !== 'relic') return
+      setRelic(null)
+    }))
+
     subs.push(listen('wipe-state', (e) => {
       const wipePos = e.payload
       if (wipePos === myPos || wipePos === undefined) {
@@ -233,7 +238,7 @@ function ToastCard({ toast, onExpire }) {
     <div
       className={`
         flex flex-col gap-1.5 px-3 py-3 rounded-xl flex-shrink-0
-        transition-all duration-300 transform
+        transition-all ${IS_LINUX ? 'duration-0' : 'duration-300'} transform
         ${exiting ? 'notif-exit' : 'notif-enter'}
       `}
       style={{
@@ -305,7 +310,7 @@ function RelicCard({ data, onClose }) {
     <div
       className={`
         flex flex-col gap-2 rounded-2xl flex-shrink-0
-        transition-all duration-300 transform
+        transition-all ${IS_LINUX ? 'duration-0' : 'duration-300'} transform
         ${exiting ? 'notif-exit' : 'notif-relic-enter'}
       `}
       style={{
