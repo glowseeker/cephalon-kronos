@@ -955,6 +955,7 @@ fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) -> Resul
     // 3. Local dev path (relative to CARGO_MANIFEST_DIR)
     let candidates = [
         app_handle.path_resolver().resolve_resource(&format!("audio/{}", sound)),
+        app_handle.path_resolver().resolve_resource(&sound),
         std::env::current_exe().ok().and_then(|exe| {
             exe.ancestors().nth(4).map(|root| root.join("public/audio").join(&sound))
         }),
@@ -965,6 +966,8 @@ fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) -> Resul
         .flatten()
         .find(|p| p.exists())
         .ok_or_else(|| format!("Could not find sound file: {}", sound))?;
+
+    eprintln!("[Audio] Using path: {:?}", resource_path);
 
     std::thread::spawn(move || {
         match OutputStream::try_default() {
