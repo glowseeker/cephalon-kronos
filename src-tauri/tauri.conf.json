@@ -45,7 +45,7 @@
       "resources": [
         "data/bin/*",
         "data/export/*",
-        "audio/**"
+        "audio/*"
       ]
     },
     "security": {
