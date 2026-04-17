@@ -9,7 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 use std::fs;
 use tauri::Manager;
-use std::io::BufReader;
+// use std::io::BufReader;
 use std::sync::{Arc, Mutex};
 // use rodio::{Decoder, OutputStream, Sink};
 
@@ -633,6 +633,10 @@ async fn show_relic_overlay(
     rewards: Value,
     persistent: Option<bool>,
 ) -> Result<(), String> {
+    // Play sound
+    let sound = state.notif_sound.lock().unwrap().clone();
+    let _ = play_notification_sound(app_handle.clone(), sound).await;
+
     let app = app_handle.clone();
 
     let payload = serde_json::json!({
@@ -649,27 +653,7 @@ async fn show_relic_overlay(
     app.emit_all("show-relic-rewards", payload)
         .map_err(|e| e.to_string())?;
 
-    // On Linux, also schedule removal via Rust timer (JS timers get throttled on Wayland)
-    #[cfg(target_os = "linux")]
-    {
-        let app_for_timer = app.clone();
-        std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_secs(15));
-            let _ = app_for_timer.emit_all("remove-relic-rewards", ());
-            if let Some(w) = app_for_timer.get_window("overlay-relic") {
-                let _ = w.hide();
-            }
-        });
-    }
-
-    // Also auto-hide after 15 seconds if not persistent
-    if !persistent.unwrap_or(false) {
-        let app_for_hide = app.clone();
-        tokio::spawn(async move {
-            tokio::time::sleep(std::time::Duration::from_secs(15)).await;
-            let _ = hide_overlay_window(app_for_hide, "overlay-relic".to_string());
-        });
-    }
+    // (Rust-side timer for relics removed on Linux, now handled by start_notif_autoclose_timer from frontend)
 
     Ok(())
 }
@@ -1086,70 +1070,9 @@ async fn show_notification(
         let _ = show_overlay_window(app_handle.clone(), label.to_string());
     }
 
-    // Play sound (blocking on tokio runtime)
+    // Play sound
     let sound = state.notif_sound.lock().unwrap().clone();
-    let sound_path = app_handle.path_resolver().resolve_resource(&format!("audio/{}", sound));
-    if let Some(path) = sound_path {
-        if path.exists() {
-            let path_clone = path.clone();
-            tokio::task::spawn_blocking(move || {
-                use std::process::Command;
-
-                #[cfg(target_os = "linux")]
-                {
-                    // Try ffplay first (works better on AppImage)
-                    let path_str = path_clone.to_string_lossy().to_string();
-                    if std::process::Command::new("ffplay")
-                        .args(["-nodisp", "-autoexit", "-loglevel", "quiet", &path_str])
-                        .spawn()
-                        .is_ok()
-                    {
-                        eprintln!("[Audio] Played via ffplay");
-                        return;
-                    }
-                    // Try ogg123
-                    if std::process::Command::new("ogg123")
-                        .arg("-q")
-                        .arg(&path_clone)
-                        .spawn()
-                        .is_ok()
-                    {
-                        eprintln!("[Audio] Played via ogg123");
-                        return;
-                    }
-                    // Try paplay
-                    if std::process::Command::new("paplay")
-                        .arg(&path_clone)
-                        .spawn()
-                        .is_ok()
-                    {
-                        eprintln!("[Audio] Played via paplay");
-                        return;
-                    }
-                }
-
-                // Fallback to rodio
-                eprintln!("[Audio] Falls back to rodio");
-                use rodio::{OutputStream, Sink, Decoder};
-
-                if let Ok((_stream, handle)) = OutputStream::try_default() {
-                    if let Ok(sink) = Sink::try_new(&handle) {
-                        if let Ok(file) = std::fs::File::open(&path_clone) {
-                            match Decoder::new(file) {
-                                Ok(source) => {
-                                    eprintln!("[Audio] Playing via rodio");
-                                    sink.append(source);
-                                    sink.sleep_until_end();
-                                    eprintln!("[Audio] Done");
-                                }
-                                Err(e) => eprintln!("Audio decoder error: {}", e),
-                            }
-                        }
-                    }
-                }
-            }).await.ok();
-        }
-    }
+    let _ = play_notification_sound(app_handle.clone(), sound).await;
 
     // Emit the notification — the matching overlay window renders it
     app_handle.emit_all("new-notification", NotificationPayload {
@@ -1165,10 +1088,15 @@ async fn show_notification(
 }
 
 #[tauri::command]
-fn start_notif_autoclose_timer(app_handle: tauri::AppHandle, id: String) {
+fn start_notif_autoclose_timer(app_handle: tauri::AppHandle, id: serde_json::Value, seconds: u64) {
+    let id_str = match id {
+        serde_json::Value::String(s) => s,
+        serde_json::Value::Number(n) => n.to_string(),
+        _ => return,
+    };
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_secs(6));
-        let _ = app_handle.emit_all("expire-notification", id);
+        std::thread::sleep(std::time::Duration::from_secs(seconds));
+        let _ = app_handle.emit_all("expire-notification", id_str);
     });
 }
 

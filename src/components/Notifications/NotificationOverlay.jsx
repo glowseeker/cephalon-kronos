@@ -85,7 +85,7 @@ export default function NotificationOverlay() {
       setVisibleToasts(prev => [...prev, next])
 
       if (IS_LINUX) {
-        invoke('start_notif_autoclose_timer', { id: next.id }).catch(console.error)
+        invoke('start_notif_autoclose_timer', { id: next.id, seconds: 6 }).catch(console.error)
       }
     }
   }, [visibleToasts.length, queue, myLimit])
@@ -155,16 +155,22 @@ export default function NotificationOverlay() {
     subs.push(listen('show-relic-rewards', (e) => {
       if (myPos !== 'relic') return
       const rewards = Array.isArray(e.payload) ? e.payload : (e.payload?.rewards ?? [])
-      setRelic({ rewards, id: Date.now() })
+      const newId = Date.now()
+      setRelic({ rewards, id: newId })
+      
+      if (IS_LINUX) {
+        invoke('start_notif_autoclose_timer', { id: newId, seconds: 15 }).catch(console.error)
+      }
     }))
 
-    subs.push(listen('remove-relic-rewards', () => {
-      if (myPos !== 'relic') return
-      setRelic(null)
-    }))
 
     subs.push(listen('expire-notification', (e) => {
-      removeToast(e.payload)
+      const expiredId = String(e.payload)
+      removeToast(expiredId)
+      setRelic(prev => {
+        if (prev && String(prev.id) === expiredId) return null
+        return prev
+      })
     }))
 
     subs.push(listen('wipe-state', (e) => {
