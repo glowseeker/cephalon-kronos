@@ -1089,54 +1089,38 @@ async fn show_notification(
 
 #[tauri::command]
 async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), String> {
-    println!("[open_url] Requesting: {}", url);
-
     #[cfg(target_os = "linux")]
     {
-        // AppImages bundle their own libraries which break xdg-open.
-        // We MUST clear these variables so the system can find its own browser/libs.
-        let openers = ["xdg-open", "gio", "gnome-open", "kde-open"];
-        
-        for opener in openers {
-            let mut cmd = std::process::Command::new(opener);
-            
-            // Scrub the environment
-            cmd.env_remove("LD_LIBRARY_PATH");
-            cmd.env_remove("LD_PRELOAD");
-            
-            if opener == "gio" {
-                cmd.arg("open");
-            }
-            cmd.arg(&url);
+        use std::process::Command;
 
-            println!("[open_url] Trying {} (cleared ENV)...", opener);
-            
-            if let Ok(mut child) = cmd.spawn() {
-                // If it spawned, we assume success unless it exits immediately with error
-                std::thread::sleep(std::time::Duration::from_millis(150));
-                match child.try_wait() {
-                    Ok(Some(status)) if !status.success() => {
-                        eprintln!("[open_url] {} failed (status {})", opener, status);
-                        continue;
-                    }
-                    _ => {
-                        println!("[open_url] Success via {}", opener);
-                        return Ok(());
-                    }
-                }
-            }
+        // AppImage sets APPDIR, GDK_BACKEND, LD_LIBRARY_PATH and other vars that
+        // confuse xdg-open's desktop/browser detection. The fix: run xdg-open via
+        // `env -i` with a clean slate, forwarding only what xdg-open actually needs.
+        let passthrough: Vec<(&str, String)> = [
+            "HOME", "PATH", "DISPLAY", "WAYLAND_DISPLAY",
+            "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR",
+            "XDG_SESSION_TYPE", "XDG_CURRENT_DESKTOP", "BROWSER",
+        ]
+        .iter()
+        .filter_map(|k| std::env::var(k).ok().map(|v| (*k, v)))
+        .collect();
+
+        let mut cmd = Command::new("env");
+        cmd.arg("-i");
+        for (k, v) in &passthrough {
+            cmd.arg(format!("{}={}", k, v));
+        }
+        cmd.arg("xdg-open").arg(&url);
+
+        match cmd.spawn() {
+            Ok(_) => return Ok(()),
+            Err(e) => eprintln!("[open_url] xdg-open failed: {}", e),
         }
     }
 
-    // Use 'opener' or Tauri API as final fallback
-    println!("[open_url] Falling back to standard libraries...");
-    match opener::open(&url) {
-        Ok(_) => Ok(()),
-        Err(_) => {
-            tauri::api::shell::open(&app_handle.shell_scope(), url, None)
-                .map_err(|e| e.to_string())
-        }
-    }
+    // macOS / Windows — Tauri shell API works fine there
+    tauri::api::shell::open(&app_handle.shell_scope(), url, None)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
