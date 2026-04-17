@@ -1,0 +1,30 @@
+name: Notify Discord on Release
+on:
+  release:
+    types: [published, edited]
+
+jobs:
+  discord_notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Release Info to Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          # We use jq to handle potential newlines or quotes in the release body
+          # to keep the JSON payload valid.
+          TITLE="${{ github.event.release.name || github.event.release.tag_name }}"
+          URL="${{ github.event.release.html_url }}"
+          BODY=$(echo '${{ github.event.release.body }}' | jq -aRs .)
+
+          curl -H "Content-Type: application/json" \
+               -d "{
+                 \"embeds\": [{
+                   \"title\": \"🚀 New Release: $TITLE\",
+                   \"url\": \"$URL\",
+                   \"description\": $BODY,
+                   \"color\": 5814783,
+                   \"footer\": { \"text\": \"Cephalon Kronos Update\" }
+                 }]
+               }" \
+               $DISCORD_WEBHOOK
