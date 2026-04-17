@@ -1089,23 +1089,52 @@ async fn show_notification(
 
 #[tauri::command]
 async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), String> {
-    println!("[open_url] Attempting to open: {}", url);
+    println!("[open_url] Requesting: {}", url);
 
-    // Use the 'opener' crate for robust cross-platform URL opening.
-    // open_detached doesn't wait for the browser to exit.
-    match opener::open(&url) {
-        Ok(_) => {
-            println!("[open_url] Successfully opened via opener crate");
-            Ok(())
+    #[cfg(target_os = "linux")]
+    {
+        // AppImages bundle their own libraries which break xdg-open.
+        // We MUST clear these variables so the system can find its own browser/libs.
+        let openers = ["xdg-open", "gio", "gnome-open", "kde-open"];
+        
+        for opener in openers {
+            let mut cmd = std::process::Command::new(opener);
+            
+            // Scrub the environment
+            cmd.env_remove("LD_LIBRARY_PATH");
+            cmd.env_remove("LD_PRELOAD");
+            
+            if opener == "gio" {
+                cmd.arg("open");
+            }
+            cmd.arg(&url);
+
+            println!("[open_url] Trying {} (cleared ENV)...", opener);
+            
+            if let Ok(mut child) = cmd.spawn() {
+                // If it spawned, we assume success unless it exits immediately with error
+                std::thread::sleep(std::time::Duration::from_millis(150));
+                match child.try_wait() {
+                    Ok(Some(status)) if !status.success() => {
+                        eprintln!("[open_url] {} failed (status {})", opener, status);
+                        continue;
+                    }
+                    _ => {
+                        println!("[open_url] Success via {}", opener);
+                        return Ok(());
+                    }
+                }
+            }
         }
-        Err(e) => {
-            eprintln!("[open_url] opener crate failed: {}. Falling back to standard Tauri API.", e);
+    }
+
+    // Use 'opener' or Tauri API as final fallback
+    println!("[open_url] Falling back to standard libraries...");
+    match opener::open(&url) {
+        Ok(_) => Ok(()),
+        Err(_) => {
             tauri::api::shell::open(&app_handle.shell_scope(), url, None)
-                .map_err(|e| {
-                    let err_msg = format!("All openers failed: {}", e);
-                    eprintln!("[open_url] Error: {}", err_msg);
-                    err_msg
-                })
+                .map_err(|e| e.to_string())
         }
     }
 }
