@@ -1,6 +1,6 @@
 // Remove duplicate - using App.jsx version instead
 import { useState, useEffect } from 'react'
-import { Palette, Bell, Clock, AlertTriangle, Star, CheckCircle, Settings as SettingsIcon, Zap, Save, RefreshCw, Play, X, WifiOff } from 'lucide-react'
+import { Palette, Bell, Clock, AlertTriangle, Star, CheckCircle, Settings as SettingsIcon, Zap, Save, RefreshCw, Play, X, WifiOff, Wifi } from 'lucide-react'
 import { open } from '@tauri-apps/api/shell'
 import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
