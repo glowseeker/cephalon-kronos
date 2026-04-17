@@ -1089,21 +1089,51 @@ async fn show_notification(
 
 #[tauri::command]
 async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), String> {
+    println!("[open_url] Attempting to open: {}", url);
+
     #[cfg(target_os = "linux")]
     {
-        // On Linux, try xdg-open directly as it often works better in AppImages
-        if std::process::Command::new("xdg-open")
-            .arg(&url)
-            .spawn()
-            .is_ok()
-        {
-            return Ok(());
+        // On Linux, try multiple openers.
+        // We clear LD_LIBRARY_PATH to avoid conflicts between AppImage libs and system tools.
+        let openers = ["xdg-open", "gio", "gnome-open", "kde-open"];
+
+        for opener in openers {
+            let mut cmd = std::process::Command::new(opener);
+            cmd.env_remove("LD_LIBRARY_PATH");
+            if opener == "gio" {
+                cmd.arg("open");
+            }
+            cmd.arg(&url);
+
+            if let Ok(mut child) = cmd.spawn() {
+                // Wait a tiny bit to see if it immediately fails
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                match child.try_wait() {
+                    Ok(Some(status)) if !status.success() => {
+                        eprintln!("[open_url] {} failed with status: {}", opener, status);
+                        continue;
+                    }
+                    Ok(_) => {
+                        println!("[open_url] Spawned {} successfully", opener);
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        eprintln!("[open_url] Error waiting for {}: {}", opener, e);
+                        continue;
+                    }
+                }
+            }
         }
     }
 
     // Fallback or other platforms
+    println!("[open_url] Falling back to standard Tauri API");
     tauri::api::shell::open(&app_handle.shell_scope(), url, None)
-        .map_err(|e| e.to_string())
+        .map_err(|e| {
+            let err_msg = format!("All openers failed: {}", e);
+            eprintln!("[open_url] Error: {}", err_msg);
+            err_msg
+        })
 }
 
 #[tauri::command]
