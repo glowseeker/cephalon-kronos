@@ -1109,8 +1109,48 @@ async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), Strin
             "PYTHONPATH", "QT_PLUGIN_PATH", "GDK_BACKEND",
         ];
 
-        // Method A: DBus Desktop Portal (The modern, sandbox-aware way via busctl)
-        println!("[open_url] Trying Method A: busctl Portal...");
+        // Method A: Python webbrowser (Very high reliability)
+        println!("[open_url] Trying Method A: Python webbrowser...");
+        let mut py_cmd = Command::new("python3");
+        // Use sys.argv to avoid quoting issues
+        py_cmd.args(["-c", "import webbrowser, sys; webbrowser.open(sys.argv[1])", &url]);
+        py_cmd.env("PATH", &clean_path);
+        for var in toxic_vars { py_cmd.env_remove(var); }
+        if let Ok(status) = py_cmd.status() {
+            if status.success() {
+                println!("[open_url] Success via Python");
+                return Ok(());
+            }
+        }
+
+        // Method B: gio open (GLib Standard) - Portal aware
+        println!("[open_url] Trying Method B: gio open");
+        let mut gio_cmd = Command::new("gio");
+        gio_cmd.args(["open", &url]);
+        gio_cmd.env("PATH", &clean_path);
+        for var in toxic_vars { gio_cmd.env_remove(var); }
+        if let Ok(status) = gio_cmd.status() {
+            if status.success() {
+                println!("[open_url] Success via gio open");
+                return Ok(());
+            }
+        }
+
+        // Method C: xdg-open (using sanitized PATH)
+        println!("[open_url] Trying Method C: xdg-open");
+        let mut xdg_cmd = Command::new("xdg-open");
+        xdg_cmd.arg(&url);
+        xdg_cmd.env("PATH", &clean_path);
+        for var in toxic_vars { xdg_cmd.env_remove(var); }
+        if let Ok(status) = xdg_cmd.status() {
+            if status.success() {
+                println!("[open_url] Success via xdg-open");
+                return Ok(());
+            }
+        }
+
+        // Method D: busctl Portal (Modern Sandbox Escape)
+        println!("[open_url] Trying Method D: busctl Portal...");
         let mut busctl_cmd = Command::new("busctl");
         busctl_cmd.args([
             "--user", "call",
@@ -1118,46 +1158,13 @@ async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), Strin
             "/org/freedesktop/portal/desktop",
             "org.freedesktop.portal.OpenURI",
             "OpenURI",
-            "ss", "", &url, "0" // 0 is for an empty dictionary/array in busctl speak
+            "ss", "", &url, "0" // For OpenURI, busctl handles the empty dict with '0' if using 'ss'
         ]);
         busctl_cmd.env("PATH", &clean_path);
         for var in toxic_vars { busctl_cmd.env_remove(var); }
-        if let Ok(_) = busctl_cmd.spawn() {
-            println!("[open_url] Method A (busctl) spawned");
-            return Ok(());
-        }
-
-        // Method B: Python webbrowser (Extreme robustness fallback)
-        println!("[open_url] Trying Method B: Python webbrowser...");
-        let mut py_cmd = Command::new("python3");
-        py_cmd.args(["-c", &format!("import webbrowser; webbrowser.open('{}')", url)]);
-        py_cmd.env("PATH", &clean_path);
-        for var in toxic_vars { py_cmd.env_remove(var); }
-        if let Ok(_) = py_cmd.spawn() {
-            println!("[open_url] Method B (python) spawned");
-            return Ok(());
-        }
-
-        // Method C: Host gio open
-        println!("[open_url] Trying Method C: gio open");
-        let mut gio_cmd = Command::new("gio");
-        gio_cmd.args(["open", &url]);
-        gio_cmd.env("PATH", &clean_path);
-        for var in toxic_vars { gio_cmd.env_remove(var); }
-        if let Ok(_) = gio_cmd.spawn() {
-            println!("[open_url] Method C (gio) spawned");
-            return Ok(());
-        }
-
-        // Method D: Host xdg-open (using absolute path to be sure)
-        for xdg_path in ["/usr/bin/xdg-open", "/bin/xdg-open", "xdg-open"] {
-            println!("[open_url] Trying Method D: {}", xdg_path);
-            let mut xdg_cmd = Command::new(xdg_path);
-            xdg_cmd.arg(&url);
-            xdg_cmd.env("PATH", &clean_path);
-            for var in toxic_vars { xdg_cmd.env_remove(var); }
-            if let Ok(_) = xdg_cmd.spawn() {
-                println!("[open_url] Method D ({}) spawned", xdg_path);
+        if let Ok(status) = busctl_cmd.status() {
+            if status.success() {
+                println!("[open_url] Success via busctl");
                 return Ok(());
             }
         }
