@@ -24,10 +24,7 @@
       },
       "shell": {
         "all": false,
-        "open": true,
-        "scope": [
-          { "name": "any", "cmd": "https://**" }
-        ]
+        "open": "^https?://"
       }
     },
     "bundle": {
