@@ -1089,36 +1089,82 @@ async fn show_notification(
 
 #[tauri::command]
 async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), String> {
+    println!("[open_url] Requesting: {}", url);
+
     #[cfg(target_os = "linux")]
     {
         use std::process::Command;
 
-        // AppImage sets APPDIR, GDK_BACKEND, LD_LIBRARY_PATH and other vars that
-        // confuse xdg-open's desktop/browser detection. The fix: run xdg-open via
-        // `env -i` with a clean slate, forwarding only what xdg-open actually needs.
-        let passthrough: Vec<(&str, String)> = [
-            "HOME", "PATH", "DISPLAY", "WAYLAND_DISPLAY",
-            "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR",
-            "XDG_SESSION_TYPE", "XDG_CURRENT_DESKTOP", "BROWSER",
-        ]
-        .iter()
-        .filter_map(|k| std::env::var(k).ok().map(|v| (*k, v)))
-        .collect();
+        // 1. Sanitize PATH to remove AppImage internal folders.
+        // This prevents picking up the broken xdg-open inside the AppImage mount.
+        let path = std::env::var("PATH").unwrap_or_default();
+        let clean_path = path.split(':')
+            .filter(|p| !p.contains(".mount_"))
+            .collect::<Vec<_>>()
+            .join(":");
 
-        let mut cmd = Command::new("env");
-        cmd.arg("-i");
-        for (k, v) in &passthrough {
-            cmd.arg(format!("{}={}", k, v));
+        // Variables that frequently cause issues in AppImage environments
+        let toxic_vars = [
+            "APPDIR", "APPIMAGE", "LD_LIBRARY_PATH", "LD_PRELOAD",
+            "PYTHONPATH", "QT_PLUGIN_PATH", "GDK_BACKEND",
+        ];
+
+        // Method A: DBus Desktop Portal (The modern, sandbox-aware way via busctl)
+        println!("[open_url] Trying Method A: busctl Portal...");
+        let mut busctl_cmd = Command::new("busctl");
+        busctl_cmd.args([
+            "--user", "call",
+            "org.freedesktop.portal.Desktop",
+            "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.OpenURI",
+            "OpenURI",
+            "ss", "", &url, "0" // 0 is for an empty dictionary/array in busctl speak
+        ]);
+        busctl_cmd.env("PATH", &clean_path);
+        for var in toxic_vars { busctl_cmd.env_remove(var); }
+        if let Ok(_) = busctl_cmd.spawn() {
+            println!("[open_url] Method A (busctl) spawned");
+            return Ok(());
         }
-        cmd.arg("xdg-open").arg(&url);
 
-        match cmd.spawn() {
-            Ok(_) => return Ok(()),
-            Err(e) => eprintln!("[open_url] xdg-open failed: {}", e),
+        // Method B: Python webbrowser (Extreme robustness fallback)
+        println!("[open_url] Trying Method B: Python webbrowser...");
+        let mut py_cmd = Command::new("python3");
+        py_cmd.args(["-c", &format!("import webbrowser; webbrowser.open('{}')", url)]);
+        py_cmd.env("PATH", &clean_path);
+        for var in toxic_vars { py_cmd.env_remove(var); }
+        if let Ok(_) = py_cmd.spawn() {
+            println!("[open_url] Method B (python) spawned");
+            return Ok(());
+        }
+
+        // Method C: Host gio open
+        println!("[open_url] Trying Method C: gio open");
+        let mut gio_cmd = Command::new("gio");
+        gio_cmd.args(["open", &url]);
+        gio_cmd.env("PATH", &clean_path);
+        for var in toxic_vars { gio_cmd.env_remove(var); }
+        if let Ok(_) = gio_cmd.spawn() {
+            println!("[open_url] Method C (gio) spawned");
+            return Ok(());
+        }
+
+        // Method D: Host xdg-open (using absolute path to be sure)
+        for xdg_path in ["/usr/bin/xdg-open", "/bin/xdg-open", "xdg-open"] {
+            println!("[open_url] Trying Method D: {}", xdg_path);
+            let mut xdg_cmd = Command::new(xdg_path);
+            xdg_cmd.arg(&url);
+            xdg_cmd.env("PATH", &clean_path);
+            for var in toxic_vars { xdg_cmd.env_remove(var); }
+            if let Ok(_) = xdg_cmd.spawn() {
+                println!("[open_url] Method D ({}) spawned", xdg_path);
+                return Ok(());
+            }
         }
     }
 
-    // macOS / Windows — Tauri shell API works fine there
+    // Fallback for other platforms or if Linux manual methods fail
+    println!("[open_url] Final fallback to standard Tauri API");
     tauri::api::shell::open(&app_handle.shell_scope(), url, None)
         .map_err(|e| e.to_string())
 }

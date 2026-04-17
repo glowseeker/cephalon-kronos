@@ -24,7 +24,7 @@
       },
       "shell": {
         "all": false,
-        "open": "^https?://"
+        "open": true
       }
     },
     "bundle": {
