@@ -11,7 +11,7 @@ use std::fs;
 use tauri::Manager;
 use std::io::BufReader;
 use std::sync::{Arc, Mutex};
-use rodio::{Decoder, OutputStream, Sink};
+// use rodio::{Decoder, OutputStream, Sink};
 
 pub struct AppState {
     pub notif_sound: Arc<Mutex<String>>,
@@ -1152,7 +1152,6 @@ async fn show_notification(
     }
 
     // Emit the notification — the matching overlay window renders it
-    let position = pos.clone();
     app_handle.emit_all("new-notification", NotificationPayload {
         id: notif_id,
         title,
@@ -1162,25 +1161,15 @@ async fn show_notification(
         persistent: persist,
     }).map_err(|e| e.to_string())?;
 
-    // On Linux, schedule removal via Rust timer (JS timers get throttled on Wayland)
-    #[cfg(target_os = "linux")]
-    {
-        if !persist {
-            let app = app_handle.clone();
-            let position = position.clone();
-            let label = label.clone();
-            std::thread::spawn(move || {
-                std::thread::sleep(std::time::Duration::from_secs(6));
-                // Hide window FIRST to prevent animation ghost, then wipe state
-                if let Some(w) = app.get_window(&label) {
-                    let _ = w.hide();
-                }
-                let _ = app.emit_all("wipe-state", position.clone());
-            });
-        }
-    }
-
     Ok(())
+}
+
+#[tauri::command]
+fn start_notif_autoclose_timer(app_handle: tauri::AppHandle, id: String) {
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(6));
+        let _ = app_handle.emit_all("expire-notification", id);
+    });
 }
 
 /// Save a JSON settings object to data/user/settings.json.
@@ -1273,6 +1262,7 @@ fn main() {
             set_ignore_cursor_events,
             play_notification_sound,
             set_notification_sound,
+            start_notif_autoclose_timer,
             save_settings,
             load_settings,
             // --- calibration ---

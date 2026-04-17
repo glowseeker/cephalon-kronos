@@ -83,8 +83,19 @@ export default function NotificationOverlay() {
       const next = queue[0]
       setQueue(prev => prev.slice(1))
       setVisibleToasts(prev => [...prev, next])
+
+      if (IS_LINUX) {
+        invoke('start_notif_autoclose_timer', { id: next.id }).catch(console.error)
+      }
     }
   }, [visibleToasts.length, queue, myLimit])
+
+  // Automatically hide window when all notifications/rewards are cleared
+  useEffect(() => {
+    if (visibleToasts.length === 0 && queue.length === 0 && !relic) {
+      invoke('hide_overlay_window', { label: myLabel }).catch(() => {})
+    }
+  }, [visibleToasts.length, queue.length, relic, myLabel])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -150,6 +161,10 @@ export default function NotificationOverlay() {
     subs.push(listen('remove-relic-rewards', () => {
       if (myPos !== 'relic') return
       setRelic(null)
+    }))
+
+    subs.push(listen('expire-notification', (e) => {
+      removeToast(e.payload)
     }))
 
     subs.push(listen('wipe-state', (e) => {
