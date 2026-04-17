@@ -20,7 +20,7 @@ jobs:
           curl -H "Content-Type: application/json" \
                -d "{
                  \"embeds\": [{
-                   \"title\": \"🚀 New Release: $TITLE\",
+                   \"title\": \"New Release: $TITLE\",
                    \"url\": \"$URL\",
                    \"description\": $BODY,
                    \"color\": 5814783,
