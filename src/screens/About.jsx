@@ -11,7 +11,7 @@
  */
 import { AlertTriangle, Github, Box, Globe, Database, Layers, Palette, Terminal, BookOpen } from 'lucide-react'
 import { PageLayout, Card } from '../components/UI'
-import { open } from '@tauri-apps/api/shell'
+import { invoke } from '@tauri-apps/api/tauri'
 
 const CREDITS = [
   { name: 'warframe-api-helper', desc: 'Credential extraction from game memory', href: 'https://github.com/Obsidian-Jackal/warframe-api-helper/' },
@@ -25,9 +25,9 @@ export default function About() {
   const handleOpenLink = async (e, url) => {
     e.preventDefault()
     try {
-      await open(url)
+      await invoke('open_url', { url })
     } catch (err) {
-      console.error('Failed to open link with Tauri shell API:', err)
+      console.error('Failed to open link with custom open_url command:', err)
       // Removed window.open fallback as it leads to inconsistent behavior in packaged applications
       // and does not open external links correctly. The Tauri shell API should be used exclusively.
     }

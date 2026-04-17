@@ -5,7 +5,7 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import { MonitoringProvider } from './contexts/MonitoringContext'
 import { Tooltip } from './components/UI'
 import { AlertTriangle } from 'lucide-react'
-import { open } from '@tauri-apps/api/shell'
+import { invoke } from '@tauri-apps/api/tauri'
 import { loadSettings, getSetting, setSetting } from './lib/settings'
 
 // Screens (lazy-loaded, main window only)
@@ -95,7 +95,7 @@ function DisclaimerModal() {
         <p className="text-sm text-kronos-text/90 mb-3 leading-relaxed">
           This app uses{' '}
           <button
-            onClick={() => open('https://github.com/Obsidian-Jackal/warframe-api-helper').catch(err => console.error('Link error:', err))}
+            onClick={() => invoke('open_url', { url: 'https://github.com/Obsidian-Jackal/warframe-api-helper' }).catch(err => console.error('Link error:', err))}
             className="text-kronos-accent hover:underline"
           >
             warframe-api-helper

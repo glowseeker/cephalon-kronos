@@ -32,7 +32,7 @@ import {
   Settings, Check, MoreHorizontal, Trophy, Star
 } from 'lucide-react'
 import { useMonitoring } from '../contexts/MonitoringContext'
-import { open } from '@tauri-apps/api/shell'
+import { invoke } from '@tauri-apps/api/tauri'
 import {
   resolveNode,
   resolveMissionType,
@@ -1602,7 +1602,7 @@ export default function Dashboard() {
                   <div key={idx} className="text-xs">
                     {item.link ? (
                       <button
-                        onClick={() => open(item.link).catch(console.error)}
+                        onClick={() => invoke('open_url', { url: item.link }).catch(console.error)}
                         className="font-bold hover:text-kronos-accent transition-colors block leading-tight text-left w-full"
                       >
                         {item.message}

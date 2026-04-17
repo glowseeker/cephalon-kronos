@@ -1088,6 +1088,25 @@ async fn show_notification(
 }
 
 #[tauri::command]
+async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        // On Linux, try xdg-open directly as it often works better in AppImages
+        if std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .is_ok()
+        {
+            return Ok(());
+        }
+    }
+
+    // Fallback or other platforms
+    tauri::api::shell::open(&app_handle.shell_scope(), url, None)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn start_notif_autoclose_timer(app_handle: tauri::AppHandle, id: serde_json::Value, seconds: u64) {
     let id_str = match id {
         serde_json::Value::String(s) => s,
@@ -1191,6 +1210,7 @@ fn main() {
             play_notification_sound,
             set_notification_sound,
             start_notif_autoclose_timer,
+            open_url,
             save_settings,
             load_settings,
             // --- calibration ---
