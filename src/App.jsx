@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense, useEffect } from 'react'
+import { useState, lazy, Suspense, useEffect, useRef } from 'react'
 import { useMonitoring } from './contexts/MonitoringContext'
 import { formatLastUpdate } from './lib/warframeUtils'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -21,7 +21,7 @@ const Rivens = lazy(() => import('./screens/Rivens'))
 const Relics = lazy(() => import('./screens/Relics'))
 
 // Overlay (separate window, no monitoring context needed)
-const NotificationOverlay = lazy(() => import('./components/Notifications/NotificationOverlay'))
+const OverlayRouter = lazy(() => import('./components/overlays/OverlayRouter'))
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: '/IconDashboard.png', label: 'Dashboard' },
@@ -52,7 +52,7 @@ function OverlayApp() {
         style={{ background: 'transparent' }}
       >
         <Suspense fallback={null}>
-          <NotificationOverlay />
+          <OverlayRouter />
         </Suspense>
       </main>
     </ThemeProvider>
@@ -66,10 +66,21 @@ function DisclaimerModal() {
   const [show, setShow] = useState(false)
   const [checked, setChecked] = useState(false)
   const [ready, setReady] = useState(false)
+  const hasStartedRef = useRef(false)
 
   useEffect(() => {
-    loadSettings().then(() => {
+    if (hasStartedRef.current) return
+    loadSettings().then(async () => {
+      if (hasStartedRef.current) return
+      hasStartedRef.current = true
+
       if (!getSetting('disclaimer-accepted')) setShow(true)
+      // Auto-start log scanner if fissure overlay was enabled
+      const fissureEnabled = getSetting('fissure_overlay_enabled')
+      const logPath = getSetting('ee_log_path')
+      if (fissureEnabled && logPath) {
+        invoke('start_log_scanner', { path: logPath }).catch(console.error)
+      }
       setReady(true)
     })
   }, [])

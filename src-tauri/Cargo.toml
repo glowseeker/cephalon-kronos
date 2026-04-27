@@ -1,11 +1,12 @@
 [package]
 name = "cephalon-kronos"
-version = "0.3.2"
+version = "0.4.0"
 description = "A cross-platform desktop companion for Warframe"
 authors = ["glowseeker"]
 license = ""
 repository = ""
 edition = "2021"
+autobins = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -13,12 +14,21 @@ edition = "2021"
 tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
-tauri = { version = "1.5", features = [ "notification-all", "protocol-asset", "shell-open", "notification"] }
+tauri = { version = "1.5", features = [ "dialog-all", "notification-all", "protocol-asset", "shell-open", "notification"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.11", features = ["json"] }
 rodio = { version = "0.17", features = ["symphonia-all"] }
+notify = "6.1.1"
+xcap = "0.9"
+levenshtein = "1.0"
+image = "0.25"
+
+
+[[bin]]
+name = "cephalon-kronos"
+path = "src/main.rs"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.24"
@@ -28,3 +38,4 @@ objc = "0.2.7"
 # This feature is used for production builds or when `devPath` points to the filesystem
 # DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
+dev = []

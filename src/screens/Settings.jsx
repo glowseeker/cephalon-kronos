@@ -1,7 +1,8 @@
 // Remove duplicate - using App.jsx version instead
 import { useState, useEffect } from 'react'
-import { Palette, Bell, Clock, AlertTriangle, Star, CheckCircle, Settings as SettingsIcon, Zap, Save, RefreshCw, Play, X, WifiOff, Wifi } from 'lucide-react'
-import { open } from '@tauri-apps/api/shell'
+import { Palette, Bell, Clock, AlertTriangle, Star, CheckCircle, Settings as SettingsIcon, Zap, Save, RefreshCw, Play, X, WifiOff, Wifi, FolderOpen, Scan } from 'lucide-react'
+import { open as openUrl } from '@tauri-apps/api/shell'
+import { open as openDialog } from '@tauri-apps/api/dialog'
 import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
 import { getSetting, setSetting } from '../lib/settings'
@@ -59,6 +60,15 @@ export default function SettingsScreen() {
   const [notifChecklistMinutes, setNotifChecklistMinutes] = useState(
     () => parseInt(getSetting('notif_checklist_minutes', 60))
   )
+
+  // Fissure Overlay Settings
+  const [fissureOverlayEnabled, setFissureOverlayEnabled] = useState(
+    () => getSetting('fissure_overlay_enabled')
+  )
+  const [eeLogPath, setEeLogPath] = useState(
+    () => getSetting('ee_log_path', '')
+  )
+  const [debugSquadSize, setDebugSquadSize] = useState(4)
 
   // Listen for calibration window close from X button
   useEffect(() => {
@@ -153,6 +163,43 @@ export default function SettingsScreen() {
   const handleSetChecklistMinutes = async (val) => {
     setNotifChecklistMinutes(val)
     await setSetting('notif_checklist_minutes', val)
+  }
+
+  // Fissure Overlay handlers
+  const handleSetFissureEnabled = async (val) => {
+    setFissureOverlayEnabled(val)
+    await setSetting('fissure_overlay_enabled', val)
+    if (val && eeLogPath) {
+      invoke('start_log_scanner', { path: eeLogPath }).catch(console.error)
+    } else {
+      invoke('stop_log_scanner').catch(console.error)
+    }
+  }
+
+  const handleBrowseLog = async () => {
+    try {
+      const selected = await openDialog({
+        multiple: false,
+        filters: [{ name: 'Game Log', extensions: ['log'] }]
+      })
+      if (selected) {
+        setEeLogPath(selected)
+        await setSetting('ee_log_path', selected)
+        if (fissureOverlayEnabled) {
+          invoke('start_log_scanner', { path: selected }).catch(console.error)
+        }
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleCaptureDebugOcr = async () => {
+    try {
+      await invoke('start_debug_ocr_session', { squadSize: debugSquadSize })
+    } catch (err) {
+      alert(`Debug OCR Failed: ${err}`)
+    }
   }
 
   const handleTestNotification = (position, delay = 0) => {
@@ -306,12 +353,6 @@ export default function SettingsScreen() {
                 test notification in 5 seconds
               </button>
               <button
-                onClick={handleTestRelic}
-                className="py-2 px-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20"
-              >
-                test relic overlay
-              </button>
-              <button
                 onClick={handleToggleCalibrate}
                 className="py-2 px-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20"
               >
@@ -459,6 +500,73 @@ export default function SettingsScreen() {
                 </select>
               </div>
             </div>
+          </div>
+        </Card>
+
+        {/* Fissure Relic Overlay */}
+        <Card glow className="p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <Scan className="text-kronos-accent" size={28} />
+              <h2 className="text-xl font-black uppercase tracking-tight">Fissure Relic Overlay</h2>
+            </div>
+            <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5">
+               <span className="text-[10px] font-black uppercase tracking-widest text-kronos-dim">Enable Scanner</span>
+               <Toggle checked={fissureOverlayEnabled} onChange={handleSetFissureEnabled} />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="p-3 bg-kronos-panel/20 rounded-lg border border-white/5">
+              <p className="text-xs text-kronos-dim uppercase mb-2 font-bold tracking-wider">EE.log Path Configuration</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={eeLogPath}
+                  readOnly
+                  placeholder="Select your Warframe EE.log file..."
+                  className="flex-1 glass-panel rounded-lg px-4 py-2 text-xs font-mono focus:outline-none focus:glow-border"
+                />
+                <Button variant="secondary" onClick={handleBrowseLog} className="px-3">
+                  <FolderOpen size={16} className="mr-2" />
+                  Browse
+                </Button>
+              </div>
+              <div className="mt-4 flex flex-col sm:flex-row gap-6 text-[10px] text-zinc-500 uppercase leading-relaxed font-bold">
+                <div>
+                  <p className="text-zinc-400 mb-1 tracking-widest">Common Windows Path:</p>
+                  <p className="font-mono text-kronos-accent/70">AppData\Local\Warframe\EE.log</p>
+                </div>
+                <div>
+                  <p className="text-zinc-400 mb-1 tracking-widest">Common Linux Path:</p>
+                  <p className="font-mono text-kronos-accent/70">steamapps/compatdata/230410/pfx/drive_c/users/steamuser/AppData/Local/Warframe/EE.log</p>
+                </div>
+              </div>
+            </div>
+
+            {fissureOverlayEnabled && (
+              <div className="flex flex-col gap-3 pt-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex bg-white/5 p-1 rounded-lg border border-white/5">
+                    {[2, 3, 4].map(size => (
+                      <button
+                        key={size}
+                        onClick={() => setDebugSquadSize(size)}
+                        className={`w-8 h-8 rounded flex items-center justify-center text-[10px] font-black transition-all ${debugSquadSize === size ? 'bg-kronos-accent text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                  <Button variant="ghost" onClick={handleCaptureDebugOcr} className="text-[10px] font-black uppercase py-1 px-4 border-white/5 text-kronos-dim hover:text-white h-10">
+                    Test Relic Recognition (4s)
+                  </Button>
+                </div>
+                <p className="text-[10px] text-zinc-500 italic px-1 leading-relaxed">
+                  Select squad size, click test, then switch to your screenshot. The overlay will appear after 4s and capture the screen.
+                </p>
+              </div>
+            )}
           </div>
         </Card>
 

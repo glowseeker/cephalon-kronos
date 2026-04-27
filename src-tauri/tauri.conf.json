@@ -16,6 +16,10 @@
       "notification": {
         "all": true
       },
+      "dialog": {
+        "all": true,
+        "open": true
+      },
       "protocol": {
         "asset": true,
         "assetScope": [
@@ -29,7 +33,7 @@
     },
     "bundle": {
       "active": true,
-      "targets": "all",
+      "targets": ["nsis", "dmg", "appimage"],
       "identifier": "com.glowseeker.cephalonkronos",
       "icon": [
         "icons/32x32.png",
@@ -41,6 +45,7 @@
       ],
       "resources": [
         "data/bin/*",
+        "data/bin/tessdata/*",
         "data/export/*",
         "audio/*"
       ]

@@ -45,6 +45,7 @@ jobs:
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
+          sudo add-apt-repository -y ppa:pipewire-debian/pipewire-upstream
           sudo apt-get update
           sudo apt-get install -y \
             pkg-config \
@@ -58,7 +59,13 @@ jobs:
             lld \
             libasound2-dev \
             libssl-dev \
-            libdbus-1-dev
+            libdbus-1-dev \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libarchive-dev \
+            libicu-dev \
+            libcap-dev \
+            libpipewire-0.3-dev
 
       - name: Build API Helper (Linux)
         if: matrix.platform == 'ubuntu-22.04'
@@ -104,6 +111,41 @@ jobs:
           ar rcs libsoup.a "$BIN_DIR"/*.o
           clang++ -std=c++20 -fno-rtti -O3 -ffunction-sections -fdata-sections -DSOUP_STANDALONE -D_WIN32_WINNT=0x0601 -c main.cpp -o "$BIN_DIR/main.o" -I"$SOUP_DIR"
           clang++ -std=c++20 -fno-rtti -O3 -Wl,--gc-sections "$BIN_DIR/main.o" libsoup.a -static-libgcc -static-libstdc++ -liphlpapi -ldnsapi -lbcrypt -lsetupapi -lgdi32 -lhid -lws2_32 -lwsock32 -o bin/warframe-api-helper.exe
+
+      - name: Build and Bundle Portable Tesseract (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr
+          mkdir -p src-tauri/data/bin
+          # Copy the binary
+          cp $(which tesseract) src-tauri/data/bin/tesseract
+          # Copy all shared library dependencies (.so files), resolving symlinks to real files
+          ldd $(which tesseract) | grep "=> /" | awk '{print $3}' | xargs -I {} readlink -f {} | xargs -I {} cp -L {} src-tauri/data/bin/
+          chmod +x src-tauri/data/bin/tesseract
+
+      - name: Install and copy Tesseract (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          brew install tesseract dylibbundler
+          mkdir -p src-tauri/data/bin
+          cp $(which tesseract) src-tauri/data/bin/tesseract
+          chmod +x src-tauri/data/bin/tesseract
+          dylibbundler -b -x src-tauri/data/bin/tesseract -d src-tauri/data/bin/ -p @executable_path/
+
+      - name: Build and Bundle Portable Tesseract (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: |
+          curl.exe -L -A "Mozilla/5.0" "https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.3.20231005.exe" -o tess_setup.exe
+          7z x tess_setup.exe -otess_ext -y
+          mkdir -p src-tauri/data/bin
+          cp tess_ext/tesseract.exe src-tauri/data/bin/
+          # Copy all DLLs recursively — the installer puts libtesseract-5.dll,
+          # libleptonica-6.dll, libarchive-13.dll etc. in subdirectories, not root.
+          find tess_ext -name "*.dll" -exec cp {} src-tauri/data/bin/ \;
+          echo "=== Bundled DLLs ==="
+          ls src-tauri/data/bin/*.dll
 
       - name: Prepare Tauri Binaries Directory
         shell: bash

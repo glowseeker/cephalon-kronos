@@ -2,6 +2,9 @@ import { createContext, useContext, useState, useRef, useCallback, useEffect, us
 import { invoke } from '@tauri-apps/api/tauri'
 import { parseInventory } from '../lib/inventoryParser'
 import { parseWorldstate } from '../lib/worldstateParser'
+import { getRelicRewards, getAllRelicRewards, getRewardInventoryContext, parseRelicName } from '../lib/relicParser'
+import { listen, emit } from '@tauri-apps/api/event'
+import { getPrice } from '../lib/wfmCache'
 
 const ORACLE_API = 'https://oracle.browse.wf/worldState.json'
 
@@ -26,6 +29,13 @@ function toMap(data, key) {
   }
   return arr || {}
 }
+
+const cleanOcrText = (s) => s
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip diacritics: É→E, Ï→I, etc.
+  .toUpperCase()
+  .replace(/[^A-Z0-9 ]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim();
 
 const ARBY_TIERS = {
   SolNode106: "S", SolNode147: "S", SolNode149: "S", ClanNode22: "S",
@@ -81,33 +91,33 @@ export function MonitoringProvider({ children }) {
   }, [])
 
   // ── Derived lookup maps ──────────────────────────────────────────────────────
-  // All computed once when exportData loads; consumers just destructure from context.
   const dict = useMemo(() => exportData?.['dict.en'] ?? {}, [exportData])
   const suppDict = useMemo(() => exportData?.['supp-dict-en'] ?? {}, [exportData])
-
   const EC = useMemo(() => toMap(exportData?.ExportChallenges, 'ExportChallenges'), [exportData])
-
   const ERg = useMemo(() => {
     const data = exportData?.ExportRegions
     if (!data) return {}
     const map = {}
+    const process = (r) => {
+      if (!r || typeof r !== 'object') return
+      if (r.uniqueName) map[r.uniqueName] = r
+      if (r.name) map[r.name] = r
+      if (r.regionIndex !== undefined) map[`SolNode${r.regionIndex}`] = r
+    }
     if (Array.isArray(data)) {
-      for (const r of data) {
-        const key = r.uniqueName || r.name || `SolNode${r.regionIndex}`
-        if (key) map[key] = r
-      }
+      data.forEach(process)
     } else if (typeof data === 'object') {
-      Object.entries(data).forEach(([k, v]) => { if (k !== 'ExportRegions') map[k] = v })
       if (Array.isArray(data.ExportRegions)) {
-        for (const r of data.ExportRegions) {
-          const key = r.uniqueName || r.name || `SolNode${r.regionIndex}`
-          if (key) map[key] = r
-        }
+        data.ExportRegions.forEach(process)
+      } else {
+        Object.entries(data).forEach(([k, v]) => {
+          if (k !== 'ExportRegions') map[k] = v
+          process(v)
+        })
       }
     }
     return map
   }, [exportData])
-
   const ES = useMemo(() => exportData?.ExportSyndicates ?? {}, [exportData])
   const ENW = useMemo(() => toMap(exportData?.ExportNightwave, 'rewards'), [exportData])
   const ENWRawRewards = useMemo(() => exportData?.ExportNightwave?.rewards || [], [exportData])
@@ -124,66 +134,50 @@ export function MonitoringProvider({ children }) {
     const EI = {}
     const nameToImage = {}
     const uniqueNameToName = {}
+    const toBrowseWf = (p) => p ? `https://browse.wf${p.startsWith('/') ? '' : '/'}${p}` : null
 
-    const toBrowseWf = (path) => {
-      if (!path || path.startsWith('http')) return null
-      if (path.includes('/')) return `https://browse.wf${path.startsWith('/') ? '' : '/'}${path}`
-      return null
-    }
-
-    const indexEntry = (e, keyFromMap, tableSource) => {
-      if (!e || typeof e !== 'object') return
-      const un = e.uniqueName || e.ItemType || keyFromMap
+    const indexEntry = (e, k, t) => {
+      const un = e.uniqueName || e.ItemType || k
       if (!un) return
       const url = toBrowseWf(e.icon ?? e.texture ?? '')
       if (url) EI[un] = url
-      
-      // Use direct name if available, otherwise if it's a recipe, try to inherit from result
-      let nameKey = e.name ?? e.displayName ?? ''
-      if (!nameKey && tableSource === 'ExportRecipes' && e.resultType) {
-        // We'll resolve this in a second pass or check if already indexed
-        nameKey = e.resultType 
-      }
-      
+      const nameKey = e.name ?? e.displayName ?? (t === 'ExportRecipes' ? e.resultType : '')
       uniqueNameToName[un] = nameKey
       const locKey = uniqueNameToName[un]
       if (locKey) {
         const resolved = (dict[locKey] || dict['/' + locKey] || '').replace(/<[^>]*>/g, '').trim()
         if (resolved && !resolved.startsWith('/')) { if (url) nameToImage[resolved.toLowerCase()] = url }
-        if (!locKey.startsWith('/')) { if (url) nameToImage[locKey.toLowerCase()] = url }
       }
     }
 
-    for (const tbl of tableNames) {
+    tableNames.forEach(tbl => {
       const data = exportData[tbl]
-      if (!data) continue
-      if (Array.isArray(data)) { data.forEach(e => indexEntry(e, null, tbl)); continue }
-      if (typeof data === 'object') {
+      if (!data) return
+      if (Array.isArray(data)) data.forEach(e => indexEntry(e, null, tbl))
+      else if (typeof data === 'object') {
         const nested = data[tbl] ?? (Object.keys(data).length === 1 && typeof Object.values(data)[0] === 'object' ? Object.values(data)[0] : null)
         if (Array.isArray(nested)) nested.forEach(e => indexEntry(e, null, tbl))
         else Object.entries(data).forEach(([k, v]) => indexEntry(v, k, tbl))
       }
-    }
-
-    // Second pass for recipes to resolve names AND icons that point to uniqueNames (resultType)
-    if (exportData.ExportRecipes) {
-      Object.entries(exportData.ExportRecipes).forEach(([un, e]) => {
-        const target = e.resultType
-        if (!target) return
-        
-        // Inherit name mapping if missing or internal
-        if (uniqueNameToName[target] && (!uniqueNameToName[un] || uniqueNameToName[un].startsWith('/Lotus/'))) {
-          uniqueNameToName[un] = uniqueNameToName[target]
-        }
-        
-        // Inherit icon if recipe doesn't have one
-        if (!EI[un] && EI[target]) {
-          EI[un] = EI[target]
-        }
-      })
-    }
+    })
     return { EI, nameToImage, uniqueNameToName }
   }, [exportData, dict])
+
+  const globalRewardPool = useMemo(() => getAllRelicRewards(exportData), [exportData])
+
+  // When the global reward pool is (re-)computed, write a baseline Tesseract wordlist
+  // containing every word that can ever appear in a relic reward name.
+  useEffect(() => {
+    if (!globalRewardPool || globalRewardPool.length === 0) return
+    const wordSet = new Set()
+    for (const item of globalRewardPool) {
+      const name = (item.name || '').trim()
+      if (name) name.split(/\s+/).forEach(w => { if (w.length > 1) wordSet.add(w) })
+    }
+    if (wordSet.size > 0) {
+      invoke('write_ocr_wordlist', { words: [...wordSet] }).catch(() => { })
+    }
+  }, [globalRewardPool])
 
   const applyRaw = useCallback((raw, ts, exports = exportData) => {
     if (!raw) return
@@ -193,7 +187,6 @@ export function MonitoringProvider({ children }) {
       const parsed = parseInventory(raw, exports)
       setInventoryData(parsed || null)
     } catch (err) {
-      console.error('[MonitoringContext] parseInventory failed:', err)
       setInventoryData(null)
     }
     const tsStr = String(ts ?? Date.now())
@@ -251,32 +244,28 @@ export function MonitoringProvider({ children }) {
         setStatusText('Loading inventory…')
         const result = await invoke('load_cached_inventory')
         if (result) {
-          const [data, timestamp] = result
-          // Note: parseWorldstate call in applyRaw handles its own logic
-          applyRaw(data, timestamp, exports)
+          applyRaw(result[0], result[1], exports)
           setStatusText('Loaded cached data')
         } else {
           setStatusText('No cached data – start monitoring in Settings')
           setInventoryData(null)
         }
       } catch (err) {
-        console.warn('Startup failed:', err)
         setStatusText(`Startup failed: ${err}`)
         setInventoryData(null)
       }
     })()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+
   const fetchWorldstate = useCallback(async () => {
     try {
       const ws = await fetch(ORACLE_API).then(r => r.ok ? r.json() : null)
-      if (ws && dict && suppDict && EC && ERg && EI) {
+      if (ws && dict) {
         const parsed = parseWorldstate(ws, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages })
         setWorldState(parsed)
       }
-    } catch (err) {
-      console.warn('Worldstate fetch failed:', err)
-    }
+    } catch (err) { }
   }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages])
 
   useEffect(() => {
@@ -287,239 +276,242 @@ export function MonitoringProvider({ children }) {
     }
   }, [fetchWorldstate, dict])
 
-  useEffect(() => {
-    if (rawInventory && exportData && inventoryData === undefined) {
-      applyRaw(rawInventory, lastUpdate, exportData)
-    }
-  }, [rawInventory, exportData, inventoryData, lastUpdate, applyRaw])
-
-  // Check notification conditions
-  useEffect(() => {
-    if (!inventoryData) return
-    const settings = {
-      arbitrationEnabled: localStorage.getItem('notif_arbitration_enabled') === 'true',
-      arbitrationHours: parseInt(localStorage.getItem('notif_arbitration_hours')) || 24,
-      arbitrationRemind: parseInt(localStorage.getItem('notif_arbitration_remind')) || 30,
-      foundryEnabled: localStorage.getItem('notif_foundry_enabled') === 'true',
-      foundryMinutes: parseInt(localStorage.getItem('notif_foundry_minutes')) || 5,
-      syndicateEnabled: localStorage.getItem('notif_syndicate_enabled') === 'true',
-      syndicateWasteEnabled: localStorage.getItem('notif_syndicate_waste_enabled') === 'true',
-      masteryEnabled: localStorage.getItem('notif_mastery_enabled') === 'true',
-      masteryPercent: parseInt(localStorage.getItem('notif_mastery_percent')) || 50,
-      checklistMinutes: parseInt(localStorage.getItem('notif_checklist_minutes')) || 60,
-    }
-    const doNotify = async (title, message, image = null) => {
-      const pos = localStorage.getItem('notif_position') || 'top-right'
-      await invoke('show_notification', { title, message, image, position: pos }).catch(() => {})
-    }
-
-    // Foundry: only notify if remaining time > threshold at scan time
-    if (settings.foundryEnabled) {
-      const foundryItems = inventoryData?.foundry ?? []
-      const now = Date.now() / 1000 // Unix timestamp in seconds
-      for (const item of foundryItems) {
-        if (item.ready) continue // Skip already ready items
-        const finishTime = item.finishTime ?? 0
-        if (finishTime <= 0) continue
-        const remainingSeconds = finishTime - now
-        const thresholdSeconds = settings.foundryMinutes * 60
-        // Only notify if remaining time is GREATER than threshold
-        // (i.e., item will finish AFTER the notification would fire)
-        if (remainingSeconds > thresholdSeconds && remainingSeconds <= (24 * 3600)) {
-          const itemId = item.uniqueName || item.name || String(finishTime)
-          if (!notifiedRef.current.foundry.has(itemId)) {
-            notifiedRef.current.foundry.add(itemId)
-            const timeLeft = Math.round(remainingSeconds / 60)
-            doNotify('Foundry Progress', `${item.name || 'Item'} will be ready in ${timeLeft} minutes`)
-          }
-        }
-      }
-    }
-
-    // Syndicate Capped: check if any syndicate is at max standing
-    if (settings.syndicateEnabled) {
-      const affiliations = inventoryData?.Affiliations || {}
-      for (const [tag, aff] of Object.entries(affiliations)) {
-        const standing = aff.Standing || 0
-        const rank = aff.Title || 0
-        // Get rank cap for this rank
-        const syndInfo = ES[tag]
-        const caps = syndInfo?.ranks?.[rank]?.standing
-        if (caps !== undefined) {
-          const rankCap = Math.abs(caps)
-          if (standing >= rankCap && standing > 0) {
-            if (!notifiedRef.current.syndicate.has(tag)) {
-              notifiedRef.current.syndicate.add(tag)
-              const name = syndInfo?.name || tag
-              doNotify('Syndicate Capped', `${name} has reached max daily standing`)
-            }
-          }
-        }
-      }
-    }
-
-    // Waste Reminder: check opponent of pledged faction
-    if (settings.syndicateWasteEnabled) {
-      const pledged = inventoryData?.SupportedSyndicate
-      if (pledged) {
-        const opponentTag = { 
-          'Steel Meridian': 'Perrin Seqments', 
-          'Perrin Seqments': 'Steel Meridian', 
-          'Arbiters of Hexis': 'The Society', 
-          'The Society': 'Arbiters of Hexis',
-          'New Loka': 'Red Veil', 
-          'Red Veil': 'New Loka',
-          'Cephalon Suda': 'The Vigilant', 
-          'The Vigilant': 'Cephalon Suda' 
-        }[pledged]
-        if (opponentTag) {
-          const aff = inventoryData?.Affiliations?.[opponentTag]
-          const opponentStanding = aff?.Standing || 0
-          const opponentRank = aff?.Title || 0
-          const oppSyndInfo = ES[opponentTag]
-          const oppCaps = oppSyndInfo?.ranks?.[opponentRank]?.standing
-          if (oppCaps !== undefined) {
-            const oppRankCap = Math.abs(oppCaps)
-            // Notify if opponent has more than 50% of rank cap
-            if (oppRankCap > 0 && opponentStanding > oppRankCap * 0.5) {
-              const now = Date.now()
-              const sixHours = 6 * 60 * 60 * 1000
-              const wasteData = notifiedRef.current.syndicateWaste
-              if (now - wasteData.lastNotify > sixHours && wasteData.count < 2) {
-                const oppName = oppSyndInfo?.name || opponentTag
-                const pledgedName = ES[pledged]?.name || pledged
-                wasteData.lastNotify = now
-                wasteData.count++
-                doNotify('Standing Waste Warning', `${oppName} (enemy of ${pledgedName}) has ${opponentStanding.toLocaleString()} standing`)
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Checklist tasks: notify before daily/weekly reset
-    const checklistTasks = window.__checklistTasks
-    if (checklistTasks && checklistTasks.length > 0) {
-      const thresholdMs = settings.checklistMinutes * 60 * 1000
-      const cooldownMs = Math.min(settings.checklistMinutes * 30 * 1000, 30 * 60 * 1000) // 30% of threshold, max 30min
-      const nowMs = Date.now()
-      for (const task of checklistTasks) {
-        if (!task.notifEnabled) continue
-        const timeUntilReset = task.nextResetTime - nowMs
-        // Notify if less than threshold left and not yet notified for this cycle
-        if (timeUntilReset > 0 && timeUntilReset <= thresholdMs) {
-          const lastNotified = notifiedRef.current.checklist[task.id] || 0
-          // Only notify if haven't notified within the cooldown for this task
-          if (nowMs - lastNotified > cooldownMs) {
-            notifiedRef.current.checklist[task.id] = nowMs
-            const timeLeft = Math.round(timeUntilReset / 60000)
-            doNotify('Task Reminder', `${task.label} resets in ${timeLeft} minutes`)
-          }
-        }
-        // Clear notification state if reset has passed
-        if (timeUntilReset <= 0 && notifiedRef.current.checklist[task.id]) {
-          delete notifiedRef.current.checklist[task.id]
-        }
-      }
-    }
-  }, [inventoryData, ES])
-
   const callApiHelper = useCallback(async () => {
     if (busyRef.current) return
     busyRef.current = true
     setIsUpdating(true)
     try {
-      setStatusText('Launching warframe-api-helper…')
-      // Fetch everything concurrently: inventory + text updates
-      const [raw, spiText, arbText] = await Promise.all([
-        invoke('call_api_helper'),
-        invoke('load_txt_file', { name: 'sp-incursions.txt' }),
-        invoke('load_txt_file', { name: 'arbys.txt' }),
-      ])
-
-      if (spiText) setSpIncursions(spiText)
-      if (arbText) setArbys(arbText)
-
-      if (raw) {
-        applyRaw(raw, Date.now())
-        setStatusText(`Updated - ${new Date().toLocaleTimeString()}`)
-        setMonitorResult('success')
-      } else {
-        setStatusText('Helper returned no data')
-        setMonitorResult('error')
-      }
-    } catch (err) {
-      setStatusText(`Error: ${String(err)}`)
-      setMonitorResult('error')
-      throw err
+      const raw = await invoke('call_api_helper')
+      if (raw) applyRaw(raw, Date.now())
     } finally {
       busyRef.current = false
       setIsUpdating(false)
     }
   }, [applyRaw])
 
-  const manualRefresh = useCallback(async () => {
-    if (busyRef.current) return
-    try {
-      setStatusText('Refreshing…')
-      await callApiHelper()
-    } catch (err) {
-      setStatusText(`Refresh failed: ${err?.message ?? err}`)
-    }
-  }, [callApiHelper])
-
   const startMonitoring = useCallback(async (intervalMs = 180_000) => {
     if (isMonitoring) return
     setIsMonitoring(true)
-    setStatusText('Starting monitoring…')
-    try { await callApiHelper() } catch { /* will retry */ }
-    if (intervalRef.current) clearInterval(intervalRef.current)
+    try { await callApiHelper() } catch { }
     intervalRef.current = setInterval(() => callApiHelper().catch(() => { }), intervalMs)
   }, [isMonitoring, callApiHelper])
-
-  // Auto-start monitoring once on launch if the user preference is enabled
-  const autoStartFiredRef = useRef(false)
-  useEffect(() => {
-    if (autoStartRef.current && exportData && !isMonitoring && !autoStartFiredRef.current) {
-      autoStartFiredRef.current = true
-      startMonitoring()
-    }
-  }, [exportData, isMonitoring, startMonitoring])
 
   const stopMonitoring = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
     setIsMonitoring(false)
-    setMonitorResult('idle')
-    setStatusText('Monitoring stopped')
   }, [])
+
+  const manualRefresh = useCallback(() => callApiHelper(), [callApiHelper])
+
+  const fissureStateRef = useRef({ squad_relics: [] })
+  const ocrActiveRef = useRef(false)
+
+  const termLog = (msg) => {
+    console.log(msg)
+    invoke('log_terminal', { message: msg }).catch(() => { })
+  }
+
+  useEffect(() => {
+    if (!exportData) return
+    const subs = []
+
+    const levenshtein = (a, b) => {
+      const tmp = []
+      for (let i = 0; i <= a.length; i++) { tmp[i] = [i] }
+      for (let j = 0; j <= b.length; j++) { tmp[0][j] = j }
+      for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+          tmp[i][j] = Math.min(tmp[i - 1][j] + 1, tmp[i][j - 1] + 1, tmp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+        }
+      }
+      return tmp[a.length][b.length]
+    }
+
+    const wordSimilarity = (s1, s2) => {
+      if (s1 === s2) return 1.0
+      const dist = levenshtein(s1, s2)
+      const maxLen = Math.max(s1.length, s2.length)
+      return 1.0 - (dist / maxLen)
+    }
+
+    subs.push(listen('scanner-relic-phase-start', (e) => {
+      const { squad_size } = e.payload
+      ocrActiveRef.current = true
+      invoke('show_overlay_window', { label: 'overlay-relic' }).catch(() => { })
+      invoke('relay_event', { event: 'overlay-squad-size', payload: { squad_size } }).catch(() => { })
+    }))
+
+    subs.push(listen('fissure-relic-phase', (e) => {
+      const { squad_relics, squad_size } = e.payload
+      const resolved = squad_relics.map(r => ({
+        ...r, ...parseRelicName(r.unique_name), rewards: getRelicRewards(r.unique_name, exportData)
+      }))
+      fissureStateRef.current.squad_relics = resolved
+      invoke('relay_event', { event: 'overlay-update-relics', payload: { squad_relics: resolved, squad_size } }).catch(() => { })
+
+      // Build the Tesseract wordlist from all words appearing in the reward pool.
+      // With squad relics known we have at most 24 candidates — a tiny, precise
+      // vocabulary that dramatically narrows what Tesseract considers valid output.
+      const wordSet = new Set()
+      for (const relic of resolved) {
+        for (const rew of (relic.rewards || [])) {
+          const name = (rew.name || '').trim()
+          if (name) name.split(/\s+/).forEach(w => { if (w.length > 1) wordSet.add(w) })
+        }
+      }
+      if (wordSet.size > 0) {
+        invoke('write_ocr_wordlist', { words: [...wordSet] }).catch(err =>
+          termLog(`[MonitoringContext] write_ocr_wordlist failed: ${err}`)
+        )
+      }
+    }))
+
+    subs.push(listen('fissure-reward-phase', async (e) => {
+      const { local_reward, squad_size } = e.payload
+      if (!local_reward) return
+      const baseItem = fissureStateRef.current.squad_relics.flatMap(r => r.rewards).find(r => r.uniqueName === local_reward) || {}
+      const platPrice = await getPrice(local_reward, baseItem.name, baseItem.ducats)
+      const reward = { uniqueName: local_reward, ...baseItem, platPrice }
+      invoke('relay_event', { event: 'overlay-update-reward', payload: { local_reward: reward, squad_size } }).catch(() => { })
+    }))
+
+    subs.push(listen('fissure-ocr-band', async (e) => {
+      const { text, slot_results, is_debug } = e.payload
+      if (!ocrActiveRef.current && !is_debug) return
+      if (is_debug) ocrActiveRef.current = true
+      if (!slot_results) return
+
+
+      for (const res of slot_results) {
+        const ocrText = cleanOcrText(res.text || '');
+        if (ocrText.length < 3) continue;
+
+        // Build candidate pool (squad relics if available, else global)
+        let candidates = [];
+        const currentRelics = fissureStateRef.current.squad_relics || [];
+        if (currentRelics.length > 0 && !is_debug) {
+          const seen = new Set();
+          for (const r of currentRelics) {
+            if (r.rewards) r.rewards.forEach(rew => {
+              if (!seen.has(rew.uniqueName)) {
+                candidates.push(rew);
+                seen.add(rew.uniqueName);
+              }
+            });
+          }
+        } else {
+          // Only keep items that can actually appear in relic reward UI
+          candidates = (globalRewardPool || []).filter(item => {
+            const n = item.name.toUpperCase();
+            return n.includes('PRIME') || n.includes('BLUEPRINT') || n === 'FORMA BLUEPRINT';
+          });
+        }
+
+        const cleanOcrNoSpace = ocrText.replace(/\s/g, '');
+        let bestMatch = null;
+        let bestScore = -1;
+
+        for (const item of candidates) {
+          if (!item || !item.name) continue;
+          const cleanItemName = item.name.toUpperCase().replace(/[^A-Z0-9]/g, ' ')
+          const cleanItemNoSpace = cleanItemName.replace(/\s/g, '');
+
+          let score = 0
+          const ocrWords = ocrText.split(' ').filter(w => w.length > 0)
+          const candWords = cleanItemName.split(' ').filter(w => w.length > 0)
+          if (candWords.length === 0) continue;
+
+          // 1. Direct Subset/Exact checks
+          if (ocrText === cleanItemName || ocrText === cleanItemNoSpace || cleanOcrNoSpace === cleanItemNoSpace) {
+            score = 1.3;
+          } else if (ocrText.includes(cleanItemName) || cleanOcrNoSpace.includes(cleanItemNoSpace)) {
+            score = 1.1;
+          } else {
+            // 2. Glue-Aware Word-by-word matching
+            let totalWeightedSim = 0;
+            let totalWeight = 0;
+
+            for (let i = 0; i < candWords.length; i++) {
+              const cw = candWords[i];
+              let bestWordSim = 0;
+
+              // Check standalone words
+              for (const ow of ocrWords) {
+                const sim = wordSimilarity(ow, cw);
+                if (sim > bestWordSim) bestWordSim = sim;
+              }
+
+              // GLUE CHECK: If the candidate word is stuck to another word (e.g. MIRAGPRIME)
+              // we check the best similarity of any SUBSTRING of the mangled OCR
+              if (bestWordSim < 0.8) {
+                for (const ow of ocrWords) {
+                  if (ow.length > cw.length && ow.includes(cw)) {
+                    bestWordSim = Math.max(bestWordSim, 0.9);
+                  }
+                }
+              }
+
+              let weight = 1.0;
+              if (i === 0) weight = 8.0; // The Name is king
+              else if (cw === 'PRIME') weight = 0.5;
+              else if (cw === 'BLUEPRINT') weight = 0.3;
+
+              totalWeightedSim += (bestWordSim * weight);
+              totalWeight += weight;
+            }
+
+            score = totalWeightedSim / totalWeight;
+
+            // 3. Penalty: zero the score only if the first word is a complete miss.
+            // Also check if candWords[0] appears *inside* an OCR word, which handles
+            // merged tokens like "MIRAGPRIIE" where "MIRAGE" and "PRIME" got glued.
+            const firstName = candWords[0];
+            const ocrContainsName = ocrWords.some(ow =>
+              ow.includes(firstName) ||
+              firstName.includes(ow) ||
+              wordSimilarity(ow, firstName) > 0.6
+            ) || cleanOcrNoSpace.includes(firstName);
+            if (!ocrContainsName && score < 1.0) score = 0;
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = item;
+          }
+        }
+
+        if (bestMatch && bestScore >= 0.60) {
+          const platPrice = await getPrice(bestMatch.uniqueName, bestMatch.name, bestMatch.ducats || 0);
+          const inventory = getRewardInventoryContext(bestMatch.uniqueName, inventoryData, exportData);
+          invoke('relay_event', {
+            event: 'overlay-update-ocr',
+            payload: { slot: res.slot, confirmed_reward: bestMatch.name, item: { ...bestMatch, icon: EI[bestMatch.uniqueName], platPrice, inventory } }
+          }).catch(() => { });
+          termLog(`[MonitoringContext] Slot ${res.slot} MATCHED: "${ocrText}" -> ${bestMatch.name} (Score: ${bestScore.toFixed(3)})`);
+        } else {
+          termLog(`[MonitoringContext] Slot ${res.slot} failed match: "${ocrText}" (Best: ${bestMatch?.name || 'None'}, Score: ${bestScore.toFixed(3)})`);
+        }
+      }
+
+    }))
+
+    subs.push(listen('fissure-reward-closed', () => {
+      ocrActiveRef.current = false
+    }))
+
+    return () => { subs.forEach(p => p.then(f => f())) }
+  }, [exportData, inventoryData, globalRewardPool, EI])
 
   return (
     <MonitoringContext.Provider value={{
       exportData, spIncursions, arbys, descendiaDescs,
       dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENW, ENWRawRewards, ExportImages, ExportTextIcons, arbyTiers: ARBY_TIERS,
       isMonitoring, monitorResult, autoStart, setAutoStart, lastUpdate, rawInventory, inventoryData, isInventoryLoading, worldState, setWorldState, statusText,
-      startMonitoring, stopMonitoring, manualRefresh, callApiHelper,
-      notifSettings: {
-        arbitrationEnabled: localStorage.getItem('notif_arbitration_enabled') === 'true',
-        arbitrationHours: parseInt(localStorage.getItem('notif_arbitration_hours')) || 24,
-        arbitrationRemind: parseInt(localStorage.getItem('notif_arbitration_remind')) || 30,
-        foundryEnabled: localStorage.getItem('notif_foundry_enabled') === 'true',
-        foundryMinutes: parseInt(localStorage.getItem('notif_foundry_minutes')) || 5,
-        syndicateEnabled: localStorage.getItem('notif_syndicate_enabled') === 'true',
-        syndicateWasteEnabled: localStorage.getItem('notif_syndicate_waste_enabled') === 'true',
-        masteryEnabled: localStorage.getItem('notif_mastery_enabled') === 'true',
-        masteryPercent: parseInt(localStorage.getItem('notif_mastery_percent')) || 50,
-      },
-      notifiedRef
+      startMonitoring, stopMonitoring, manualRefresh, callApiHelper
     }}>
       {children}
     </MonitoringContext.Provider>
   )
 }
 
-export function useMonitoring() {
-  return useContext(MonitoringContext)
-}
-
-export default MonitoringContext
+export const useMonitoring = () => useContext(MonitoringContext)

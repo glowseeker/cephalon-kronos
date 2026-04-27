@@ -1,0 +1,4 @@
+# Ensure binaries are handled correctly
+*.exe binary
+*.traineddata binary
+src-tauri/data/bin/* -text

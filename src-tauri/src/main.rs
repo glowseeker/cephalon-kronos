@@ -6,15 +6,22 @@
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
-use serde_json::Value;
 use std::fs;
 use tauri::Manager;
-// use std::io::BufReader;
 use std::sync::{Arc, Mutex};
-// use rodio::{Decoder, OutputStream, Sink};
+use serde_json::Value;
+
+mod log_scanner;
+mod ocr;
+mod overlay_utils;
 
 pub struct AppState {
     pub notif_sound: Arc<Mutex<String>>,
+    pub log_scanner: Arc<Mutex<Option<log_scanner::LogScannerHandle>>>,
+    pub log_scanner_path: Arc<Mutex<Option<String>>>,
+    /// Path to the eng.user-words file written for the current session.
+    /// Written by `write_ocr_wordlist`, consumed by the OCR pipeline.
+    pub ocr_wordlist_path: Arc<Mutex<Option<std::path::PathBuf>>>,
 }
 
 // ─── Path Resolution ──────────────────────────────────────────────────────────
@@ -77,6 +84,12 @@ fn resolve_path(relative: &str) -> PathBuf {
 /// Used as fallback when writable data root doesn't have the file yet (e.g. AppImage first run).
 fn resolve_bundled_path(app_handle: &tauri::AppHandle, relative: &str) -> Option<PathBuf> {
     app_handle.path_resolver().resolve_resource(relative)
+}
+
+/// Simple command to proxy frontend logs to the terminal/stdout.
+#[tauri::command]
+fn log_terminal(message: String) {
+    eprintln!("[JS] {}", message);
 }
 
 // ─── Export Management ────────────────────────────────────────────────────────
@@ -670,6 +683,11 @@ fn hide_overlay_window(
 }
 
 #[tauri::command]
+fn relay_event(app_handle: tauri::AppHandle, event: String, payload: Value) -> Result<(), String> {
+    app_handle.emit_all(&event, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn set_notification_sound(state: tauri::State<'_, AppState>, sound: String) -> Result<(), String> {
     // Update in-memory state
     let mut current = state.notif_sound.lock().unwrap();
@@ -692,7 +710,6 @@ fn set_notification_sound(state: tauri::State<'_, AppState>, sound: String) -> R
     }
     std::fs::write(&settings_path, content).map_err(|e| e.to_string())?;
     
-    println!("[set_notification_sound] Saved: {}", sound);
     Ok(())
 }
 
@@ -701,143 +718,7 @@ fn show_overlay_window(
     app_handle: tauri::AppHandle,
     label: String,
 ) -> Result<(), String> {
-    eprintln!("[show_overlay_window] Called for: {}", label);
-    
-    let window = app_handle
-        .get_window(&label)
-        .ok_or_else(|| format!("window '{}' not found", label))?;
-    
-    let monitor = window.primary_monitor()
-        .map_err(|e| e.to_string())?
-        .ok_or("no primary monitor")?;
-
-    let screen_w = monitor.size().width;
-    let screen_h = monitor.size().height;
-    let scale    = monitor.scale_factor();
-    let margin   = (16.0 * scale) as i32;
-
-    // Fixed widths for standard overlays (centered internally in JS)
-    let log_w = match label.as_str() {
-        "overlay-relic" => 640u32,
-        _ => 440u32,
-    };
-    
-    let phys_w = (log_w as f64 * scale) as u32;
-    let phys_h = screen_h; 
-
-    let phys_margin = margin;
-
-    let (x, y) = match label.as_str() {
-        "overlay-tl"    => (phys_margin, phys_margin),
-        "overlay-tc"    => (((screen_w as i32 - phys_w as i32) / 2), phys_margin),
-        "overlay-relic" => {
-            let relic_w_f = 640.0 * scale;
-            let relic_h_f = 140.0 * scale;
-            let margin_f  = 16.0 * scale;
-
-            let rx = ((screen_w as f64 - relic_w_f) / 2.0).round() as i32;
-            let ry = (screen_h as f64 - relic_h_f - margin_f).round() as i32;
-            eprintln!(
-                "[Relic Overlay] Initial position: x={}, y={}, width={}, height={}",
-                rx, ry, relic_w_f, relic_h_f
-            );
-
-            let relic_w = relic_w_f.round() as u32;
-            let relic_h = relic_h_f.round() as u32;
-            let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-                width: relic_w, height: relic_h,
-            }));
-            let _ = window.set_position(tauri::Position::Physical(
-                tauri::PhysicalPosition { x: rx, y: ry }
-            ));
-            let _ = window.show();
-            let _ = window.set_always_on_top(true);
-            let _ = window.set_ignore_cursor_events(true);
-
-            // Platform Specific Fixes
-            #[cfg(target_os = "macos")]
-            {
-                use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
-                if let Ok(ns_window) = window.ns_window() {
-                    let id = ns_window as cocoa::base::id;
-                    unsafe {
-                        id.setLevel_(8);
-                        id.setCollectionBehavior_(
-                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces |
-                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
-                        );
-                    }
-                }
-            }
-            #[cfg(target_os = "windows")]
-            {
-            }
-
-            let wr = window.clone();
-            tauri::async_runtime::spawn(async move {
-                // High-frequency re-assertion for the first 500ms
-                for ms in [20u64, 40, 60, 80, 100, 120, 140, 160, 180, 200, 250, 300, 350, 400, 450, 500] {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
-                    let _ = wr.set_always_on_top(true);
-                }
-                // Periodic re-assertion for the remaining duration
-                for _ in 0..15 {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-                    let _ = wr.set_always_on_top(true);
-                }
-            });
-            return Ok(());
-        }
-        _ => (screen_w as i32 - phys_w as i32 - phys_margin, phys_margin), // overlay-tr
-    };
-
-    let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-        width: phys_w, height: phys_h,
-    }));
-
-    let _ = window.set_position(tauri::Position::Physical(
-        tauri::PhysicalPosition { x, y }
-    ));
-
-    let _ = window.show();
-    let _ = window.set_always_on_top(true);
-    let _ = window.set_ignore_cursor_events(true);
-    let _ = window.set_skip_taskbar(true);
-
-    // Platform Specific Fixes
-    #[cfg(target_os = "macos")]
-    {
-        use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
-        if let Ok(ns_window) = window.ns_window() {
-            let id = ns_window as cocoa::base::id;
-            unsafe {
-                id.setLevel_(8);
-                id.setCollectionBehavior_(
-                    NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces |
-                    NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
-                );
-            }
-        }
-    }
-    #[cfg(target_os = "windows")]
-    {
-    }
-
-    let w = window.clone();
-    let is_relic = label.as_str() == "overlay-relic";
-    tauri::async_runtime::spawn(async move {
-        let ticks = if is_relic { 15 } else { 5 };
-        for ms in [20u64, 40, 60, 80, 100, 120, 140, 160, 180, 200, 250, 300, 350, 400, 450, 500] {
-            tokio::time::sleep(tokio::time::Duration::from_millis(ms)).await;
-            let _ = w.set_always_on_top(true);
-        }
-        for _ in 0..ticks {
-            tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-            let _ = w.set_always_on_top(true);
-        }
-    });
-
-    Ok(())
+    overlay_utils::show_window_internal(&app_handle, &label)
 }
 
 #[tauri::command]
@@ -856,7 +737,7 @@ fn resize_overlay_window(
         .ok_or("no primary monitor")?;
 
     let screen_w = monitor.size().width;
-    let screen_h = monitor.size().height;
+    let _screen_h = monitor.size().height;
     let scale    = monitor.scale_factor();
     let margin   = (16.0 * scale) as i32;
 
@@ -870,13 +751,18 @@ fn resize_overlay_window(
         "overlay-relic" => {
             let relic_w_f = width as f64 * scale;
             let relic_h_f = height as f64 * scale;
-            let margin_f  = 16.0 * scale;
+            let margin_f  = 40.0 * scale;
 
-            let rx = ((screen_w as f64 - relic_w_f) / 2.0).round() as i32;
-            let ry = (screen_h as f64 - relic_h_f - margin_f).round() as i32;
+            // Use the monitor the window is currently on
+            let mon_size = monitor.size();
+            let mon_w = mon_size.width as f64;
+            let mon_h = mon_size.height as f64;
+
+            let rx = ((mon_w - relic_w_f) / 2.0).round() as i32;
+            let ry = (mon_h - relic_h_f - margin_f).round() as i32;
             eprintln!(
-                "[Relic Overlay] Resizing: height={}, scale={}, rx={}, ry={}",
-                height, scale, rx, ry
+                "[Relic Overlay] Positioning at bottom of monitor: w={}, h={}, x={}, y={}",
+                mon_w, mon_h, rx, ry
             );
             (rx, ry)
         }
@@ -958,6 +844,7 @@ async fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) ->
         if path.exists() {
             let path_clone = path.clone();
             tokio::task::spawn_blocking(move || {
+                #[cfg(target_os = "linux")]
                 use std::process::Command;
 
                 #[cfg(target_os = "linux")]
@@ -1096,84 +983,149 @@ async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), Strin
         use std::process::Command;
 
         // 1. Sanitize PATH to remove AppImage internal folders.
-        // This prevents picking up the broken xdg-open inside the AppImage mount.
         let path = std::env::var("PATH").unwrap_or_default();
         let clean_path = path.split(':')
             .filter(|p| !p.contains(".mount_"))
             .collect::<Vec<_>>()
             .join(":");
 
-        // Variables that frequently cause issues in AppImage environments
         let toxic_vars = [
             "APPDIR", "APPIMAGE", "LD_LIBRARY_PATH", "LD_PRELOAD",
             "PYTHONPATH", "QT_PLUGIN_PATH", "GDK_BACKEND",
         ];
 
-        // Method A: Python webbrowser (Very high reliability)
-        println!("[open_url] Trying Method A: Python webbrowser...");
-        let mut py_cmd = Command::new("python3");
-        // Use sys.argv to avoid quoting issues
-        py_cmd.args(["-c", "import webbrowser, sys; webbrowser.open(sys.argv[1])", &url]);
-        py_cmd.env("PATH", &clean_path);
-        for var in toxic_vars { py_cmd.env_remove(var); }
-        if let Ok(status) = py_cmd.status() {
-            if status.success() {
-                println!("[open_url] Success via Python");
-                return Ok(());
-            }
-        }
+        let try_cmd = |cmd: &str, args: &[&str]| -> bool {
+            let mut command = Command::new(cmd);
+            command.args(args);
+            command.env("PATH", &clean_path);
+            for var in toxic_vars { command.env_remove(var); }
+            matches!(command.status(), Ok(s) if s.success())
+        };
 
-        // Method B: gio open (GLib Standard) - Portal aware
-        println!("[open_url] Trying Method B: gio open");
-        let mut gio_cmd = Command::new("gio");
-        gio_cmd.args(["open", &url]);
-        gio_cmd.env("PATH", &clean_path);
-        for var in toxic_vars { gio_cmd.env_remove(var); }
-        if let Ok(status) = gio_cmd.status() {
-            if status.success() {
-                println!("[open_url] Success via gio open");
-                return Ok(());
-            }
-        }
+        // Method A: Python webbrowser
+        if try_cmd("python3", &["-c", "import webbrowser, sys; webbrowser.open(sys.argv[1])", &url]) { return Ok(()); }
+        
+        // Method B: gio open
+        if try_cmd("gio", &["open", &url]) { return Ok(()); }
 
-        // Method C: xdg-open (using sanitized PATH)
-        println!("[open_url] Trying Method C: xdg-open");
-        let mut xdg_cmd = Command::new("xdg-open");
-        xdg_cmd.arg(&url);
-        xdg_cmd.env("PATH", &clean_path);
-        for var in toxic_vars { xdg_cmd.env_remove(var); }
-        if let Ok(status) = xdg_cmd.status() {
-            if status.success() {
-                println!("[open_url] Success via xdg-open");
-                return Ok(());
-            }
-        }
+        // Method C: xdg-open
+        if try_cmd("xdg-open", &[&url]) { return Ok(()); }
 
-        // Method D: busctl Portal (Modern Sandbox Escape)
-        println!("[open_url] Trying Method D: busctl Portal...");
-        let mut busctl_cmd = Command::new("busctl");
-        busctl_cmd.args([
+        // Method D: Portal
+        if try_cmd("busctl", &[
             "--user", "call",
             "org.freedesktop.portal.Desktop",
             "/org/freedesktop/portal/desktop",
             "org.freedesktop.portal.OpenURI",
-            "OpenURI",
-            "ss", "", &url, "0" // For OpenURI, busctl handles the empty dict with '0' if using 'ss'
-        ]);
-        busctl_cmd.env("PATH", &clean_path);
-        for var in toxic_vars { busctl_cmd.env_remove(var); }
-        if let Ok(status) = busctl_cmd.status() {
-            if status.success() {
-                println!("[open_url] Success via busctl");
-                return Ok(());
-            }
-        }
+            "OpenURI", "ss", "", &url, "0"
+        ]) { return Ok(()); }
     }
 
-    // Fallback for other platforms or if Linux manual methods fail
-    println!("[open_url] Final fallback to standard Tauri API");
+    // Fallback
     tauri::api::shell::open(&app_handle.shell_scope(), url, None)
         .map_err(|e| e.to_string())
+}
+
+// ─── Log Scanner Commands ───────────────────────────────────────────────────
+
+#[tauri::command]
+async fn start_log_scanner(app: tauri::AppHandle, state: tauri::State<'_, AppState>, path: String) -> Result<(), String> {
+    use std::path::PathBuf;
+    let path_buf = PathBuf::from(&path);
+    if !path_buf.exists() {
+        return Err("Log file does not exist".to_string());
+    }
+    
+    let mut scanner_lock = state.log_scanner.lock().unwrap();
+    let mut path_lock = state.log_scanner_path.lock().unwrap();
+    
+    let existing = path_lock.as_ref().map(|s| s.as_str()).unwrap_or("");
+    let is_same = scanner_lock.is_some() && existing == path;
+    eprintln!("[LOG_SCANNER] start called path={}, existing={}, is_same={}", path, existing, is_same);
+    
+    if is_same {
+        return Ok(());
+    }
+    
+    *scanner_lock = None;
+    *path_lock = Some(path.clone());
+    drop(path_lock);
+    drop(scanner_lock);
+    
+    let handle = match log_scanner::spawn_log_watcher(app, path_buf) {
+        Ok(h) => h,
+        Err(e) => {
+            crate::log_scanner::stop_scanner();
+            return Err(e);
+        }
+    };
+    let mut scanner_lock = state.log_scanner.lock().unwrap();
+    *scanner_lock = Some(handle);
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn stop_log_scanner(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let mut scanner_lock = state.log_scanner.lock().unwrap();
+    *scanner_lock = None;
+    crate::log_scanner::stop_scanner();
+    Ok(())
+}
+
+#[tauri::command]
+async fn validate_log_path(path: String) -> Result<serde_json::Value, String> {
+    use std::io::Read;
+    use std::path::PathBuf;
+    
+    let path_buf = PathBuf::from(path);
+    if !path_buf.exists() {
+        return Ok(serde_json::json!({ "valid": false, "reason": "File not found" }));
+    }
+    
+    let mut file = std::fs::File::open(&path_buf).map_err(|e| e.to_string())?;
+    let mut head = [0u8; 1024];
+    let _ = file.read(&mut head);
+    let s = String::from_utf8_lossy(&head);
+    
+    if s.contains("Sys [Info]:") || s.contains("Game [Info]:") {
+        Ok(serde_json::json!({ "valid": true }))
+    } else {
+        Ok(serde_json::json!({ "valid": false, "reason": "Invalid log format" }))
+    }
+}
+
+#[tauri::command]
+async fn simulate_fissure_event(app: tauri::AppHandle) -> Result<(), String> {
+    use crate::log_scanner::{FissureEvent, RelicInfo};
+    use tokio::time::{sleep, Duration};
+
+    // 1. Relic Phase
+    app.emit_all("fissure-relic-phase", FissureEvent {
+        event_type: "relic_phase_start".to_string(),
+        squad_relics: vec![
+            RelicInfo { unique_name: "/Lotus/Types/Game/Projections/T1VoidProjectionGaussPrimeBBronze".to_string(), tier: "Lith".to_string(), refinement: "Intact".to_string(), era: "Lith".to_string() },
+            RelicInfo { unique_name: "/Lotus/Types/Game/Projections/T2VoidProjectionSevagothPrimeCBronze".to_string(), tier: "Meso".to_string(), refinement: "Intact".to_string(), era: "Meso".to_string() },
+            RelicInfo { unique_name: "/Lotus/Types/Game/Projections/T3VoidProjectionHarrowPrimePBronze".to_string(), tier: "Neo".to_string(), refinement: "Intact".to_string(), era: "Neo".to_string() },
+            RelicInfo { unique_name: "/Lotus/Types/Game/Projections/T4VoidProjectionKhoraPrimeBBronze".to_string(), tier: "Axi".to_string(), refinement: "Intact".to_string(), era: "Axi".to_string() },
+        ],
+        local_reward: None,
+        squad_size: 4,
+        void_tier: Some("VoidT3".to_string()),
+    }).unwrap_or_default();
+
+    sleep(Duration::from_millis(500)).await;
+
+    // 2. Reward Phase
+    app.emit_all("fissure-reward-phase", FissureEvent {
+        event_type: "reward_phase".to_string(),
+        squad_relics: vec![],
+        local_reward: Some("/Lotus/StoreItems/Types/Recipes/Weapons/BroncoPrimeBlueprint".to_string()),
+        squad_size: 4,
+        void_tier: Some("VoidT3".to_string()),
+    }).unwrap_or_default();
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -1225,16 +1177,25 @@ fn main() {
         .and_then(|v| v.as_str())
         .unwrap_or("notification1.ogg");
     
-    let saved_theme = saved_settings.get("kronos-theme")
-        .and_then(|v| v.as_str())
-        .unwrap_or("vitruvian");
-    
-    println!("[Startup] Loaded theme: {}", saved_theme);
-    println!("[Startup] Loaded sound: {}", saved_sound);
-    
+    // Fix xcap screen capture on Linux inside AppImage:
+    // When run from an AppImage, the usual env-var workarounds for WebKit / Mesa
+    // are not set automatically.  Set them here so xcap always gets a working
+    // software-renderer path and GDK_BACKEND is forced to X11.
+    #[cfg(target_os = "linux")]
+    {
+        std::env::set_var("LIBGL_ALWAYS_SOFTWARE", "1");
+        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        // Only set GDK_BACKEND if not already overridden by the user
+        if std::env::var("GDK_BACKEND").is_err() {
+            std::env::set_var("GDK_BACKEND", "x11");
+        }
+    }
     tauri::Builder::default()
         .manage(AppState {
             notif_sound: Arc::new(Mutex::new(saved_sound.to_string())),
+            log_scanner: Arc::new(Mutex::new(None)),
+            log_scanner_path: Arc::new(Mutex::new(None)),
+            ocr_wordlist_path: Arc::new(Mutex::new(None)),
         })
         .on_window_event(|event| match event.event() {
             tauri::WindowEvent::CloseRequested { api, .. } => {
@@ -1270,6 +1231,14 @@ fn main() {
             get_maps_path,
             get_assets_path,
             get_cdn_base_url,
+            // --- log scanner ---
+            start_log_scanner,
+            stop_log_scanner,
+            validate_log_path,
+            simulate_fissure_event,
+            crate::ocr::save_debug_screenshot,
+            crate::ocr::start_debug_ocr_session,
+            crate::ocr::write_ocr_wordlist,
             // --- overlay ---
             show_notification,
             show_relic_overlay,
@@ -1280,9 +1249,11 @@ fn main() {
             play_notification_sound,
             set_notification_sound,
             start_notif_autoclose_timer,
+            relay_event,
             open_url,
             save_settings,
             load_settings,
+            log_terminal,
             // --- calibration ---
             toggle_calibration,
         ])
