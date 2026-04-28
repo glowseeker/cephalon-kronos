@@ -1,6 +1,8 @@
-use notify::{Config, EventKind, RecursiveMode, Watcher};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -71,9 +73,12 @@ impl LogScanner {
 
         // === 1. Mission Start/End Detection ===
         if line.contains("_ActiveMission\"} with MissionInfo") {
-            if !silent { 
-                let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
-                println!("[{}] [LOG_SCANNER] === FISSURE MISSION DETECTED ===", now); 
+            if !silent {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis();
+                println!("[{}] [LOG_SCANNER] === FISSURE MISSION DETECTED ===", now);
             }
             self.is_fissure = true;
             self.reset_state();
@@ -88,20 +93,31 @@ impl LogScanner {
                 if let Ok(count) = count_str.parse::<usize>() {
                     if count > 0 {
                         self.squad_size = count.min(4);
-                        if !silent { println!("[LOG_SCANNER] Squad size updated: {}", self.squad_size); }
+                        if !silent {
+                            println!("[LOG_SCANNER] Squad size updated: {}", self.squad_size);
+                        }
                     }
                 }
             }
         }
 
-        if line.contains("ExitState: Disconnected") || line.contains("Game [Info]: Set state to Disconnected") {
+        if line.contains("ExitState: Disconnected")
+            || line.contains("Game [Info]: Set state to Disconnected")
+        {
             if !silent && self.is_fissure {
-                let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
-                println!("[{}] [LOG_SCANNER] === MISSION END/ABORT (Disconnected) ===", now); 
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis();
+                println!(
+                    "[{}] [LOG_SCANNER] === MISSION END/ABORT (Disconnected) ===",
+                    now
+                );
             }
             self.is_fissure = false;
             self.reset_state();
-            app.emit_all("fissure-reward-closed", ()).unwrap_or_default();
+            app.emit_all("fissure-reward-closed", ())
+                .unwrap_or_default();
             return;
         }
 
@@ -119,7 +135,10 @@ impl LogScanner {
                             self.squad_relics.push(relic);
                             self.squad_size = self.squad_relics.len().min(4);
                             if !silent {
-                                println!("[LOG_SCANNER] Relic detected: {} (Squad: {})", path, self.squad_size);
+                                println!(
+                                    "[LOG_SCANNER] Relic detected: {} (Squad: {})",
+                                    path, self.squad_size
+                                );
                             }
                         }
                     }
@@ -131,28 +150,48 @@ impl LogScanner {
                 if let Some(pos) = line.find(" gets reward ") {
                     let path = line[pos + 13..].trim();
                     self.local_reward = Some(path.to_string());
-                    if !silent { println!("[LOG_SCANNER] Local reward caught: {}", path); }
-                    
+                    if !silent {
+                        println!("[LOG_SCANNER] Local reward caught: {}", path);
+                    }
+
                     if !silent && !self.has_triggered_round {
                         self.has_triggered_round = true;
                         let app_c = app.clone();
                         let sz = self.squad_size;
                         let relics = self.squad_relics.clone();
-                        
+
                         std::thread::spawn(move || {
-                            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
-                            println!("[{}] [LOG_SCANNER] === EARLY TRIGGER (Got reward line) ===", now);
+                            let now = std::time::SystemTime::now()
+                                .duration_since(std::time::UNIX_EPOCH)
+                                .unwrap()
+                                .as_millis();
+                            println!(
+                                "[{}] [LOG_SCANNER] === EARLY TRIGGER (Got reward line) ===",
+                                now
+                            );
                             std::thread::sleep(std::time::Duration::from_millis(300));
                             let _ = overlay_utils::show_window_internal(&app_c, "overlay-relic");
-                            app_c.emit_all("scanner-show-overlay", "overlay-relic").unwrap_or_default();
-                            app_c.emit_all("scanner-relic-phase-start", serde_json::json!({ "squad_size": sz })).unwrap_or_default();
-                            app_c.emit_all("fissure-relic-phase", FissureEvent {
-                                event_type: "relic_phase_start".to_string(),
-                                squad_relics: relics,
-                                local_reward: None,
-                                squad_size: sz,
-                                void_tier: None,
-                            }).unwrap_or_default();
+                            app_c
+                                .emit_all("scanner-show-overlay", "overlay-relic")
+                                .unwrap_or_default();
+                            app_c
+                                .emit_all(
+                                    "scanner-relic-phase-start",
+                                    serde_json::json!({ "squad_size": sz }),
+                                )
+                                .unwrap_or_default();
+                            app_c
+                                .emit_all(
+                                    "fissure-relic-phase",
+                                    FissureEvent {
+                                        event_type: "relic_phase_start".to_string(),
+                                        squad_relics: relics,
+                                        local_reward: None,
+                                        squad_size: sz,
+                                        void_tier: None,
+                                    },
+                                )
+                                .unwrap_or_default();
                             crate::ocr::run_ocr_pipeline_with_size(app_c, sz);
                         });
                     }
@@ -160,14 +199,26 @@ impl LogScanner {
             }
 
             // === 4. Backup Trigger ===
-            if !self.has_triggered_round && line.contains("ProjectionRewardChoice.lua: Got rewards") {
+            if !self.has_triggered_round && line.contains("ProjectionRewardChoice.lua: Got rewards")
+            {
                 self.has_triggered_round = true;
                 if !silent {
-                    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
-                    println!("[{}] [LOG_SCANNER] === BACKUP TRIGGER (Got rewards line) ===", now);
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis();
+                    println!(
+                        "[{}] [LOG_SCANNER] === BACKUP TRIGGER (Got rewards line) ===",
+                        now
+                    );
                     let _ = overlay_utils::show_window_internal(app, "overlay-relic");
-                    app.emit_all("scanner-show-overlay", "overlay-relic").unwrap_or_default();
-                    app.emit_all("scanner-relic-phase-start", serde_json::json!({ "squad_size": self.squad_size })).unwrap_or_default();
+                    app.emit_all("scanner-show-overlay", "overlay-relic")
+                        .unwrap_or_default();
+                    app.emit_all(
+                        "scanner-relic-phase-start",
+                        serde_json::json!({ "squad_size": self.squad_size }),
+                    )
+                    .unwrap_or_default();
                     let app_c = app.clone();
                     let sz = self.squad_size;
                     std::thread::spawn(move || {
@@ -179,7 +230,11 @@ impl LogScanner {
             // === 5. Endless Mission Continue/Extract ===
             if line.contains("Sending continue dialogue to host with answer") {
                 if line.contains("answer 1") {
-                    if !silent { println!("[LOG_SCANNER] Endless: User chose to CONTINUE. Resetting round state."); }
+                    if !silent {
+                        println!(
+                            "[LOG_SCANNER] Endless: User chose to CONTINUE. Resetting round state."
+                        );
+                    }
                     self.reset_round();
                 }
             }
@@ -235,7 +290,11 @@ fn parse_relic_path(path: &str) -> RelicInfo {
 }
 
 pub struct LogScannerHandle {
-    pub watcher: Box<dyn Watcher + Send + Sync>,
+    pub running: Arc<AtomicBool>,
+}
+
+pub fn stop_scanner() {
+    IS_SCANNING.store(false, Ordering::SeqCst);
 }
 
 pub fn spawn_log_watcher(app: AppHandle, log_path: PathBuf) -> Result<LogScannerHandle, String> {
@@ -244,75 +303,72 @@ pub fn spawn_log_watcher(app: AppHandle, log_path: PathBuf) -> Result<LogScanner
     }
     IS_SCANNING.store(true, Ordering::SeqCst);
 
-    let mut scanner = LogScanner::new();
     let app_inner = app.clone();
 
-    let (tx, rx) = std::sync::mpsc::channel();
-    let mut watcher =
-        notify::RecommendedWatcher::new(tx, Config::default()).map_err(|e| e.to_string())?;
-    watcher
-        .watch(&log_path, RecursiveMode::NonRecursive)
-        .map_err(|e| e.to_string())?;
-
     std::thread::spawn(move || {
-        let mut file = File::open(&log_path).expect("Failed to open log");
-        let total_len = file.metadata().unwrap().len();
+        let mut scanner = LogScanner::new();
+        let mut pos = 0u64;
 
-        // ── Backfill: read the last 32 KB to catch in-progress missions ────────
-        // If the scanner starts after the mission has already started (e.g. app
-        // launched mid-run) we would otherwise miss all state-setting lines.
-        const BACKFILL_BYTES: u64 = 32 * 1024;
-        let backfill_start = total_len.saturating_sub(BACKFILL_BYTES);
-        if backfill_start < total_len {
-            let mut backfill_buf = Vec::new();
-            let _ = file.seek(SeekFrom::Start(backfill_start));
-            let _ = file.read_to_end(&mut backfill_buf);
-            let backfill_text = String::from_utf8_lossy(&backfill_buf);
-            eprintln!("[LOG_SCANNER] Backfilling {} bytes from EE.log", backfill_buf.len());
-            for line in backfill_text.lines() {
-                scanner.on_line(&app_inner, line, true);
+        // Backfill on start
+        if let Ok(mut file) = File::open(&log_path) {
+            if let Ok(metadata) = file.metadata() {
+                let total_len = metadata.len();
+                const BACKFILL_BYTES: u64 = 32 * 1024;
+                let backfill_start = total_len.saturating_sub(BACKFILL_BYTES);
+
+                if backfill_start < total_len {
+                    let mut backfill_buf = Vec::new();
+                    let _ = file.seek(SeekFrom::Start(backfill_start));
+                    if file.read_to_end(&mut backfill_buf).is_ok() {
+                        let backfill_text = String::from_utf8_lossy(&backfill_buf);
+                        eprintln!(
+                            "[LOG_SCANNER] Backfilling {} bytes from EE.log",
+                            backfill_buf.len()
+                        );
+                        for line in backfill_text.lines() {
+                            scanner.on_line(&app_inner, line, true);
+                        }
+                    }
+                }
+                pos = total_len;
             }
         }
-        // ── End backfill ────────────────────────────────────────────────────────
 
-        let mut pos = file.metadata().unwrap().len();
-        let mut buffer = Vec::new();
-        let mut f = file;
+        // Main polling loop
+        loop {
+            if !IS_SCANNING.load(Ordering::SeqCst) {
+                break;
+            }
 
-        for res in rx {
-            if let Ok(event) = res {
-                if let EventKind::Modify(_) = event.kind {
-                    let new_len = f.metadata().unwrap().len();
+            if let Ok(mut file) = File::open(&log_path) {
+                if let Ok(metadata) = file.metadata() {
+                    let new_len = metadata.len();
+
                     if new_len < pos {
+                        // File was truncated (log rotation)
                         pos = 0;
                     }
 
-                    let mut temp = Vec::new();
-                    f.seek(SeekFrom::Start(pos)).unwrap_or(0);
-                    if f.read_to_end(&mut temp).is_ok() && !temp.is_empty() {
-                        buffer.extend(temp);
-                        let mut last_nl = 0;
-                        for (i, &b) in buffer.iter().enumerate() {
-                            if b == b'\n' {
-                                if let Ok(line) = std::str::from_utf8(&buffer[last_nl..i]) {
+                    if new_len > pos {
+                        let mut buffer = Vec::new();
+                        if file.seek(SeekFrom::Start(pos)).is_ok() {
+                            if file.read_to_end(&mut buffer).is_ok() && !buffer.is_empty() {
+                                let text = String::from_utf8_lossy(&buffer);
+                                for line in text.lines() {
                                     scanner.on_line(&app_inner, line, false);
                                 }
-                                last_nl = i + 1;
                             }
                         }
-                        buffer.drain(0..last_nl);
-                        pos = f.seek(SeekFrom::Current(0)).unwrap_or(pos);
+                        pos = new_len;
                     }
                 }
             }
+
+            thread::sleep(Duration::from_millis(500));
         }
     });
 
     Ok(LogScannerHandle {
-        watcher: Box::new(watcher),
+        running: Arc::new(AtomicBool::new(true)),
     })
-}
-
-pub fn stop_scanner() {
-    IS_SCANNING.store(false, Ordering::SeqCst);
 }
