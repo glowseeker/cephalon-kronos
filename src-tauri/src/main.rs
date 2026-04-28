@@ -1096,6 +1096,11 @@ async fn validate_log_path(path: String) -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
+fn is_scanning() -> bool {
+    crate::log_scanner::is_scanning()
+}
+
+#[tauri::command]
 async fn simulate_fissure_event(app: tauri::AppHandle) -> Result<(), String> {
     use crate::log_scanner::{FissureEvent, RelicInfo};
     use tokio::time::{sleep, Duration};
@@ -1235,6 +1240,7 @@ fn main() {
             start_log_scanner,
             stop_log_scanner,
             validate_log_path,
+            is_scanning,
             simulate_fissure_event,
             crate::ocr::save_debug_screenshot,
             crate::ocr::start_debug_ocr_session,

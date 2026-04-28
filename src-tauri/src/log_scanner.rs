@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use tauri::{AppHandle, Manager};
 
-static IS_SCANNING: AtomicBool = AtomicBool::new(false);
+pub static IS_SCANNING: AtomicBool = AtomicBool::new(false);
 
 use crate::overlay_utils;
 
@@ -295,6 +295,10 @@ pub struct LogScannerHandle {
 
 pub fn stop_scanner() {
     IS_SCANNING.store(false, Ordering::SeqCst);
+}
+
+pub fn is_scanning() -> bool {
+    IS_SCANNING.load(Ordering::SeqCst)
 }
 
 pub fn spawn_log_watcher(app: AppHandle, log_path: PathBuf) -> Result<LogScannerHandle, String> {

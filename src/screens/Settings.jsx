@@ -17,6 +17,7 @@ export default function SettingsScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isCalibrationOpen, setIsCalibrationOpen] = useState(false)
+  const [isScannerRunning, setIsScannerRunning] = useState(false)
 
   // Notification settings
   const [notifPosition, setNotifPosition] = useState(
@@ -78,8 +79,18 @@ export default function SettingsScreen() {
     return () => { unlisten.then(f => f()) }
   }, [])
 
-  // Calibration window state is managed locally — no Rust command needed
-  // (is_overlay_visible was removed; we track it via toggle_calibration return value)
+  // Poll scanner status
+  useEffect(() => {
+    let interval
+    if (fissureOverlayEnabled) {
+      interval = setInterval(() => {
+        invoke('is_scanning').then(setIsScannerRunning).catch(() => setIsScannerRunning(false))
+      }, 2000)
+    } else {
+      setIsScannerRunning(false)
+    }
+    return () => clearInterval(interval)
+  }, [fissureOverlayEnabled])
 
   const handleStart = async () => {
     setLoading(true)
@@ -513,7 +524,16 @@ export default function SettingsScreen() {
             <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5">
                <span className="text-[10px] font-black uppercase tracking-widest text-kronos-dim">Enable Scanner</span>
                <Toggle checked={fissureOverlayEnabled} onChange={handleSetFissureEnabled} />
-            </div>
+             </div>
+             {fissureOverlayEnabled && (
+               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+                 {isScannerRunning ? (
+                   <><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /><span className="text-green-500">Scanner Active</span></>
+                 ) : (
+                   <><div className="w-2 h-2 rounded-full bg-zinc-600" /><span className="text-zinc-500">Scanner Idle</span></>
+                 )}
+               </div>
+             )}
           </div>
 
           <div className="space-y-4">
