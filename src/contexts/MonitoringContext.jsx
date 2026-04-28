@@ -282,7 +282,17 @@ export function MonitoringProvider({ children }) {
     setIsUpdating(true)
     try {
       const raw = await invoke('call_api_helper')
-      if (raw) applyRaw(raw, Date.now())
+      if (raw) {
+        applyRaw(raw, Date.now())
+        setMonitorResult('success')
+        setStatusText('Monitoring active')
+      } else {
+        setMonitorResult('error')
+        setStatusText('API helper returned no data')
+      }
+    } catch (err) {
+      setMonitorResult('error')
+      setStatusText(`Error: ${err}`)
     } finally {
       busyRef.current = false
       setIsUpdating(false)
@@ -299,6 +309,8 @@ export function MonitoringProvider({ children }) {
   const stopMonitoring = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
     setIsMonitoring(false)
+    setMonitorResult('idle')
+    setStatusText('Monitoring stopped')
   }, [])
 
   const manualRefresh = useCallback(() => callApiHelper(), [callApiHelper])

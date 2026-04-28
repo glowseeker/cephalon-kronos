@@ -130,7 +130,15 @@ impl LogScanner {
                 if let Some(start) = line.find("(/Lotus") {
                     if let Some(end) = line[start..].find(')') {
                         let path = &line[start + 1..start + end];
+                        // If a new relic appears that we haven't seen and we already
+                        // triggered a round, this means a new endless round started
+                        // (the "continue" dialogue line is host-only and unreliable for
+                        // client players). Reset so the next reward triggers the overlay.
                         if !self.squad_relics.iter().any(|r| r.unique_name == path) {
+                            if self.has_triggered_round {
+                                if !silent { println!("[LOG_SCANNER] New relic detected after triggered round — resetting for new endless round"); }
+                                self.reset_round();
+                            }
                             let relic = parse_relic_path(path);
                             self.squad_relics.push(relic);
                             self.squad_size = self.squad_relics.len().min(4);

@@ -519,21 +519,12 @@ export default function SettingsScreen() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <Scan className="text-kronos-accent" size={28} />
-              <h2 className="text-xl font-black uppercase tracking-tight">Fissure Relic Overlay</h2>
+              <h2 className="text-xl font-black uppercase tracking-tight">Fissure Rewards Overlay</h2>
             </div>
             <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5">
-               <span className="text-[10px] font-black uppercase tracking-widest text-kronos-dim">Enable Scanner</span>
-               <Toggle checked={fissureOverlayEnabled} onChange={handleSetFissureEnabled} />
-             </div>
-             {fissureOverlayEnabled && (
-               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-                 {isScannerRunning ? (
-                   <><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /><span className="text-green-500">Scanner Active</span></>
-                 ) : (
-                   <><div className="w-2 h-2 rounded-full bg-zinc-600" /><span className="text-zinc-500">Scanner Idle</span></>
-                 )}
-               </div>
-             )}
+              <span className="text-[10px] font-black uppercase tracking-widest text-kronos-dim">Enable Scanner</span>
+              <Toggle checked={fissureOverlayEnabled} onChange={handleSetFissureEnabled} />
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -591,73 +582,78 @@ export default function SettingsScreen() {
         </Card>
 
         {/* Monitoring Section */}
-        <Card glow>
-          <h2 className="text-xl font-semibold mb-4">Game Monitoring</h2>
-
-          {/* Connection status badge */}
-          <div className="flex items-center gap-3 mb-6">
-            {monitorResult === 'success' ? (
-              <><Wifi className="text-green-500" size={24} /><span className="text-green-500 font-medium">Active</span></>
-            ) : monitorResult === 'error' ? (
-              <><WifiOff className="text-red-500" size={24} /><span className="text-red-500 font-medium">Error</span></>
-            ) : (
-              <><WifiOff className="text-zinc-500" size={24} /><span className="text-zinc-500 font-medium">Offline</span></>
-            )}
+        <Card glow className="p-5">
+          <div className="flex items-center gap-3 mb-5">
+            <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 transition-all duration-500 ${monitorResult === 'success' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.7)]' :
+                monitorResult === 'error' ? 'bg-red-500   shadow-[0_0_8px_rgba(239,68,68,0.7)]' :
+                  'bg-zinc-600'
+              }`} />
+            <h2 className="text-xl font-black uppercase tracking-tight">Game Monitoring</h2>
           </div>
 
-          <div className="flex gap-4 items-start">
-
-            {/* Prerequisites */}
-            <Card className="flex-1 bg-black/20">
-              <h3 className="font-medium mb-2 text-sm text-zinc-300">Prerequisites</h3>
-              <ul className="text-xs text-zinc-500 space-y-1">
-                <li>• Warframe must be running</li>
-                <li>• You must be logged in</li>
-                <li>• JSON output path must be reachable</li>
-              </ul>
-              <div className="mt-4 pt-4 border-t border-white/5">
-                <Toggle
-                  checked={autoStart}
-                  onChange={setAutoStart}
-                  label="Auto-start on launch"
-                  description="Start monitoring automatically when the app opens"
-                />
-              </div>
-            </Card>
-
-            {/* Status */}
-            <Card className="flex-1 bg-black/20">
-              <h3 className="font-medium mb-2 text-sm text-zinc-300">Status</h3>
-              <p className="text-xs text-kronos-accent font-mono break-words">{statusText}</p>
+          {/* Status widget */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="bg-kronos-panel/30 rounded-xl p-4 border border-white/5 space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-kronos-dim">Status</p>
+              <p className="text-xs text-kronos-accent font-mono break-words leading-relaxed min-h-[2rem]">
+                {statusText || (isMonitoring ? 'Monitoring active' : 'Not monitoring')}
+              </p>
               {lastUpdate && (
-                <p className="text-xs text-zinc-600 mt-2">
+                <p className="text-[10px] text-zinc-600 font-mono">
                   Last update: {formatLastUpdate(lastUpdate)}
                 </p>
               )}
-              {error && (
-                <p className="text-xs text-red-400 mt-2">Error: {error}</p>
-              )}
-            </Card>
-
-            {/* Buttons */}
-            <div className="w-1/3 flex flex-col gap-2">
-              <Button onClick={handleStart} disabled={loading || isMonitoring} className="w-full">
-                {loading
-                  ? <RefreshCw className="animate-spin" size={18} />
-                  : 'Start Monitoring'
-                }
-              </Button>
-              <Button
-                onClick={stopMonitoring}
-                disabled={!isMonitoring}
-                className="w-full bg-red-500/10 hover:bg-red-600"
-              >
-                Stop
-              </Button>
-              <Button variant="secondary" onClick={manualRefresh} className="w-full">
-                Manual Refresh
-              </Button>
+              {error && <p className="text-[10px] text-red-400 font-mono">Error: {error}</p>}
             </div>
+
+            <div className="bg-kronos-panel/30 rounded-xl p-4 border border-white/5 flex flex-col justify-between">
+              <p className="text-[10px] font-black uppercase tracking-widest text-kronos-dim mb-3">Options</p>
+              <Toggle
+                checked={autoStart}
+                onChange={setAutoStart}
+                label="Auto-start on launch"
+                description="Start monitoring when the app opens"
+              />
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={handleStart}
+              disabled={loading || isMonitoring}
+              className={`py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${isMonitoring
+                  ? 'bg-green-500/10 border-green-500/30 text-green-400 cursor-not-allowed'
+                  : loading
+                    ? 'bg-kronos-panel/20 border-white/5 text-kronos-dim cursor-not-allowed'
+                    : 'bg-kronos-accent/20 border-kronos-accent/40 text-kronos-accent hover:bg-kronos-accent/30'
+                }`}
+            >
+              {loading
+                ? <span className="flex items-center justify-center gap-2"><RefreshCw size={12} className="animate-spin" /> Starting</span>
+                : isMonitoring ? '● Active' : 'Start'
+              }
+            </button>
+            <button
+              onClick={stopMonitoring}
+              disabled={!isMonitoring}
+              className={`py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${isMonitoring
+                  ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+                  : 'bg-kronos-panel/20 border-white/5 text-kronos-dim/40 cursor-not-allowed'
+                }`}
+            >
+              Stop
+            </button>
+            <button
+              onClick={manualRefresh}
+              disabled={!isMonitoring}
+              className={`py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${isMonitoring
+                  ? 'bg-kronos-panel/40 border-white/10 text-kronos-text hover:border-kronos-accent/30 hover:text-kronos-accent'
+                  : 'bg-kronos-panel/20 border-white/5 text-kronos-dim/40 cursor-not-allowed'
+                }`}
+            >
+              Refresh
+            </button>
           </div>
         </Card>
 

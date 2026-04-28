@@ -148,7 +148,19 @@ function DisclaimerModal() {
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const { lastUpdate, monitorResult } = useMonitoring()
+  const { lastUpdate, monitorResult, isMonitoring } = useMonitoring()
+  const [isScannerRunning, setIsScannerRunning] = useState(false)
+
+  useEffect(() => {
+    // Poll fissure scanner status every 2s so sidebar dot stays in sync
+    // unconditionally — polling even when off ensures the dot goes grey immediately
+    const checkScanner = () => {
+      invoke('is_scanning').then(setIsScannerRunning).catch(() => setIsScannerRunning(false))
+    }
+    checkScanner() // immediate first check
+    const iv = setInterval(checkScanner, 2000)
+    return () => clearInterval(iv)
+  }, [])
 
   const screens = {
     dashboard: <Dashboard />,
@@ -183,6 +195,7 @@ function AppContent() {
                 <div key={item.id} className="relative">
                   <Tooltip content={item.label}>
                     <button
+                      id={item.id === 'settings' ? 'nav-settings' : undefined}
                       onClick={() => setActiveTab(item.id)}
                       className={`
                         w-12 h-12 flex items-center justify-center rounded-lg
@@ -215,25 +228,32 @@ function AppContent() {
           </div>
         </div>
 
-        {/* Status dot */}
-        <div className="mt-auto flex-shrink-0 flex flex-col items-center gap-4 pt-4 border-t border-white/5 w-full">
+        {/* Status dots */}
+        <div className="mt-auto flex-shrink-0 flex flex-col items-center gap-3 pt-4 border-t border-white/5 w-full">
           <div className="text-xs text-kronos-dim text-center whitespace-nowrap">
             Last update:<br />
             {formatLastUpdate(lastUpdate)}
           </div>
+          {/* API monitoring dot */}
           <div
             className={`w-3 h-3 rounded-full transition-all duration-300 relative group
               ${monitorResult === 'success' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
-                : monitorResult === 'error' ? 'bg-red-500   shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+                : monitorResult === 'error' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
                   : 'bg-gray-600'}
             `}
           >
             <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 glass-panel rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[9999] shadow-2xl bg-kronos-bg border border-white/10 font-black uppercase text-[10px] tracking-widest text-kronos-accent">
-              <span className="font-medium">
-                {monitorResult === 'success' ? 'Monitoring'
-                  : monitorResult === 'error' ? 'Connection Error'
-                    : 'Not Monitoring'}
-              </span>
+              {monitorResult === 'success' ? 'API Active' : monitorResult === 'error' ? 'API Error' : 'API Offline'}
+            </div>
+          </div>
+          {/* Scanner dot */}
+          <div
+            className={`w-3 h-3 rounded-full transition-all duration-300 relative group
+              ${isScannerRunning ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]' : 'bg-gray-700'}
+            `}
+          >
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 glass-panel rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[9999] shadow-2xl bg-kronos-bg border border-white/10 font-black uppercase text-[10px] tracking-widest text-kronos-accent">
+              {isScannerRunning ? 'Scanner Active' : 'Scanner Idle'}
             </div>
           </div>
         </div>
