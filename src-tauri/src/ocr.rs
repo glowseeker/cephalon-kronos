@@ -88,7 +88,7 @@ fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_
 
             let slot_crop = dynamic_image.crop_imm(full_slot_x, full_slot_y, full_slot_w, full_slot_h);
             
-            // ÔöÇÔöÇ PREPROCESS ÔöÇÔöÇ
+            // ── PREPROCESS ──
             let upscaled = slot_crop.resize(full_slot_w * 4, full_slot_h * 4, image::imageops::FilterType::CatmullRom);
             let mut gray = upscaled.to_luma8();
             for p in gray.pixels_mut() { p[0] = 255 - p[0]; }
@@ -251,11 +251,7 @@ fn get_tesseract_config(app: &AppHandle) -> (PathBuf, Option<PathBuf>) {
 
     if let Some(bundled) = app.path_resolver().resolve_resource(format!("data/bin/{}", bin_name)) {
         if bundled.exists() {
-<<<<<<< HEAD
-            // Derive tessdata from the binary location ÔÇö always correct regardless
-=======
             // Derive tessdata from the binary location — always correct regardless
->>>>>>> 53d00bf (docs: add Discord button to hero section)
             // of whether resolve_resource("data/bin/tessdata") returns None.
             let tessdata = bundled.parent().map(|p| p.join("tessdata"));
             return (bundled, tessdata);
