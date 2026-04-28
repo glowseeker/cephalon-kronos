@@ -45,6 +45,14 @@
                 <a href="https://github.com/glowseeker/cephalon-kronos/releases/latest" class="btn btn-primary">Download
                     Latest Release</a>
                 <a href="#wiki" class="btn btn-secondary">Read the Wiki</a>
+                <a href="https://discord.gg/9GjkZ9aXwy" class="btn btn-discord" target="_blank">
+                    <svg viewBox="0 0 127.14 96.36" width="20" height="20"
+                        style="margin-right: 8px; fill: currentColor;">
+                        <path
+                            d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a67.55,67.55,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.15,46,96.06,53,91.08,65.69,84.69,65.69Z" />
+                    </svg>
+                    Join the Discord
+                </a>
             </div>
         </div>
     </header>
@@ -212,167 +220,165 @@
         </div>
     </section>
 
-    </section>
-
     <!-- Lightbox Modal -->
-    <div id="lightbox" class="lightbox-overlay">
-        <span class="lightbox-close">&times;</span>
-        <img src="" class="lightbox-img" alt="Enlarged view">
-    </div>
-    <footer>
-        <p>A passion project for Warframe by Tenno, for Tenno.
-            <br>Not affiliated with Digital Extremes.
-        </p>
-    </footer>
+            <div id="lightbox" class="lightbox-overlay">
+                <span class="lightbox-close">&times;</span>
+                <img src="" class="lightbox-img" alt="Enlarged view">
+            </div>
+            <footer>
+                <p>A passion project for Warframe by Tenno, for Tenno.
+                    <br>Not affiliated with Digital Extremes.
+                </p>
+            </footer>
 
-    <script>
-        // Features section tabs
-        const featureTabs = document.querySelectorAll('#showcase .wiki-tab');
-        const featurePanels = document.querySelectorAll('#showcase .wiki-panel');
+            <script>
+                // Features section tabs
+                const featureTabs = document.querySelectorAll('#showcase .wiki-tab');
+                const featurePanels = document.querySelectorAll('#showcase .wiki-panel');
 
-        featureTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                featureTabs.forEach(t => t.classList.remove('active'));
-                featurePanels.forEach(p => p.classList.remove('active'));
+                featureTabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        featureTabs.forEach(t => t.classList.remove('active'));
+                        featurePanels.forEach(p => p.classList.remove('active'));
 
-                tab.classList.add('active');
-                document.getElementById(tab.getAttribute('data-target')).classList.add('active');
-            });
-        });
-
-        // Wiki section tabs
-        const wikiTabs = document.querySelectorAll('#wiki .wiki-tab');
-        const wikiPanels = document.querySelectorAll('#wiki .wiki-panel');
-
-        wikiTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                wikiTabs.forEach(t => t.classList.remove('active'));
-                wikiPanels.forEach(p => p.classList.remove('active'));
-
-                tab.classList.add('active');
-                document.getElementById(tab.getAttribute('data-target')).classList.add('active');
-            });
-        });
-
-        // Nested Stack Logic (Visual Deck of Cards)
-        document.querySelectorAll('.feature-image:not(.no-stack)').forEach(container => {
-            const images = container.querySelectorAll('img');
-            if (images.length > 1) {
-                // Wrap images so buttons strictly hug the geometry
-                container.innerHTML = '';
-                // Inner wrapper for clipping rounded corners
-                const inner = document.createElement('div');
-                inner.className = 'image-stack-inner';
-
-                const wrapper = document.createElement('div');
-                wrapper.style.position = 'relative';
-                wrapper.style.display = 'flex';
-                wrapper.style.alignItems = 'center';
-                wrapper.style.justifyContent = 'center';
-                wrapper.style.width = '100%';
-                wrapper.style.height = '100%';
-
-                images.forEach(img => inner.appendChild(img));
-                wrapper.appendChild(inner);
-                container.appendChild(wrapper);
-
-                const prevBtn = document.createElement('button');
-                prevBtn.className = 'stack-nav-btn prev';
-                prevBtn.innerHTML = '&#10094;';
-
-                const nextBtn = document.createElement('button');
-                nextBtn.className = 'stack-nav-btn next';
-                nextBtn.innerHTML = '&#10095;';
-
-                wrapper.appendChild(prevBtn);
-                wrapper.appendChild(nextBtn);
-
-                const layoutCards = () => {
-                    const currentImages = Array.from(inner.querySelectorAll('img'));
-                    currentImages.forEach((img, i) => {
-                        if (i === 0) {
-                            img.style.position = 'relative';
-                            img.style.display = 'block';
-                            img.style.zIndex = '1';
-                            img.style.opacity = '1';
-                            img.style.cursor = 'pointer';
-                        } else {
-                            img.style.position = 'absolute';
-                            img.style.display = 'none';
-                            img.style.zIndex = '0';
-                            img.style.opacity = '0';
-                        }
+                        tab.classList.add('active');
+                        document.getElementById(tab.getAttribute('data-target')).classList.add('active');
                     });
-                };
-
-                const nextCard = () => {
-                    const first = inner.querySelector('img');
-                    inner.appendChild(first); // Simpler move
-                    layoutCards();
-                };
-
-                const prevCard = () => {
-                    const imgs = inner.querySelectorAll('img');
-                    const last = imgs[imgs.length - 1];
-                    inner.insertBefore(last, inner.firstChild);
-                    layoutCards();
-                };
-
-                // Hit-zones for side clicking
-                const leftZone = document.createElement('div');
-                leftZone.className = 'hit-zone left';
-                const rightZone = document.createElement('div');
-                rightZone.className = 'hit-zone right';
-
-                wrapper.appendChild(leftZone);
-                wrapper.appendChild(rightZone);
-
-                leftZone.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    prevCard();
                 });
 
-                rightZone.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    nextCard();
+                // Wiki section tabs
+                const wikiTabs = document.querySelectorAll('#wiki .wiki-tab');
+                const wikiPanels = document.querySelectorAll('#wiki .wiki-panel');
+
+                wikiTabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        wikiTabs.forEach(t => t.classList.remove('active'));
+                        wikiPanels.forEach(p => p.classList.remove('active'));
+
+                        tab.classList.add('active');
+                        document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+                    });
                 });
 
-                nextBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    nextCard();
-                });
+                // Nested Stack Logic (Visual Deck of Cards)
+                document.querySelectorAll('.feature-image:not(.no-stack)').forEach(container => {
+                    const images = container.querySelectorAll('img');
+                    if (images.length > 1) {
+                        // Wrap images so buttons strictly hug the geometry
+                        container.innerHTML = '';
+                        // Inner wrapper for clipping rounded corners
+                        const inner = document.createElement('div');
+                        inner.className = 'image-stack-inner';
 
-                prevBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    prevCard();
-                });
+                        const wrapper = document.createElement('div');
+                        wrapper.style.position = 'relative';
+                        wrapper.style.display = 'flex';
+                        wrapper.style.alignItems = 'center';
+                        wrapper.style.justifyContent = 'center';
+                        wrapper.style.width = '100%';
+                        wrapper.style.height = '100%';
 
-                // Lightbox Logic
-                const lightbox = document.getElementById('lightbox');
-                const lightboxImg = lightbox.querySelector('.lightbox-img');
+                        images.forEach(img => inner.appendChild(img));
+                        wrapper.appendChild(inner);
+                        container.appendChild(wrapper);
 
-                wrapper.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'IMG' && e.target.style.opacity === '1') {
-                        lightboxImg.src = e.target.src;
-                        lightbox.classList.add('active');
+                        const prevBtn = document.createElement('button');
+                        prevBtn.className = 'stack-nav-btn prev';
+                        prevBtn.innerHTML = '&#10094;';
+
+                        const nextBtn = document.createElement('button');
+                        nextBtn.className = 'stack-nav-btn next';
+                        nextBtn.innerHTML = '&#10095;';
+
+                        wrapper.appendChild(prevBtn);
+                        wrapper.appendChild(nextBtn);
+
+                        const layoutCards = () => {
+                            const currentImages = Array.from(inner.querySelectorAll('img'));
+                            currentImages.forEach((img, i) => {
+                                if (i === 0) {
+                                    img.style.position = 'relative';
+                                    img.style.display = 'block';
+                                    img.style.zIndex = '1';
+                                    img.style.opacity = '1';
+                                    img.style.cursor = 'pointer';
+                                } else {
+                                    img.style.position = 'absolute';
+                                    img.style.display = 'none';
+                                    img.style.zIndex = '0';
+                                    img.style.opacity = '0';
+                                }
+                            });
+                        };
+
+                        const nextCard = () => {
+                            const first = inner.querySelector('img');
+                            inner.appendChild(first); // Simpler move
+                            layoutCards();
+                        };
+
+                        const prevCard = () => {
+                            const imgs = inner.querySelectorAll('img');
+                            const last = imgs[imgs.length - 1];
+                            inner.insertBefore(last, inner.firstChild);
+                            layoutCards();
+                        };
+
+                        // Hit-zones for side clicking
+                        const leftZone = document.createElement('div');
+                        leftZone.className = 'hit-zone left';
+                        const rightZone = document.createElement('div');
+                        rightZone.className = 'hit-zone right';
+
+                        wrapper.appendChild(leftZone);
+                        wrapper.appendChild(rightZone);
+
+                        leftZone.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            prevCard();
+                        });
+
+                        rightZone.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            nextCard();
+                        });
+
+                        nextBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            nextCard();
+                        });
+
+                        prevBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            prevCard();
+                        });
+
+                        // Lightbox Logic
+                        const lightbox = document.getElementById('lightbox');
+                        const lightboxImg = lightbox.querySelector('.lightbox-img');
+
+                        wrapper.addEventListener('click', (e) => {
+                            if (e.target.tagName === 'IMG' && e.target.style.opacity === '1') {
+                                lightboxImg.src = e.target.src;
+                                lightbox.classList.add('active');
+                            }
+                        });
+
+                        lightbox.addEventListener('click', () => {
+                            lightbox.classList.remove('active');
+                        });
+
+
+                        layoutCards();
+
+                        layoutCards();
+                    } else if (images.length === 1) {
+                        images[0].style.transform = 'translate(0,0) scale(1) rotate(0)';
+                        images[0].style.opacity = '1';
+                        images[0].style.zIndex = '1';
                     }
                 });
-
-                lightbox.addEventListener('click', () => {
-                    lightbox.classList.remove('active');
-                });
-
-
-                layoutCards();
-
-                layoutCards();
-            } else if (images.length === 1) {
-                images[0].style.transform = 'translate(0,0) scale(1) rotate(0)';
-                images[0].style.opacity = '1';
-                images[0].style.zIndex = '1';
-            }
-        });
-    </script>
+            </script>
 </body>
 
 </html>

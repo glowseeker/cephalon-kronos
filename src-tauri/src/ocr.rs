@@ -251,7 +251,11 @@ fn get_tesseract_config(app: &AppHandle) -> (PathBuf, Option<PathBuf>) {
 
     if let Some(bundled) = app.path_resolver().resolve_resource(format!("data/bin/{}", bin_name)) {
         if bundled.exists() {
+<<<<<<< HEAD
             // Derive tessdata from the binary location ÔÇö always correct regardless
+=======
+            // Derive tessdata from the binary location — always correct regardless
+>>>>>>> 53d00bf (docs: add Discord button to hero section)
             // of whether resolve_resource("data/bin/tessdata") returns None.
             let tessdata = bundled.parent().map(|p| p.join("tessdata"));
             return (bundled, tessdata);
