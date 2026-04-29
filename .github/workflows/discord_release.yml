@@ -7,7 +7,7 @@ jobs:
   discord_notification:
     runs-on: ubuntu-latest
     steps:
-      - name: Send Release Info to Discord
+      - name: Send Release Information to Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RELEASE_BODY: ${{ github.event.release.body }}
