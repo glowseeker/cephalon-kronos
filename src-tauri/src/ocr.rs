@@ -212,17 +212,47 @@ fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_
     });
 }
 
-fn preprocess_for_ocr(image: DynamicImage) -> image::GrayImage {
-    let mut gray = image.to_luma8();
+/// Core preprocessing logic used by both live OCR and debug screenshots.
+/// Performs 4x upscale, inversion, blurring, and dynamic Otsu thresholding.
+fn apply_ocr_preprocessing(slot_crop: &DynamicImage) -> image::GrayImage {
+    let (full_slot_w, full_slot_h) = (slot_crop.width(), slot_crop.height());
+    let upscaled = slot_crop.resize(full_slot_w * 4, full_slot_h * 4, image::imageops::FilterType::CatmullRom);
+    let mut gray = upscaled.to_luma8();
     for p in gray.pixels_mut() { p[0] = 255 - p[0]; }
-    let upscaled = image::DynamicImage::ImageLuma8(gray).resize(image.width() * 4, image.height() * 4, image::imageops::FilterType::CatmullRom);
-    let mut processed_gray = upscaled.to_luma8();
-    for p in processed_gray.pixels_mut() { p[0] = if p[0] < 140 { 0 } else { 255 }; }
+    let blurred = image::imageops::blur(&gray, 0.5);
+
+    // --- DYNAMIC OTSU ---
+    let mut hist = [0u32; 256];
+    for p in blurred.pixels() { hist[p[0] as usize] += 1; }
+    let total = (blurred.width() * blurred.height()) as f64;
+    let (mut sum, mut sum_b, mut q1, mut max_var) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
+    for i in 0..256usize { sum += i as f64 * hist[i] as f64; }
+    let mut threshold = 128u8;
+    for i in 0..256usize {
+        q1 += hist[i] as f64;
+        if q1 == 0.0 { continue; }
+        let q2 = total - q1;
+        if q2 == 0.0 { break; }
+        sum_b += i as f64 * hist[i] as f64;
+        let m1 = sum_b / q1;
+        let m2 = (sum - sum_b) / q2;
+        let var_between = q1 * q2 * (m1 - m2).powi(2);
+        if var_between > max_var { max_var = var_between; threshold = i as u8; }
+    }
+    let mut binary = blurred.clone();
+    for p in binary.pixels_mut() { p[0] = if p[0] <= threshold { 0 } else { 255 }; }
+    binary
+}
+
+/// Preprocesses a single image for OCR.
+/// Now uses the same dynamic Otsu pipeline as the live `run_ocr_internal`.
+fn preprocess_for_ocr(image: DynamicImage) -> image::GrayImage {
+    let binary = apply_ocr_preprocessing(&image);
     let pad = 30u32;
-    let (uw, uh) = processed_gray.dimensions();
+    let (uw, uh) = binary.dimensions();
     let mut padded = image::GrayImage::new(uw + pad * 2, uh + pad * 2);
     padded.fill(255);
-    image::imageops::overlay(&mut padded, &processed_gray, pad as i64, pad as i64);
+    image::imageops::overlay(&mut padded, &binary, pad as i64, pad as i64);
     padded
 }
 

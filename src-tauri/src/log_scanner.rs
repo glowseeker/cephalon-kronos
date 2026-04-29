@@ -136,7 +136,7 @@ impl LogScanner {
                         // client players). Reset so the next reward triggers the overlay.
                         if !self.squad_relics.iter().any(|r| r.unique_name == path) {
                             if self.has_triggered_round {
-                                if !silent { println!("[LOG_SCANNER] New relic detected after triggered round — resetting for new endless round"); }
+                                if !silent { println!("[LOG_SCANNER] New relic detected after triggered round -- resetting for new endless round"); }
                                 self.reset_round();
                             }
                             let relic = parse_relic_path(path);

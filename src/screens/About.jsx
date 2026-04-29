@@ -22,17 +22,12 @@ const CREDITS = [
 ]
 
 export default function About() {
-  const handleOpenLink = async (e, url) => {
-    e.preventDefault()
+  const handleOpenLink = async (url) => {
     try {
       await invoke('open_url', { url })
     } catch (err) {
       console.error('Failed to open link with custom open_url command:', err)
     }
-  }
-
-  const handleDragStart = (e, url) => {
-    e.dataTransfer.setData('text/plain', url);
   }
 
   return (
@@ -57,17 +52,13 @@ export default function About() {
           <p className="text-kronos-text/90 mb-4 leading-relaxed text-sm">
             Track your inventory, relics, rivens and mastery alongside a live worldstate with timers, fissures, arbitrations and more.
           </p>
-          <a
-            href="https://github.com/glowseeker/cephalon-kronos"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => handleOpenLink(e, 'https://github.com/glowseeker/cephalon-kronos')}
-            onDragStart={(e) => handleDragStart(e, 'https://github.com/glowseeker/cephalon-kronos')}
-            className="inline-flex items-center gap-2 text-kronos-accent hover:text-kronos-accent-secondary transition-colors text-sm font-medium"
-          >
-            <Github size={18} />
-            View on GitHub
-          </a>
+           <button
+             onClick={() => handleOpenLink('https://github.com/glowseeker/cephalon-kronos')}
+             className="inline-flex items-center gap-2 text-kronos-accent hover:text-kronos-accent-secondary transition-colors text-sm font-medium cursor-pointer"
+           >
+             <Github size={18} />
+             View on GitHub
+           </button>
         </Card>
 
         {/* Credits */}
@@ -78,16 +69,12 @@ export default function About() {
               <li key={name} className="flex items-start gap-2 text-sm">
                 <span className="text-kronos-accent font-bold flex-shrink-0">•</span>
                 <span>
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => handleOpenLink(e, href)}
-                    onDragStart={(e) => handleDragStart(e, href)}
-                    className="font-bold text-kronos-accent hover:underline"
-                  >
-                    {name}
-                  </a>
+                 <button
+                   onClick={() => handleOpenLink(href)}
+                   className="font-bold text-kronos-accent hover:underline cursor-pointer"
+                 >
+                   {name}
+                 </button>
                   <span className="text-kronos-dim ml-1.5">- {desc}</span>
                 </span>
               </li>
@@ -103,16 +90,12 @@ export default function About() {
               <h3 className="text-base font-semibold text-red-400 mb-2">Important Disclaimer</h3>
               <p className="text-kronos-text/90 text-sm leading-relaxed mb-2">
                 This app uses{' '}
-                <a
-                  href="https://github.com/Obsidian-Jackal/warframe-api-helper"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => handleOpenLink(e, 'https://github.com/Obsidian-Jackal/warframe-api-helper')}
-                  onDragStart={(e) => handleDragStart(e, 'https://github.com/Obsidian-Jackal/warframe-api-helper')}
-                  className="text-kronos-accent hover:underline"
-                >
-                  warframe-api-helper
-                </a>
+                 <button
+                   onClick={() => handleOpenLink('https://github.com/Obsidian-Jackal/warframe-api-helper')}
+                   className="text-kronos-accent hover:underline cursor-pointer"
+                 >
+                   warframe-api-helper
+                 </button>
                 {' '}to extract your session tokens from game memory.
               </p>
               <ul className="text-kronos-text/80 text-xs space-y-0.5 mb-2 list-disc list-inside">

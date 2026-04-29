@@ -597,7 +597,7 @@ export default function Inventory() {
                       {/* Bottom: status row */}
                       <div className="flex items-center flex-wrap gap-x-4 gap-y-1 pt-2 border-t border-white/5">
 
-                        {/* Rank — shown for equipment and mods */}
+                        {/* Rank -- shown for equipment and mods */}
                         {!isUnowned && item.rank !== undefined && item.max_rank !== undefined && item.max_rank > 0 && (
                           <span className={`text-[10px] font-black uppercase ${item.rank === item.max_rank ? 'text-blue-400' : 'text-kronos-dim'}`}>
                             R{item.rank}/{item.max_rank}

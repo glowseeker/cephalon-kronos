@@ -38,13 +38,13 @@ const NAV_ITEMS = [
 
 // ─── Overlay window ───────────────────────────────────────────────────────────
 // Rendered when the window hash is #overlay.
-// IMPORTANT: does NOT include MonitoringProvider — the overlay window must not
+// IMPORTANT: does NOT include MonitoringProvider - the overlay window must not
 // fire Tauri startup commands (check_exports, load_all_exports, etc.).
 // It only needs ThemeProvider for CSS variable access.
 
 function OverlayApp() {
   // Transparency is set synchronously in index.html before React renders,
-  // so no useEffect is needed here — eliminating the Linux first-frame black flash.
+  // so no useEffect is needed here - eliminating the Linux first-frame black flash.
   return (
     <ThemeProvider>
       <main
@@ -105,16 +105,12 @@ function DisclaimerModal() {
         </div>
         <p className="text-sm text-kronos-text/90 mb-3 leading-relaxed">
           This app uses{' '}
-          <a
-            href="https://github.com/Obsidian-Jackal/warframe-api-helper"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => { e.preventDefault(); invoke('open_url', { url: 'https://github.com/Obsidian-Jackal/warframe-api-helper' }).catch(err => console.error('Link error:', err)) }}
-            onDragStart={(e) => e.dataTransfer.setData('text/plain', 'https://github.com/Obsidian-Jackal/warframe-api-helper')}
-            className="text-kronos-accent hover:underline"
-          >
-            warframe-api-helper
-          </a>
+           <button
+                onClick={() => { invoke('open_url', { url: 'https://github.com/Obsidian-Jackal/warframe-api-helper' }).catch(err => console.error('Link error:', err)) }}
+             className="text-kronos-accent hover:underline cursor-pointer"
+           >
+             warframe-api-helper
+           </button>
           {' '}to extract your session tokens from game memory.
         </p>
         <ul className="text-xs text-kronos-text/80 space-y-1 mb-3 list-disc list-inside">
@@ -153,7 +149,7 @@ function AppContent() {
 
   useEffect(() => {
     // Poll fissure scanner status every 2s so sidebar dot stays in sync
-    // unconditionally — polling even when off ensures the dot goes grey immediately
+    // unconditionally - polling even when off ensures the dot goes grey immediately
     const checkScanner = () => {
       invoke('is_scanning').then(setIsScannerRunning).catch(() => setIsScannerRunning(false))
     }

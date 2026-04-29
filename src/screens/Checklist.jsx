@@ -427,7 +427,7 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
         </div>
       )}
 
-      {/* Icon column — full card height, tinted with accent */}
+      {/* Icon column -- full card height, tinted with accent */}
       {iconSrc && (
         <div
           className="w-24 flex-shrink-0 flex items-center justify-center p-2"
@@ -439,7 +439,7 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
 
       {/* Content */}
       <div className="flex-1 min-w-0 p-3 flex flex-col gap-1.5 relative">
-        {/* Row 1: Name — Rank X */}
+        {/* Row 1: Name -- Rank X */}
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-[13px] font-mono font-bold truncate" style={{ color: config.accent }}>
             {standing.label}{isPledged ? ' ★' : ''}

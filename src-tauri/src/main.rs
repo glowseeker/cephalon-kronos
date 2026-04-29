@@ -30,7 +30,7 @@ pub struct AppState {
 // that assets sit alongside the source tree.  In release builds they're resolved
 // relative to the executable so the installed app is self-contained.
 // When running from an AppImage, the mounted FS is read-only, but the APPIMAGE
-// env var points to the real file — we use its parent dir for writable data so
+// relative to the real file -- we use its parent dir for writable data so
 // everything stays in one portable folder.
 
 fn get_app_root() -> PathBuf {
@@ -953,7 +953,7 @@ async fn show_notification(
             // Wipe stale toasts for this specific position (not all windows)
             let _ = w.emit("wipe-state", pos.clone());
         }
-        // Always re-show and position — window may have moved between calls
+        // Always re-show and position -- window may have moved between calls
         let _ = show_overlay_window(app_handle.clone(), label.to_string());
     }
 
@@ -961,7 +961,7 @@ async fn show_notification(
     let sound = state.notif_sound.lock().unwrap().clone();
     let _ = play_notification_sound(app_handle.clone(), sound).await;
 
-    // Emit the notification — the matching overlay window renders it
+    // Emit the notification -- the matching overlay window renders it
     app_handle.emit_all("new-notification", NotificationPayload {
         id: notif_id,
         title,
@@ -976,8 +976,6 @@ async fn show_notification(
 
 #[tauri::command]
 async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), String> {
-    println!("[open_url] Requesting: {}", url);
-
     #[cfg(target_os = "linux")]
     {
         use std::process::Command;

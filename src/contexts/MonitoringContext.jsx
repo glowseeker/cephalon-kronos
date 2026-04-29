@@ -318,11 +318,6 @@ export function MonitoringProvider({ children }) {
   const fissureStateRef = useRef({ squad_relics: [] })
   const ocrActiveRef = useRef(false)
 
-  const termLog = (msg) => {
-    console.log(msg)
-    invoke('log_terminal', { message: msg }).catch(() => { })
-  }
-
   useEffect(() => {
     if (!exportData) return
     const subs = []
@@ -362,7 +357,7 @@ export function MonitoringProvider({ children }) {
       invoke('relay_event', { event: 'overlay-update-relics', payload: { squad_relics: resolved, squad_size } }).catch(() => { })
 
       // Build the Tesseract wordlist from all words appearing in the reward pool.
-      // With squad relics known we have at most 24 candidates — a tiny, precise
+      // With squad relics known we have at most 24 candidates -- a tiny, precise
       // vocabulary that dramatically narrows what Tesseract considers valid output.
       const wordSet = new Set()
       for (const relic of resolved) {
@@ -373,7 +368,7 @@ export function MonitoringProvider({ children }) {
       }
       if (wordSet.size > 0) {
         invoke('write_ocr_wordlist', { words: [...wordSet] }).catch(err =>
-          termLog(`[MonitoringContext] write_ocr_wordlist failed: ${err}`)
+          console.log(`[MonitoringContext] write_ocr_wordlist failed: ${err}`)
         )
       }
     }))
@@ -499,9 +494,9 @@ export function MonitoringProvider({ children }) {
             event: 'overlay-update-ocr',
             payload: { slot: res.slot, confirmed_reward: bestMatch.name, item: { ...bestMatch, icon: EI[bestMatch.uniqueName], platPrice, inventory } }
           }).catch(() => { });
-          termLog(`[MonitoringContext] Slot ${res.slot} MATCHED: "${ocrText}" -> ${bestMatch.name} (Score: ${bestScore.toFixed(3)})`);
+          console.log(`[MonitoringContext] Slot ${res.slot} MATCHED: "${ocrText}" -> ${bestMatch.name} (Score: ${bestScore.toFixed(3)})`);
         } else {
-          termLog(`[MonitoringContext] Slot ${res.slot} failed match: "${ocrText}" (Best: ${bestMatch?.name || 'None'}, Score: ${bestScore.toFixed(3)})`);
+          console.log(`[MonitoringContext] Slot ${res.slot} failed match: "${ocrText}" (Best: ${bestMatch?.name || 'None'}, Score: ${bestScore.toFixed(3)})`);
         }
       }
 

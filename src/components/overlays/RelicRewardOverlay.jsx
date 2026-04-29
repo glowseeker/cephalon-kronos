@@ -18,56 +18,10 @@ export default function RelicRewardOverlay() {
   const containerRef = useRef(null)
   const lastTick = useRef(Date.now())
 
-  const termLog = (msg) => {
-    console.log(msg)
-    invoke('log_terminal', { message: msg }).catch(() => {})
-  }
-
-  useEffect(() => {
-    if (!data || isClosing) return
-    const timer = setInterval(() => {
-      const now = Date.now()
-      const delta = now - lastTick.current
-      lastTick.current = now
-      setRemaining(prev => {
-        const next = prev - delta
-        if (next <= 0) {
-          setIsClosing(true)
-          setTimeout(() => {
-            setData(null)
-            invoke('hide_overlay_window', { label: 'overlay-relic' }).catch(() => { })
-          }, 500)
-          return 0
-        }
-        return next
-      })
-    }, 100)
-    return () => clearInterval(timer)
-  }, [data, isClosing])
-
-  useEffect(() => {
-    if (!containerRef.current) return
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const height = entry.target.scrollHeight
-        const width = entry.target.scrollWidth
-        if (data && height > 20) {
-          invoke('resize_overlay_window', {
-            label: 'overlay-relic',
-            width: Math.round(width),
-            height: height
-          }).catch(console.error)
-        }
-      }
-    })
-    observer.observe(containerRef.current)
-    return () => observer.disconnect()
-  }, [data, squadSize])
-
   useEffect(() => {
     const subs = []
     subs.push(listen('overlay-update-relics', (e) => {
-      termLog(`[RelicRewardOverlay] EVENT: overlay-update-relics (relics=${e.payload.squad_relics?.length})`)
+      console.log(`[RelicRewardOverlay] EVENT: overlay-update-relics (relics=${e.payload.squad_relics?.length})`)
       setData(e.payload.squad_relics)
       setSquadSize(e.payload.squad_size)
       setOcrResults({})
@@ -75,25 +29,25 @@ export default function RelicRewardOverlay() {
       setIsClosing(false)
       setRemaining(RELIC_TIMEOUT)
       lastTick.current = Date.now()
-      invoke('show_overlay_window', { label: 'overlay-relic' }).catch(err => termLog(`[RelicRewardOverlay] ERROR: show failed: ${err}`))
+      invoke('show_overlay_window', { label: 'overlay-relic' }).catch(err => console.log(`[RelicRewardOverlay] ERROR: show failed: ${err}`))
     }))
     subs.push(listen('overlay-update-reward', (e) => {
-      termLog(`[RelicRewardOverlay] EVENT: overlay-update-reward (reward=${e.payload.local_reward?.name})`)
+      console.log(`[RelicRewardOverlay] EVENT: overlay-update-reward (reward=${e.payload.local_reward?.name})`)
       setLocalReward(e.payload.local_reward)
       setSquadSize(e.payload.squad_size)
     }))
     subs.push(listen('overlay-update-ocr', (e) => {
-      termLog(`[RelicRewardOverlay] EVENT: overlay-update-ocr (slot=${e.payload.slot}, reward=${e.payload.confirmed_reward})`)
+      console.log(`[RelicRewardOverlay] EVENT: overlay-update-ocr (slot=${e.payload.slot}, reward=${e.payload.confirmed_reward})`)
       const { slot, confirmed_reward, item } = e.payload
       setOcrResults(prev => ({ ...prev, [slot]: { confirmed_reward, item } }))
     }))
     subs.push(listen('overlay-squad-size', (e) => {
-      termLog(`[RelicRewardOverlay] EVENT: overlay-squad-size (size=${e.payload.squad_size})`)
+      console.log(`[RelicRewardOverlay] EVENT: overlay-squad-size (size=${e.payload.squad_size})`)
       setSquadSize(e.payload.squad_size)
       setData(prev => prev || []) // Ensure data is not null so it renders skeleton
     }))
     subs.push(listen('fissure-reward-closed', () => {
-      termLog('[RelicRewardOverlay] EVENT: fissure-reward-closed')
+      console.log('[RelicRewardOverlay] EVENT: fissure-reward-closed')
       setIsClosing(true)
       setTimeout(() => {
         setData(null)
