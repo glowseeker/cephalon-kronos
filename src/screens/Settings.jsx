@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { Palette, Bell, Clock, AlertTriangle, Star, CheckCircle, Settings as SettingsIcon, Zap, Save, RefreshCw, Play, X, FolderOpen, Scan } from 'lucide-react'
 import { open as openDialog } from '@tauri-apps/api/dialog'
-import { open as openDialog } from '@tauri-apps/api/dialog'
 import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
 import { getSetting, setSetting } from '../lib/settings'
