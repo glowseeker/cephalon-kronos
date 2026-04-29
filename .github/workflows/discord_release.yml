@@ -10,19 +10,24 @@ jobs:
       - name: Send Release Info to Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
         run: |
-          # We use jq to handle potential newlines or quotes in the release body
-          # to keep the JSON payload valid.
-          TITLE="${{ github.event.release.name || github.event.release.tag_name }}"
-          URL="${{ github.event.release.html_url }}"
-          BODY=$(echo '${{ github.event.release.body }}' | jq -aRs .)
+          # Use the environment variable, not the context expression directly
+          TITLE="${RELEASE_NAME:-$RELEASE_TAG}"
+          URL="$RELEASE_URL"
+          
+          # Use jq to safely encode the environment variable into a JSON string
+          JSON_BODY=$(jq -n --arg body "$RELEASE_BODY" '$body')
 
           curl -H "Content-Type: application/json" \
                -d "{
                  \"embeds\": [{
                    \"title\": \"New Release: $TITLE\",
                    \"url\": \"$URL\",
-                   \"description\": $BODY,
+                   \"description\": $JSON_BODY,
                    \"color\": 5814783,
                    \"footer\": { \"text\": \"Cephalon Kronos Update\" }
                  }]
