@@ -15,21 +15,23 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           RELEASE_URL: ${{ github.event.release.html_url }}
         run: |
-          # Use the environment variable, not the context expression directly
-          TITLE="${RELEASE_NAME:-$RELEASE_TAG}"
-          URL="$RELEASE_URL"
-          
-          # Use jq to safely encode the environment variable into a JSON string
-          JSON_BODY=$(jq -n --arg body "$RELEASE_BODY" '$body')
+          # 1. Construct the JSON payload safely using jq
+          # This handles all escaping for you automatically
+          PAYLOAD=$(jq -n \
+            --arg title "New Release: ${RELEASE_NAME:-$RELEASE_TAG}" \
+            --arg url "$RELEASE_URL" \
+            --arg desc "$RELEASE_BODY" \
+            '{
+              embeds: [{
+                title: $title,
+                url: $url,
+                description: $desc,
+                color: 5814783,
+                footer: { text: "Cephalon Kronos Update" }
+              }]
+            }')
 
-          curl -H "Content-Type: application/json" \
-               -d "{
-                 \"embeds\": [{
-                   \"title\": \"New Release: $TITLE\",
-                   \"url\": \"$URL\",
-                   \"description\": $JSON_BODY,
-                   \"color\": 5814783,
-                   \"footer\": { \"text\": \"Cephalon Kronos Update\" }
-                 }]
-               }" \
-               $DISCORD_WEBHOOK
+          # 2. Send the payload
+          curl -X POST -H "Content-Type: application/json" \
+               -d "$PAYLOAD" \
+               "$DISCORD_WEBHOOK"
