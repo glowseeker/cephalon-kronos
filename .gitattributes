@@ -2,3 +2,6 @@
 *.exe binary
 *.traineddata binary
 src-tauri/data/bin/* -text
+
+# Normalize text endings
+* text=auto
