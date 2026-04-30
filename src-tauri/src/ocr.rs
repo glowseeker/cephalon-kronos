@@ -315,6 +315,41 @@ pub async fn save_debug_screenshot(_app: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub async fn trigger_manual_ocr(app: AppHandle, squad_size: Option<usize>) -> Result<(), String> {
+    let size = squad_size.unwrap_or(4);
+    eprintln!("[OCR] Manual trigger called (size={})", size);
+    
+    // Ensure overlay is prepared
+    if let Some(w) = app.get_window("overlay-relic") {
+        let _ = w.show();
+        let _ = w.set_always_on_top(true);
+    }
+    
+    // Emit mock relics event so overlay renders the skeleton
+    use crate::log_scanner::{FissureEvent, RelicInfo};
+    let mut mock_relics = Vec::new();
+    for _ in 0..size {
+        mock_relics.push(RelicInfo {
+            unique_name: "MANUAL".to_string(),
+            tier: "MANUAL".to_string(),
+            refinement: "MANUAL".to_string(),
+            era: "MANUAL".to_string()
+        });
+    }
+    
+    app.emit_all("overlay-update-relics", FissureEvent {
+        event_type: "reward_phase".to_string(),
+        squad_relics: mock_relics,
+        local_reward: None,
+        squad_size: size,
+        void_tier: None
+    }).unwrap_or_default();
+
+    run_ocr_internal(app, size, true, None);
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn start_debug_ocr_session(app: AppHandle, squad_size: usize) -> Result<(), String> {
     use crate::log_scanner::{FissureEvent, RelicInfo};
     let app_c = app.clone();
