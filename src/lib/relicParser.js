@@ -390,6 +390,61 @@ export function getRewardInventoryContext(rewardUniqueName, inventoryData, expor
   };
 }
 
+/**
+ * Drop probabilities for each refinement level.
+ * Common: 3 items, Uncommon: 2 items, Rare: 1 item.
+ * [Common_Individual, Uncommon_Individual, Rare_Individual]
+ */
+const DROP_CHANCES = {
+  'Intact': [0.2533, 0.11, 0.02],
+  'Exceptional': [0.2333, 0.13, 0.04],
+  'Flawless': [0.20, 0.17, 0.06],
+  'Radiant': [0.1667, 0.20, 0.10]
+};
+
+/**
+ * Calculates the Expected Value (EV) of picking the best reward in a squad.
+ * @param {Array} rewards - List of 6 reward items with 'plat' or 'ducats' values.
+ * @param {string} refinement - 'Intact', 'Exceptional', 'Flawless', or 'Radiant'.
+ * @param {number} squadSize - Number of identical relics (1-4).
+ * @param {string} valueKey - 'plat' or 'ducats'.
+ */
+export function getRelicEV(rewards, refinement, squadSize = 1, valueKey = 'plat') {
+  if (!rewards || rewards.length === 0) return 0;
+  const chances = DROP_CHANCES[refinement] || DROP_CHANCES['Intact'];
+
+  // Map rewards to their values and individual probabilities
+  const items = rewards.map(r => {
+    let p = 0;
+    if (r.rarity === 'COMMON') p = chances[0];
+    else if (r.rarity === 'UNCOMMON') p = chances[1];
+    else if (r.rarity === 'RARE') p = chances[2];
+    return { val: r[valueKey] || 0, p };
+  });
+
+  // Sort by value descending to calculate "probability this is the best item available"
+  items.sort((a, b) => b.val - a.val);
+
+  let expectedValue = 0;
+  let cumulativeProb = 0;
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    // Probability that AT LEAST ONE of the top i+1 items drops:
+    // 1 - (1 - sum(p_0...p_i))^N
+    const nextCumulativeProb = 1 - Math.pow(1 - (cumulativeProb + item.p), squadSize);
+    
+    // Probability that item i is the BEST item in the result set:
+    // P(at least one of 0...i) - P(at least one of 0...i-1)
+    const probThisIsBest = nextCumulativeProb - (1 - Math.pow(1 - cumulativeProb, squadSize));
+    
+    expectedValue += item.val * probThisIsBest;
+    cumulativeProb += item.p;
+  }
+
+  return expectedValue;
+}
+
 export function parseRelicName(uniqueName) {
   const parts = uniqueName.split('/');
   const rawName = parts[parts.length - 1];
