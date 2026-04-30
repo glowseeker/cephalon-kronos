@@ -16,7 +16,6 @@ import { invoke } from '@tauri-apps/api/tauri'
 const CREDITS = [
   { name: 'warframe-api-helper', desc: 'Credential extraction from game memory', href: 'https://github.com/Obsidian-Jackal/warframe-api-helper/' },
   { name: 'browse.wf', desc: 'Worldstate, bounty cycle, arbitration and incursion data', href: 'https://browse.wf' },
-  { name: 'warframe-items', desc: 'Item database', href: 'https://github.com/wfcd/warframe-items' },
   { name: 'warframe-public-export-plus', desc: 'Data exports for the game', href: 'https://github.com/calamity-inc/warframe-public-export-plus' },
   { name: 'Warframe Checklist', desc: 'Inspiration for the checklist feature', href: 'https://warframetools.com/Task-Checklist/' },
 ]
