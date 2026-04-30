@@ -1,6 +1,7 @@
 // Remove duplicate - using App.jsx version instead
-import { useState, useEffect } from 'react'
-import { Palette, Bell, Clock, AlertTriangle, Star, CheckCircle, Settings as SettingsIcon, Zap, Save, RefreshCw, Play, X, FolderOpen, Scan } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Palette, Bell, Clock, AlertTriangle, Star, CheckCircle, Settings as SettingsIcon, Zap, Save, RefreshCw, Play, X, FolderOpen, Scan, Keyboard, MousePointer } from 'lucide-react'
+
 import { open as openDialog } from '@tauri-apps/api/dialog'
 import { invoke } from '@tauri-apps/api/tauri'
 import { listen } from '@tauri-apps/api/event'
@@ -10,6 +11,59 @@ import { useMonitoring } from '../contexts/MonitoringContext'
 import { formatLastUpdate } from '../lib/warframeUtils'
 import { PageLayout, Card, Button, Toggle } from '../components/UI'
 
+function HotkeyRecorder({ value, onChange, placeholder = 'None' }) {
+  const [recording, setRecording] = useState(false)
+  const buttonRef = useRef(null)
+
+  useEffect(() => {
+    if (!recording) return
+
+    const handleKeyDown = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      // Ignore modifier-only presses
+      if (['Control', 'Shift', 'Alt', 'Meta', 'Command', 'CapsLock'].includes(e.key)) return
+
+      const parts = []
+      if (e.ctrlKey || e.metaKey) parts.push('CmdOrControl')
+      if (e.altKey) parts.push('Alt')
+      if (e.shiftKey) parts.push('Shift')
+
+      let key = e.key.toUpperCase()
+      if (key === ' ') key = 'Space'
+      if (key === 'ARROWUP') key = 'Up'
+      if (key === 'ARROWDOWN') key = 'Down'
+      if (key === 'ARROWLEFT') key = 'Left'
+      if (key === 'ARROWRIGHT') key = 'Right'
+      if (key === 'ESCAPE') key = 'Esc'
+
+      parts.push(key)
+      const shortcut = parts.join('+')
+      onChange(shortcut)
+      setRecording(false)
+    }
+
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
+  }, [recording, onChange])
+
+  return (
+    <button
+      ref={buttonRef}
+      onClick={() => setRecording(!recording)}
+      onBlur={() => setRecording(false)}
+      className={`h-9 px-4 rounded-lg border text-xs font-mono transition-all ${
+        recording 
+        ? 'border-kronos-accent bg-kronos-accent/20 text-white animate-pulse' 
+        : 'border-white/10 bg-black/20 text-kronos-dim hover:border-white/20'
+      }`}
+    >
+      {recording ? 'Recording...' : (value || placeholder)}
+    </button>
+  )
+}
+
 export default function SettingsScreen() {
   const { theme, setTheme, themes } = useTheme()
   const { isMonitoring, startMonitoring, stopMonitoring, manualRefresh, lastUpdate, statusText, autoStart, setAutoStart, monitorResult } = useMonitoring()
@@ -18,12 +72,41 @@ export default function SettingsScreen() {
   const [isCalibrationOpen, setIsCalibrationOpen] = useState(false)
   const [isScannerRunning, setIsScannerRunning] = useState(false)
 
+  // ... existing states ...
+
+  const [hotkeys, setHotkeys] = useState(
+    () => getSetting('hotkeys', [{ action: 'manual_ocr', shortcut: '' }])
+  )
+
+  const handleUpdateHotkeys = async (newHotkeys) => {
+    setHotkeys(newHotkeys)
+    await setSetting('hotkeys', newHotkeys)
+    
+    // Unregister and re-register all with Rust
+    try {
+      await invoke('unregister_all_hotkeys')
+      for (const hk of newHotkeys) {
+        if (hk.shortcut && hk.action) {
+          await invoke('register_hotkey', { shortcut: hk.shortcut, action: hk.action })
+        }
+      }
+    } catch (err) {
+      console.error('Hotkey sync failed:', err)
+    }
+  }
+
+  const HOTKEY_ACTIONS = [
+    { id: 'manual_ocr', label: 'Manual Relic Recognition (OCR)' }
+  ]
+
+  // ... rest of the component ...
+
   // Notification settings
   const [notifPosition, setNotifPosition] = useState(
     () => getSetting('notif_position', 'top-right')
   )
   const [notifSound, setNotifSound] = useState(
-    () => getSetting('notif_sound', 'notification1.ogg')
+    () => getSetting('notif_sound', 'notification1.wav')
   )
 
   const [notifArbitrationEnabled, setNotifArbitrationEnabled] = useState(
@@ -48,6 +131,10 @@ export default function SettingsScreen() {
   )
   const [notifSyndicateWasteEnabled, setNotifSyndicateWasteEnabled] = useState(
     () => getSetting('notif_syndicate_waste_enabled', false)
+  )
+
+  const [notifVoidTracesEnabled, setNotifVoidTracesEnabled] = useState(
+    () => getSetting('notif_void_traces_enabled', false)
   )
 
   const [notifMasteryEnabled, setNotifMasteryEnabled] = useState(
@@ -110,7 +197,7 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     // Sync current sound to Rust backend on mount
-    const savedSound = getSetting('notif_sound', 'notification1.ogg')
+    const savedSound = getSetting('notif_sound', 'notification1.wav')
     invoke('set_notification_sound', { sound: savedSound }).catch(console.error)
   }, [])
 
@@ -159,6 +246,11 @@ export default function SettingsScreen() {
   const handleSetSyndicateWasteEnabled = async (val) => {
     setNotifSyndicateWasteEnabled(val)
     await setSetting('notif_syndicate_waste_enabled', val)
+  }
+
+  const handleSetVoidTracesEnabled = async (val) => {
+    setNotifVoidTracesEnabled(val)
+    await setSetting('notif_void_traces_enabled', val)
   }
 
   // Mastery settings handlers
@@ -323,14 +415,14 @@ export default function SettingsScreen() {
                 ))}
               </div>
             </div>
-            <div>
-              <p className="text-sm font-black uppercase tracking-widest text-kronos-dim mb-3">Notification Sound</p>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { label: 'None', value: 'none' },
-                  { label: 'Sound 1', value: 'notification1.ogg' },
-                  { label: 'Sound 2', value: 'notification2.ogg' },
-                ].map((s) => (
+              <div>
+               <p className="text-sm font-black uppercase tracking-widest text-kronos-dim mb-3">Notification Sound</p>
+               <div className="grid grid-cols-3 gap-2">
+                 {[
+                   { label: 'None', value: 'none' },
+                   { label: 'Sound 1', value: 'notification1.wav' },
+                   { label: 'Sound 2', value: 'notification2.wav' },
+                 ].map((s) => (
                   <button
                     key={s.value}
                     onClick={() => handleSetSound(s.value)}
@@ -462,6 +554,17 @@ export default function SettingsScreen() {
               </div>
             </div>
 
+            {/* Void Traces - Capped */}
+            <div className="p-3 bg-kronos-panel/20 rounded-lg border border-white/5">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="text-sm font-bold text-kronos-text uppercase">Void Traces Capped</p>
+                  <p className="text-xs text-kronos-dim uppercase">Notify when void traces reach maximum capacity</p>
+                </div>
+                <Toggle checked={notifVoidTracesEnabled} onChange={handleSetVoidTracesEnabled} />
+              </div>
+            </div>
+
             {/* Mastery */}
             <div className="p-3 bg-kronos-panel/20 rounded-lg border border-white/5">
               <div className="flex items-center justify-between mb-3">
@@ -580,6 +683,78 @@ export default function SettingsScreen() {
           </div>
         </Card>
 
+        {/* Global Hotkeys */}
+        <Card glow className="p-5">
+          <div className="flex items-center gap-3 mb-6">
+            <Keyboard className="text-kronos-accent" size={28} />
+            <div>
+              <h2 className="text-xl font-black uppercase tracking-tight">Global Hotkeys</h2>
+              <p className="text-[10px] text-kronos-dim uppercase font-bold tracking-widest mt-0.5">System-wide shortcuts</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {hotkeys.map((hk, idx) => (
+              <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-kronos-panel/20 rounded-xl border border-white/5">
+                <div className="flex-1">
+                  <p className="text-[10px] font-black uppercase text-kronos-dim mb-1.5 tracking-wider">Action</p>
+                  <select
+                    value={hk.action}
+                    onChange={(e) => {
+                      const next = [...hotkeys]
+                      next[idx].action = e.target.value
+                      handleUpdateHotkeys(next)
+                    }}
+                    className="w-full kronos-select bg-black/20"
+                  >
+                    <option value="">Select Action...</option>
+                    {HOTKEY_ACTIONS.map(a => (
+                      <option key={a.id} value={a.id}>{a.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex-1">
+                  <p className="text-[10px] font-black uppercase text-kronos-dim mb-1.5 tracking-wider">Shortcut</p>
+                  <HotkeyRecorder
+                    value={hk.shortcut}
+                    onChange={(val) => {
+                      const next = [...hotkeys]
+                      next[idx].shortcut = val
+                      handleUpdateHotkeys(next)
+                    }}
+                  />
+                </div>
+
+                <div className="sm:self-end">
+                   <button
+                     onClick={() => {
+                       const next = hotkeys.filter((_, i) => i !== idx)
+                       handleUpdateHotkeys(next)
+                     }}
+                     className="p-2 text-red-400/50 hover:text-red-400 transition-colors"
+                     title="Remove Hotkey"
+                   >
+                     <X size={18} />
+                   </button>
+                </div>
+              </div>
+            ))}
+
+            <button
+              onClick={() => handleUpdateHotkeys([...hotkeys, { action: '', shortcut: '' }])}
+              className="w-full py-3 border border-dashed border-white/10 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-kronos-dim hover:border-kronos-accent/30 hover:text-kronos-accent transition-all group"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <Keyboard size={12} className="group-hover:animate-bounce" /> Add New Shortcut
+              </span>
+            </button>
+          </div>
+          <p className="text-[9px] text-zinc-600 mt-4 italic uppercase tracking-wider px-1">
+            Note: Shortcuts are global and will work even when the app is in the background. Use combinations like Ctrl+Shift+Key to avoid conflicts.
+          </p>
+        </Card>
+
         {/* Monitoring Section */}
         <Card glow className="p-5">
           <div className="flex items-center gap-3 mb-5">
@@ -621,8 +796,11 @@ export default function SettingsScreen() {
             <button
               onClick={handleStart}
               disabled={loading || isMonitoring}
-              className={`py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${isMonitoring
-                  ? 'bg-green-500/10 border-green-500/30 text-green-400 cursor-not-allowed'
+              className={`py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
+                  isMonitoring 
+                  ? (monitorResult === 'error' 
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 cursor-not-allowed' 
+                      : 'bg-green-500/10 border-green-500/30 text-green-400 cursor-not-allowed')
                   : loading
                     ? 'bg-kronos-panel/20 border-white/5 text-kronos-dim cursor-not-allowed'
                     : 'bg-kronos-accent/20 border-kronos-accent/40 text-kronos-accent hover:bg-kronos-accent/30'
@@ -630,7 +808,9 @@ export default function SettingsScreen() {
             >
               {loading
                 ? <span className="flex items-center justify-center gap-2"><RefreshCw size={12} className="animate-spin" /> Starting</span>
-                : isMonitoring ? '● Active' : 'Start'
+                : isMonitoring 
+                  ? (monitorResult === 'error' ? '● Retrying' : '● Active')
+                  : 'Start'
               }
             </button>
             <button
@@ -651,7 +831,7 @@ export default function SettingsScreen() {
                   : 'bg-kronos-panel/20 border-white/5 text-kronos-dim/40 cursor-not-allowed'
                 }`}
             >
-              Refresh
+              Manual Refresh
             </button>
           </div>
         </Card>

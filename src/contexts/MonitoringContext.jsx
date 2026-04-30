@@ -5,6 +5,8 @@ import { parseWorldstate } from '../lib/worldstateParser'
 import { getRelicRewards, getAllRelicRewards, getRewardInventoryContext, parseRelicName } from '../lib/relicParser'
 import { listen, emit } from '@tauri-apps/api/event'
 import { getPrice } from '../lib/wfmCache'
+import { resolveNode } from '../lib/warframeUtils'
+import { getSetting } from '../lib/settings'
 
 const ORACLE_API = 'https://oracle.browse.wf/worldState.json'
 
@@ -51,6 +53,36 @@ const ARBY_TIERS = {
   SettlementNode11: "D", SolNode23: "D", SolNode450: "B",
 }
 
+// ── arbys.txt helpers ──────────────────────────────────────────────────────────
+function parseArbyLine(line, ERg, dict) {
+  const parts = line.split(',')
+  if (parts.length < 2) return null
+  const tsSec = parseInt(parts[0], 10)
+  const nodeKey = parts[1].trim()
+  const entry = ERg[nodeKey]
+
+  return {
+    ts: tsSec * 1000,
+    node: nodeKey,
+    type: entry?.missionName || entry?.missionType || 'Unknown Mission'
+  }
+}
+
+function getCurrentArby(arbys, ERg, dict) {
+  if (!arbys) return null
+  const now = Date.now()
+  const lines = arbys.split('\n').map(l => l.trim()).filter(Boolean)
+  let best = null
+  for (const line of lines) {
+    const entry = parseArbyLine(line, ERg, dict)
+    if (!entry || isNaN(entry.ts)) continue
+    const GRACE_PERIOD = 300000 // 5 minutes
+    if (entry.ts <= (now + GRACE_PERIOD)) best = entry
+    else break
+  }
+  return best
+}
+
 const MonitoringContext = createContext(null)
 
 export function MonitoringProvider({ children }) {
@@ -58,10 +90,19 @@ export function MonitoringProvider({ children }) {
   const [isMonitoring, setIsMonitoring] = useState(false)
   const [monitorResult, setMonitorResult] = useState('idle') // 'idle' | 'success' | 'error'
   const [autoStart, setAutoStartState] = useState(localStorage.getItem('autoStartMonitoring') === 'true')
+  const autoStartRef = useRef(autoStart)
+  
+  const setAutoStart = useCallback((val) => {
+    const v = !!val
+    setAutoStartState(v)
+    autoStartRef.current = v
+    localStorage.setItem('autoStartMonitoring', String(v))
+  }, [])
+
   const [lastUpdate, setLastUpdate] = useState(localStorage.getItem('lastUpdate') || null)
   const [rawInventory, setRawInventory] = useState(null)
   const [inventoryData, setInventoryData] = useState(undefined)
-  const [isUpdating, setIsUpdating] = useState(false)
+  const [isInventoryLoading, setIsInventoryLoading] = useState(false)
   const [worldState, setWorldState] = useState(null)
   const [statusText, setStatusText] = useState('Initializing…')
   const [spIncursions, setSpIncursions] = useState(null)
@@ -69,26 +110,15 @@ export function MonitoringProvider({ children }) {
   const [descendiaDescs, setDescendiaDescs] = useState({ penance: {}, missionType: {} })
   const intervalRef = useRef(null)
   const busyRef = useRef(false)
-  const autoStartRef = useRef(autoStart)
   const notifiedRef = useRef({
     arbitration: new Set(),
     foundry: new Set(),
     syndicate: new Set(),
     syndicateWaste: { lastNotify: 0, count: 0 },
     mastery: {},
-    checklist: {}
+    checklist: {},
+    voidTraces: false
   })
-
-  const isInventoryLoading = useMemo(() => {
-    return (inventoryData === undefined) || (!!rawInventory && !inventoryData) || isUpdating;
-  }, [inventoryData, rawInventory, isUpdating]);
-
-  const setAutoStart = useCallback((val) => {
-    const v = !!val
-    setAutoStartState(v)
-    autoStartRef.current = v
-    localStorage.setItem('autoStartMonitoring', String(v))
-  }, [])
 
   // ── Derived lookup maps ──────────────────────────────────────────────────────
   const dict = useMemo(() => exportData?.['dict.en'] ?? {}, [exportData])
@@ -164,6 +194,102 @@ export function MonitoringProvider({ children }) {
   }, [exportData, dict])
 
   const globalRewardPool = useMemo(() => getAllRelicRewards(exportData), [exportData])
+
+  // ── Notification Logic ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!inventoryData) return
+
+    const RANK_CAPS = {
+      5: 132000, 4: 99000, 3: 70000, 2: 44000, 1: 22000, 0: 5000,
+      [-1]: -22000, [-2]: -44000
+    }
+    const getCumulativePreviousCaps = (rank) => {
+      if (rank <= 0) return 0
+      if (rank >= 5) return 5000 + 22000 + 44000 + 70000 + 99000
+      if (rank === 4) return 5000 + 22000 + 44000 + 70000
+      if (rank === 3) return 5000 + 22000 + 44000
+      if (rank === 2) return 5000 + 22000
+      if (rank === 1) return 5000
+      return 0
+    }
+
+    // 1. Void Traces
+    if (getSetting('notif_void_traces_enabled', false)) {
+      const { void_traces, void_traces_max } = inventoryData.account || {}
+      if (void_traces && void_traces_max && void_traces >= void_traces_max) {
+        if (!notifiedRef.current.voidTraces) {
+          invoke('show_notification', {
+            title: 'Void Traces Capped',
+            message: `You have reached the maximum capacity of ${void_traces_max} Void Traces.`,
+            image: '/IconRelic.png'
+          }).catch(console.error)
+          notifiedRef.current.voidTraces = true
+        }
+      } else {
+        notifiedRef.current.voidTraces = false
+      }
+    }
+
+    // 2. Syndicate Rank Capped
+    if (getSetting('notif_syndicate_enabled', false)) {
+      const affiliations = inventoryData.Affiliations || []
+      affiliations.forEach(aff => {
+        const rank = aff.Title ?? 0
+        const total = aff.Standing ?? 0
+        const cap = RANK_CAPS[rank] ?? 22000
+        const previousCaps = getCumulativePreviousCaps(rank)
+        const earned = Math.max(0, total - previousCaps)
+
+        if (earned >= cap && cap > 0) {
+          if (!notifiedRef.current.syndicate.has(aff.Tag)) {
+            invoke('show_notification', {
+              title: 'Syndicate Capped',
+              message: `You have reached the maximum standing for your current rank in ${aff.Tag.replace('Syndicate', '')}.`,
+              image: '/IconMastery.png'
+            }).catch(console.error)
+            notifiedRef.current.syndicate.add(aff.Tag)
+          }
+        } else {
+          notifiedRef.current.syndicate.delete(aff.Tag)
+        }
+      })
+    }
+
+    // 3. Foundry Completion
+    if (getSetting('notif_foundry_enabled', false)) {
+      const recipes = inventoryData.craftable || []
+      recipes.forEach(item => {
+        if (item.isCrafting && item.remainingTime <= 0) {
+          if (!notifiedRef.current.foundry.has(item.uniqueName)) {
+            invoke('show_notification', {
+              title: 'Foundry Complete',
+              message: `${item.name} is ready to claim!`,
+              image: item.image || '/IconFoundry.png'
+            }).catch(console.error)
+            notifiedRef.current.foundry.add(item.uniqueName)
+          }
+        }
+      })
+    }
+
+    // 4. S-Tier Arbitration
+    if (getSetting('notif_arbitration_enabled', false) && arbys && Object.keys(ERg).length > 0) {
+      const current = getCurrentArby(arbys, ERg, dict)
+      if (current) {
+        const grade = ARBY_TIERS[current.node] || 'F'
+        if (grade === 'S') {
+          if (!notifiedRef.current.arbitration.has(current.ts)) {
+            invoke('show_notification', {
+              title: 'S-Tier Arbitration Active',
+              message: `${resolveNode(current.type, dict, ERg)} on ${resolveNode(current.node, dict, ERg)}`,
+              image: '/IconDashboard.png'
+            }).catch(console.error)
+            notifiedRef.current.arbitration.add(current.ts)
+          }
+        }
+      }
+    }
+  }, [inventoryData, arbys, ERg, dict])
 
   // When the global reward pool is (re-)computed, write a baseline Tesseract wordlist
   // containing every word that can ever appear in a relic reward name.
@@ -279,7 +405,7 @@ export function MonitoringProvider({ children }) {
   const callApiHelper = useCallback(async () => {
     if (busyRef.current) return
     busyRef.current = true
-    setIsUpdating(true)
+    setIsInventoryLoading(true)
     try {
       const raw = await invoke('call_api_helper')
       if (raw) {
@@ -295,7 +421,7 @@ export function MonitoringProvider({ children }) {
       setStatusText(`Error: ${err}`)
     } finally {
       busyRef.current = false
-      setIsUpdating(false)
+      setIsInventoryLoading(false)
     }
   }, [applyRaw])
 
