@@ -839,71 +839,67 @@ async fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) ->
         return Ok(());
     }
 
+    // Resolve from bundled resources (works in both dev and production)
     let sound_path = app_handle.path_resolver().resolve_resource(&format!("audio/{}", sound));
-    if let Some(path) = sound_path {
-        if path.exists() {
-            let path_clone = path.clone();
-            tokio::task::spawn_blocking(move || {
-                #[cfg(target_os = "linux")]
-                use std::process::Command;
+    
+    let path = if let Some(p) = sound_path.filter(|p| p.exists()) {
+        p
+    } else {
+        return Err(format!("Sound file not found: {}", sound));
+    };
+    
+    let path_str = path.to_string_lossy().to_string();
+    
+    // Play using platform-native audio commands
+    tokio::task::spawn_blocking(move || {
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::ffi::OsStrExt;
+            
+            // Remove \\?\ prefix if present (PlaySound doesn't like it)
+            let clean_path = path_str.replace("\\\\?\\", "");
+            let wide_path: Vec<u16> = std::ffi::OsStr::new(&clean_path)
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect();
 
-                #[cfg(target_os = "linux")]
-                {
-                    eprintln!("[Audio] Trying ogg123: {:?}", path_clone);
-                    if let Ok(output) = Command::new("ogg123")
-                        .arg("-q")
-                        .arg(&path_clone)
-                        .output()
-                    {
-                        if output.status.success() {
-                            eprintln!("[Audio] Played via ogg123");
-                        } else {
-                            eprintln!("[Audio] ogg123 failed: {:?}", String::from_utf8_lossy(&output.stderr));
-                            // Try paplay as fallback
-                            if std::process::Command::new("paplay")
-                                .arg(&path_clone)
-                                .spawn()
-                                .is_ok()
-                            {
-                                eprintln!("[Audio] Played via paplay");
-                            }
-                        }
-                        return;
-                    }
-                    // Try ffplay as another option
-                    let path_str = path_clone.to_string_lossy().to_string();
-                    if std::process::Command::new("ffplay")
-                        .args(["-nodisp", "-autoexit", "-loglevel", "quiet", &path_str])
-                        .spawn()
-                        .is_ok()
-                    {
-                        eprintln!("[Audio] Played via ffplay");
-                        return;
-                    }
+            unsafe {
+                #[link(name = "winmm")]
+                extern "system" {
+                    fn PlaySoundW(pszSound: *const u16, hmod: *mut std::ffi::c_void, fdwSound: u32) -> i32;
                 }
-
-                // Fallback to rodio
-                eprintln!("[Audio] Falling back to rodio");
-                use rodio::{OutputStream, Sink, Decoder};
-
-                if let Ok((_stream, handle)) = OutputStream::try_default() {
-                    if let Ok(sink) = Sink::try_new(&handle) {
-                        if let Ok(file) = std::fs::File::open(&path_clone) {
-                            match Decoder::new(file) {
-                                Ok(source) => {
-                                    eprintln!("[Audio] Playing via rodio");
-                                    sink.append(source);
-                                    sink.sleep_until_end();
-                                    eprintln!("[Audio] Done");
-                                }
-                                Err(e) => eprintln!("Audio decoder error: {}", e),
-                            }
-                        }
-                    }
-                }
-            }).await.ok();
+                const SND_FILENAME: u32 = 0x00020000;
+                const SND_ASYNC: u32 = 0x00000001;
+                const SND_NODEFAULT: u32 = 0x00000002;
+                
+                eprintln!("[Audio] Playing via PlaySoundW: {}", clean_path);
+                PlaySoundW(wide_path.as_ptr(), std::ptr::null_mut(), SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+            }
         }
-    }
+        
+        #[cfg(target_os = "macos")]
+        {
+            eprintln!("[Audio] Playing via afplay: {}", path_str);
+            let _ = std::process::Command::new("afplay")
+                .arg(&path_str)
+                .output();
+        }
+        
+        #[cfg(target_os = "linux")]
+        {
+            eprintln!("[Audio] Playing via native player: {}", path_str);
+            let status = std::process::Command::new("paplay")
+                .arg(&path_str)
+                .status();
+            
+            if status.is_err() || !status.as_ref().map(|s| s.success()).unwrap_or(false) {
+                let _ = std::process::Command::new("aplay")
+                    .arg(&path_str)
+                    .output();
+            }
+        }
+    }).await.ok();
+    
     Ok(())
 }
 
@@ -1178,7 +1174,7 @@ fn main() {
     
     let saved_sound = saved_settings.get("notif_sound")
         .and_then(|v| v.as_str())
-        .unwrap_or("notification1.ogg");
+        .unwrap_or("notification1.wav");
     
     // Fix xcap screen capture on Linux inside AppImage:
     // When run from an AppImage, the usual env-var workarounds for WebKit / Mesa
