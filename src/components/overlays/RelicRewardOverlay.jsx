@@ -29,6 +29,24 @@ export default function RelicRewardOverlay() {
   const [triggerKey, setTriggerKey] = useState(0)
 
   useEffect(() => {
+    // 1. Immediately request the cached session data in case the event was missed
+    invoke('get_active_relic_session')
+      .then(cachedData => {
+        if (cachedData) {
+          if (cachedData.squad_relics) {
+            setData(cachedData.squad_relics)
+            setSquadSize(cachedData.squad_size || 1)
+            setRemaining(RELIC_TIMEOUT)
+            lastTick.current = Date.now()
+          }
+          if (cachedData.local_reward) {
+            setLocalReward(cachedData.local_reward)
+            setSquadSize(cachedData.squad_size || 1)
+          }
+        }
+      })
+      .catch(err => console.error('[RelicRewardOverlay] Failed to fetch cached session:', err))
+
     const subs = []
     subs.push(listen('overlay-update-relics', (e) => {
       const relicsCount = e.payload.squad_relics?.length || 0

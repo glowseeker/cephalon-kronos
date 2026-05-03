@@ -1,8 +1,13 @@
 use tauri::{AppHandle, Manager};
 
 pub fn show_window_internal(app_handle: &AppHandle, label: &str) -> Result<(), String> {
+    crate::logger::log_to_disk(
+        app_handle, 
+        &format!("[WINDOW ACTION] show_window_internal called for label: {}", label)
+    );
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
-    eprintln!("[{}] [show_window_internal] Called for: {}", now, label);
+    eprintln!("[{}] [OVERLAY_UTILS] show_window_internal for label: {}", now, label);
+
     
     let window = app_handle
         .get_window(label)

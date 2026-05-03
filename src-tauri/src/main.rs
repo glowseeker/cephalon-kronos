@@ -14,6 +14,7 @@ use serde_json::Value;
 mod log_scanner;
 mod ocr;
 mod overlay_utils;
+mod logger;
 
 pub struct AppState {
     pub notif_sound: Arc<Mutex<String>>,
@@ -22,6 +23,7 @@ pub struct AppState {
     /// Path to the eng.user-words file written for the current session.
     /// Written by `write_ocr_wordlist`, consumed by the OCR pipeline.
     pub ocr_wordlist_path: Arc<Mutex<Option<std::path::PathBuf>>>,
+    pub active_relic_data: Arc<Mutex<Option<serde_json::Value>>>,
 }
 
 // ─── Path Resolution ──────────────────────────────────────────────────────────
@@ -686,8 +688,34 @@ fn hide_overlay_window(
 }
 
 #[tauri::command]
-fn relay_event(app_handle: tauri::AppHandle, event: String, payload: Value) -> Result<(), String> {
+fn relay_event(
+    app_handle: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    event: String,
+    payload: Value,
+) -> Result<(), String> {
+    // 1. Log the action
+    logger::log_to_disk(&app_handle, &format!("[RELAY EVENT] Event: {}, Payload: {}", event, payload));
+
+    // 2. Cache if it's a relic/reward update
+    if event == "overlay-update-relics" || event == "overlay-update-reward" {
+        let mut cached = state.active_relic_data.lock().unwrap();
+        *cached = Some(payload.clone());
+    }
+
+    // 3. Reset cache if session closed
+    if event == "fissure-reward-closed" {
+         let mut cached = state.active_relic_data.lock().unwrap();
+         *cached = None;
+    }
+
     app_handle.emit_all(&event, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_active_relic_session(state: tauri::State<'_, AppState>) -> Option<Value> {
+    let cached = state.active_relic_data.lock().unwrap();
+    cached.clone()
 }
 
 #[tauri::command]
@@ -1233,6 +1261,7 @@ fn main() {
             log_scanner: Arc::new(Mutex::new(None)),
             log_scanner_path: Arc::new(Mutex::new(None)),
             ocr_wordlist_path: Arc::new(Mutex::new(None)),
+            active_relic_data: Arc::new(Mutex::new(None)),
         })
         .on_window_event(|event| match event.event() {
             tauri::WindowEvent::CloseRequested { api, .. } => {
@@ -1289,6 +1318,7 @@ fn main() {
             set_notification_sound,
             start_notif_autoclose_timer,
             relay_event,
+            get_active_relic_session,
             open_url,
             save_settings,
             load_settings,

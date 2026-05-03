@@ -79,6 +79,7 @@ impl LogScanner {
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
                     .as_millis();
+                crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Fissure Mission Detected. Silent: {}. Line: {}", silent, line));
                 println!("[{}] [LOG_SCANNER] === FISSURE MISSION DETECTED ===", now);
             }
             self.is_fissure = true;
@@ -95,6 +96,7 @@ impl LogScanner {
                     if count > 0 {
                         self.squad_size = count.min(4);
                         if !silent {
+                            crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Squad size updated: {}. Line: {}", self.squad_size, line));
                             println!("[LOG_SCANNER] Squad size updated: {}", self.squad_size);
                         }
                     }
@@ -110,6 +112,7 @@ impl LogScanner {
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
                     .as_millis();
+                crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Mission End/Abort. Line: {}", line));
                 println!(
                     "[{}] [LOG_SCANNER] === MISSION END/ABORT (Disconnected) ===",
                     now
@@ -125,6 +128,7 @@ impl LogScanner {
         // === 1.6 Reward Screen Shutdown (Endless Round Reset) ===
         if line.contains("ProjectionRewardChoice.lua: Relic reward screen shut down") {
             if !silent {
+                crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Relic reward screen shut down. Line: {}", line));
                 println!("[LOG_SCANNER] Relic reward screen shut down -- resetting round state for next round");
             }
             self.reset_round();
@@ -161,6 +165,7 @@ impl LogScanner {
                         if !self.squad_relics.iter().any(|r| r.hex_id == hex_id) {
                             if self.has_triggered_round {
                                 if !silent { 
+                                    crate::logger::log_to_disk(app, &format!("[LOG SCANNER] New relic hex detected after triggered round. Hex: {}. Line: {}", hex_id, line));
                                     println!("[LOG_SCANNER] New relic hex ({}) detected after triggered round -- resetting for new endless round", hex_id); 
                                 }
                                 self.reset_round();
@@ -169,6 +174,7 @@ impl LogScanner {
                             self.squad_relics.push(relic);
                             self.squad_size = self.squad_size.max(self.squad_relics.len()).min(4);
                             if !silent {
+                                crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Relic detected: {} (Hex: {}, Squad: {})", path, hex_id, self.squad_size));
                                 println!(
                                     "[LOG_SCANNER] Relic detected: {} (Hex: {}, Squad: {})",
                                     path, hex_id, self.squad_size
@@ -185,11 +191,13 @@ impl LogScanner {
                     let path = line[pos + 13..].trim();
                     self.local_reward = Some(path.to_string());
                     if !silent {
+                        crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Local reward caught: {}. Line: {}", path, line));
                         println!("[LOG_SCANNER] Local reward caught: {}", path);
                     }
 
                     if !silent && !self.has_triggered_round {
                         self.has_triggered_round = true;
+                        crate::logger::log_to_disk(app, "[LOG SCANNER] EARLY TRIGGER (Got reward line)");
                         let app_c = app.clone();
                         let sz = self.squad_size;
                         let relics = self.squad_relics.clone();
@@ -203,7 +211,8 @@ impl LogScanner {
                                 "[{}] [LOG_SCANNER] === EARLY TRIGGER (Got reward line) ===",
                                 now
                             );
-                            std::thread::sleep(std::time::Duration::from_millis(300));
+                            // No artificial sleep here — the OCR pipeline waits for the
+                            // overlay to become visible internally before capturing.
                             let _ = overlay_utils::show_window_internal(&app_c, "overlay-relic");
                             app_c
                                 .emit_all("scanner-show-overlay", "overlay-relic")
@@ -236,7 +245,7 @@ impl LogScanner {
             if !silent && !self.has_triggered_round && line.contains("ProjectionRewardChoice.lua: Got rewards")
             {
                 self.has_triggered_round = true;
-                // The 'if !silent' block is now redundant as the condition is in the outer if.
+                crate::logger::log_to_disk(app, &format!("[LOG SCANNER] BACKUP TRIGGER (Got rewards line). Line: {}", line));
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
@@ -255,7 +264,21 @@ impl LogScanner {
                 .unwrap_or_default();
                 let app_c = app.clone();
                 let sz = self.squad_size;
+                let relics = self.squad_relics.clone();
                 std::thread::spawn(move || {
+                    // Emit fissure-relic-phase so JS knows which relics are in play
+                    // and can write the OCR wordlist. Without this the backup path
+                    // starts OCR but the frontend never resolves rewards.
+                    app_c.emit_all(
+                        "fissure-relic-phase",
+                        FissureEvent {
+                            event_type: "relic_phase_start".to_string(),
+                            squad_relics: relics,
+                            local_reward: None,
+                            squad_size: sz,
+                            void_tier: None,
+                        },
+                    ).unwrap_or_default();
                     crate::ocr::run_ocr_pipeline_with_size(app_c, sz);
                 });
             }
@@ -263,6 +286,7 @@ impl LogScanner {
             // === 5. Endless Mission Continue/Extract ===
             if line.contains("Sending continue dialogue to host with answer") {
                 if !silent {
+                    crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Endless Round Reset. Line: {}", line));
                     println!("[LOG_SCANNER] Endless: User chose a dialogue option. Resetting round state and closing overlay.");
                 }
                 self.reset_round();
