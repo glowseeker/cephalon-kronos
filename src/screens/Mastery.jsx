@@ -70,8 +70,8 @@ function getXPForRank(rank) {
 }
 function getXPNeededFor(rank) {
   if (rank <= 0) return 0
-  // XP needed for next rank: (2r+1) × 2500
-  if (rank <= 30) return (2 * rank + 1) * 2500
+  // XP needed for next rank: (2r-1) × 2500
+  if (rank <= 30) return (2 * rank - 1) * 2500
   return 147500
 }
 

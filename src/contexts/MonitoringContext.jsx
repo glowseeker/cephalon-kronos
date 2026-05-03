@@ -40,17 +40,44 @@ const cleanOcrText = (s) => s
   .trim();
 
 const ARBY_TIERS = {
-  SolNode106: "S", SolNode147: "S", SolNode149: "S", ClanNode22: "S",
-  SolNode25: "A", SolNode224: "A", SolNode195: "A", SolNode42: "A",
-  ClanNode24: "A", ClanNode6: "A", SolNode707: "B", SolNode125: "B",
-  ClanNode4: "B", SolNode412: "B", SolNode719: "B", SolNode22: "B",
-  SolNode211: "B", ClanNode8: "B", SolNode72: "B", SolNode212: "B",
-  SolNode46: "B", SolNode130: "C", ClanNode15: "C", SolNode408: "C",
-  SolNode402: "C", SolNode26: "C", SolNode18: "C", SolNode305: "C",
-  SolNode185: "C", SolNode43: "C", SolNode64: "C", SolNode122: "C",
-  SolNode167: "C", SolNode164: "C", ClanNode18: "C", SolNode85: "D",
-  ClanNode2: "D", SolNode172: "D", ClanNode0: "D", SolNode17: "D",
-  SettlementNode11: "D", SolNode23: "D", SolNode450: "B",
+  SolNode450: "S",
+  SolNode106: "S",
+  SolNode25: "S",
+  SolNode719: "S",
+  SolNode64: "S",
+  SolNode147: "A",
+  SolNode23: "A",
+  SolNode172: "A",
+  SolNode167: "B",
+  ClanNode24: "B",
+  SolNode149: "B",
+  ClanNode22: "B",
+  ClanNode18: "B",
+  SolNode164: "B",
+  SolNode707: "B",
+  SolNode211: "B",
+  SolNode42: "B",
+  SolNode195: "B",
+  SolNode408: "B",
+  SolNode402: "B",
+  SolNode412: "C",
+  ClanNode2: "C",
+  SolNode46: "C",
+  ClanNode8: "C",
+  SolNode212: "C",
+  SolNode22: "C",
+  SolNode224: "C",
+  SolNode26: "C",
+  ClanNode6: "C",
+  SolNode122: "C",
+  SolNode72: "C",
+  SolNode130: "D",
+  ClanNode15: "D",
+  SolNode85: "D",
+  SolNode18: "D",
+  SolNode305: "D",
+  ClanNode4: "D",
+  SolNode125: "D",
 }
 
 // ── arbys.txt helpers ──────────────────────────────────────────────────────────
@@ -161,8 +188,8 @@ export function MonitoringProvider({ children }) {
     const currentRank = inventoryData.account?.mastery_rank
     if (currentRank == null) return 0
     const getXPForRank = (r) => r <= 0 ? 0 : r <= 30 ? r * r * 2500 : 2250000 + (r - 30) * 147500
-    const getXPNeededFor = (r) => r <= 30 ? (2 * r + 1) * 2500 : 147500
-    const itemCats = ['warframes', 'primary', 'secondary', 'melee', 'kitguns', 'zaws', 'amps',
+    const getXPNeededFor = (r) => r <= 30 ? (2 * r - 1) * 2500 : 147500
+    const itemCats = ['warframes', 'primary', 'secondary', 'melee', 'kitgunChambers', 'zawStrikes', 'amps',
       'sentinels', 'companion_weapons', 'moaHeads', 'houndHeads', 'beasts',
       'archwings', 'archweapons', 'necramechs', 'plexus', 'kdrives']
     const itemXP = itemCats.reduce((sum, cat) =>
@@ -173,7 +200,7 @@ export function MonitoringProvider({ children }) {
     const xpAtCurrent = getXPForRank(currentRank)
     const xpNeeded = getXPNeededFor(currentRank + 1)
     const xpIntoRank = Math.max(0, totalXP - xpAtCurrent)
-    return xpNeeded > 0 ? Math.min(100, Math.floor((xpIntoRank / xpNeeded) * 100)) : 100
+    return xpNeeded > 0 ? Math.min(100, (xpIntoRank / xpNeeded) * 100) : 100
   }, [inventoryData])
 
   const { EI, nameToImage, uniqueNameToName } = useMemo(() => {
