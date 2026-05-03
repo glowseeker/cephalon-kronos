@@ -27,19 +27,35 @@ const INVENTORY_TABS = [
 ]
 
 const FILTER_CONFIG = {
-  all: ['owned', 'unowned', 'mastered', 'unmastered'],
-  warframes: ['owned', 'unowned', 'mastered', 'unmastered', 'subsumed'],
-  weapons: ['owned', 'unowned', 'mastered', 'unmastered', 'primary', 'secondary', 'melee', 'incarnon'],
-  companions: ['owned', 'unowned', 'mastered', 'unmastered'],
-  companion_weapons: ['owned', 'unowned', 'mastered', 'unmastered'],
-  archweapons: ['owned', 'unowned', 'mastered', 'unmastered'],
-  vehicles: ['owned', 'unowned', 'mastered', 'unmastered', 'archwing', 'kdrive'],
-  necramechs: ['owned', 'unowned', 'mastered', 'unmastered'],
-  amps: ['owned', 'unowned', 'mastered', 'unmastered'],
-  arcanes: ['owned', 'unowned'],
-  mods: ['owned', 'unowned'],
-  prime_parts: ['owned', 'unowned'],
-  resources: ['owned', 'unowned'],
+  all: ['mastered', 'unmastered'],
+  warframes: ['mastered', 'subsumed'],
+  weapons: ['mastered', 'primary', 'secondary', 'melee', 'incarnon'],
+  companions: ['mastered'],
+  companion_weapons: ['mastered'],
+  archweapons: ['mastered'],
+  vehicles: ['mastered', 'archwing', 'kdrive'],
+  necramechs: ['mastered'],
+  amps: ['mastered'],
+  arcanes: [],
+  mods: [],
+  prime_parts: ['owned', 'mastered'],
+  resources: [],
+}
+
+const SORT_CONFIG = {
+  all: [{ id: 'name', label: 'Name' }, { id: 'xp', label: 'XP' }],
+  warframes: [{ id: 'name', label: 'Name' }, { id: 'xp', label: 'XP' }],
+  weapons: [{ id: 'name', label: 'Name' }, { id: 'xp', label: 'XP' }],
+  companions: [{ id: 'name', label: 'Name' }, { id: 'xp', label: 'XP' }],
+  companion_weapons: [{ id: 'name', label: 'Name' }, { id: 'xp', label: 'XP' }],
+  archweapons: [{ id: 'name', label: 'Name' }, { id: 'xp', label: 'XP' }],
+  vehicles: [{ id: 'name', label: 'Name' }, { id: 'xp', label: 'XP' }],
+  necramechs: [{ id: 'name', label: 'Name' }, { id: 'xp', label: 'XP' }],
+  amps: [{ id: 'name', label: 'Name' }, { id: 'xp', label: 'XP' }],
+  arcanes: [{ id: 'name', label: 'Name' }, { id: 'rank', label: 'Rank' }, { id: 'quantity', label: 'Count' }],
+  mods: [{ id: 'name', label: 'Name' }, { id: 'quantity', label: 'Count' }, { id: 'rank', label: 'Rank' }],
+  prime_parts: [{ id: 'name', label: 'Name' }, { id: 'quantity', label: 'Count' }],
+  resources: [{ id: 'name', label: 'Name' }, { id: 'quantity', label: 'Count' }],
 }
 
 const ITEMS_PER_PAGE = 48
@@ -518,7 +534,7 @@ export default function Inventory() {
               <div className="flex-1 border-l border-white/5 pl-12">
                 <p className="text-[10px] font-black text-kronos-accent uppercase tracking-widest mb-3">Sort By</p>
                 <div className="flex flex-wrap gap-2">
-                  {[{ id: 'name', label: 'Name' }, { id: 'owned', label: 'Ownership' }, { id: 'mastered', label: 'Mastery' }].map(c => (
+                  {(SORT_CONFIG[activeTab] ?? []).map(c => (
                     <button 
                       key={c.id} 
                       onClick={() => { if (sortCriteria === c.id) setSortDirection(d => d === 'asc' ? 'desc' : 'asc'); else { setSortCriteria(c.id); setSortDirection('asc') } }} 
@@ -533,7 +549,7 @@ export default function Inventory() {
             </div>
           </Card>
         )}
-        <Tabs tabs={INVENTORY_TABS} activeTab={activeTab} onChange={(id) => { setActiveTab(id); setCurrentFilters({}) }} />
+        <Tabs tabs={INVENTORY_TABS} activeTab={activeTab} onChange={(id) => { setActiveTab(id); setCurrentFilters({}); setSortCriteria('name'); setSortDirection('asc') }} />
         {inventoryData && (
           <p className="text-xs text-kronos-dim flex items-center gap-2">
             Showing {visibleItems.length} of {filteredItems.length} items
