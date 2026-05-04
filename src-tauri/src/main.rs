@@ -53,7 +53,7 @@ fn get_app_root() -> PathBuf {
 /// - AppImage: directory containing the .AppImage file
 /// - macOS .app: directory containing the .app bundle
 /// - Everything else: directory containing the binary
-fn get_data_root() -> PathBuf {
+pub fn get_data_root() -> PathBuf {
     if let Ok(appimage_path) = std::env::var("APPIMAGE") {
         return PathBuf::from(appimage_path)
             .parent()

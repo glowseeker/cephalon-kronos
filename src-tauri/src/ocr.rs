@@ -6,6 +6,15 @@ use std::process::{Command, Stdio};
 use std::io::Write;
 use std::path::PathBuf;
 
+/// Logs to stderr (dev) and disk (prod). Requires an `AppHandle` reference named `app_c` in scope.
+macro_rules! ocr_log {
+    ($app:expr, $($arg:tt)*) => {{
+        let msg = format!($($arg)*);
+        eprintln!("{}", msg);
+        crate::logger::log_to_disk($app, &msg);
+    }};
+}
+
 #[derive(Clone, Serialize, Debug)]
 pub struct OcrSlotResult {
     pub slot: usize,
@@ -20,12 +29,14 @@ pub struct OcrBandResult {
 }
 
 // User-provided coordinates for 1920x1080
+// Rewards are centered - adjust positions accordingly
 fn get_base_region(squad_size: usize) -> (f64, f64, f64, f64) {
     match squad_size {
         2 => (719.0 / 1920.0, 409.0 / 1080.0, 481.0 / 1920.0, 51.0 / 1080.0),
         3 => (600.0 / 1920.0, 409.0 / 1080.0, 720.0 / 1920.0, 51.0 / 1080.0),
         4 => (478.0 / 1920.0, 409.0 / 1080.0, 965.0 / 1920.0, 51.0 / 1080.0),
-        _ => (839.0 / 1920.0, 409.0 / 1080.0, 241.0 / 1920.0, 51.0 / 1080.0),
+        // Single reward - centered in middle of screen
+        _ => (719.0 / 1920.0, 409.0 / 1080.0, 481.0 / 1920.0, 51.0 / 1080.0),
     }
 }
 
@@ -47,7 +58,7 @@ fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_
         let start_time = std::time::Instant::now();
 
         let dynamic_image = if let Some(img) = captured_image {
-            eprintln!("[OCR] Using provided debug image");
+            ocr_log!(&app_c, "[OCR] Using provided debug image");
             img
         } else {
             let monitors = Monitor::all().unwrap_or_default();
@@ -57,6 +68,7 @@ fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_
         };
         
         let coords = get_slot_coords(squad_size);
+        ocr_log!(&app_c, "[OCR] Captured image: {}x{}, squad_size={}", dynamic_image.width(), dynamic_image.height(), squad_size);
         let (bin_path, tessdata_path) = get_tesseract_config(&app_c);
         let bin_path_arc = std::sync::Arc::new(bin_path);
         let tessdata_path_arc = std::sync::Arc::new(tessdata_path);
@@ -196,10 +208,11 @@ fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_
             let mut lines = slot_lines.remove(&slot_idx).unwrap();
             lines.sort_by_key(|(l, _)| *l);
             let combined = lines.into_iter().map(|(_, t)| t).collect::<Vec<_>>().join(" ");
+            ocr_log!(&app_c, "[OCR] Slot {} text: \"{}\"", slot_idx + 1, combined);
             slot_results.push(OcrSlotResult { slot: slot_idx + 1, text: combined });
         }
         let combined_text = slot_results.iter().map(|r| r.text.clone()).collect::<Vec<_>>().join(" | ");
-        eprintln!("[OCR] Total pipeline time: {}ms", start_time.elapsed().as_millis());
+        ocr_log!(&app_c, "[OCR] Total pipeline time: {}ms — results: {}", start_time.elapsed().as_millis(), combined_text);
         let _ = app_c.emit_all("overlay-debug-text", serde_json::json!({ "text": combined_text }));
         app_c.emit_all("fissure-ocr-band", OcrBandResult { text: combined_text, slot_results, is_debug }).unwrap_or_default();
     });
