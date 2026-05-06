@@ -29,16 +29,30 @@ pub struct FissureEvent {
 
 pub struct LogScanner {
     squad_relics: Vec<RelicInfo>,
-    local_reward: Option<String>,
     squad_size: usize,
     is_fissure: bool,
-    wait_for_root_types: bool,
+    has_triggered_reward: bool,
 }
 
 fn parse_timestamp(line: &str) -> Option<f64> {
+    // Format: "5687.320 Sys" from EE.log
+    if let Some(space_idx) = line.find(' ') {
+        let prefix = &line[..space_idx];
+        if prefix.contains('.') {
+            return prefix.parse::<f64>().ok();
+        }
+    }
+    // Format: "[SystemTime: 1777981758260ms]" from overlay_debug
     if line.starts_with('[') {
         if let Some(end) = line.find(']') {
-            return line[1..end].trim().parse::<f64>().ok();
+            let inner = &line[1..end];
+            if let Some(ms_pos) = inner.find("SystemTime: ") {
+                let ms_str = &inner[ms_pos + 11..];
+                if let Some(ms_end) = ms_str.find("ms") {
+                    let ms_num = &ms_str[..ms_end];
+                    return ms_num.parse::<f64>().ok();
+                }
+            }
         }
     }
     None
@@ -48,118 +62,101 @@ impl LogScanner {
     pub fn new() -> Self {
         Self {
             squad_relics: Vec::new(),
-            local_reward: None,
             squad_size: 1,
             is_fissure: false,
-            wait_for_root_types: false,
+            has_triggered_reward: false,
         }
     }
 
     pub fn on_line(&mut self, app: &AppHandle, line: &str, _silent: bool) {
-        let _ts = parse_timestamp(line);
+        let ts = parse_timestamp(line).unwrap_or(0.0);
 
         let s = line.trim();
         if s.is_empty() {
             return;
         }
 
-        // === STATE MACHINE IN ORDER ===
-
-        // --- Step 1: Fissure Mission Start ---
+        // === 1. Mission Start/End Detection ===
         if line.contains("_ActiveMission\"} with MissionInfo") {
             self.is_fissure = true;
             self.squad_size = 1;
             self.squad_relics.clear();
-            self.wait_for_root_types = false;
-            crate::logger::log_to_disk(app, "[LOG SCANNER] Step 1: FISSURE START");
+            self.has_triggered_reward = false;
+            crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Step 1: FISSURE START (EE: {}s)", ts));
             return;
         }
 
-        // Skip other steps if not in fissure
-        if !self.is_fissure {
-            return;
-        }
-
-        // --- Step 8: Mission Exit ---
+        // --- Step 7: Mission Exit ---
         if line.contains("ExitState: Disconnected") || line.contains("Game [Info]: Set state to Disconnected") {
             self.is_fissure = false;
             self.squad_relics.clear();
-            self.wait_for_root_types = false;
-            crate::logger::log_to_disk(app, "[LOG SCANNER] Step 8: MISSION EXIT");
+            self.has_triggered_reward = false;
+            crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Step 7: MISSION EXIT (EE: {}s)", ts));
             app.emit_all("fissure-reward-closed", ()).unwrap_or_default();
             return;
         }
 
         // --- Step 2: Relic Pool Detection ---
         if line.contains("Resloader") && line.contains("/Lotus/Types/Game/Projections/") && line.contains("starting") {
+            let hex_id = if let Some(pos) = line.find("Resloader ") {
+                let start = pos + 10;
+                if let Some(end) = line[start..].find(' ') {
+                    &line[start..start + end]
+                } else { "unknown" }
+            } else { "unknown" };
+
             if let Some(start) = line.find("(/Lotus") {
                 if let Some(end) = line[start..].find(')') {
                     let path = &line[start + 1..start + end];
-                    if !self.squad_relics.iter().any(|r| r.unique_name == path) {
-                        crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Step 2: RELIC POOL - {}", path));
-                        let relic = parse_relic_path(path, "");
+                    if !self.squad_relics.iter().any(|r| r.hex_id == hex_id) {
+                        crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Step 2: RELIC POOL - {} (Hex: {}) (EE: {}s)", path, hex_id, ts));
+                        let relic = parse_relic_path(path, hex_id);
                         self.squad_relics.push(relic);
+                        self.is_fissure = true; // Auto-enable if we see relics
                     }
                 }
             }
             return;
         }
 
-        // --- Step 3: User Reward ---
-        if line.contains(" gets reward ") && line.contains("/Lotus/StoreItems/") {
-            if let Some(pos) = line.find(" gets reward ") {
-                let path = line[pos + 13..].trim();
-                self.local_reward = Some(path.to_string());
-                crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Step 3: USER REWARD - {}", path));
+        // --- Step 3: Reward Screen Initialization ---
+        // Trigger precisely when the reward screen is created
+        if line.contains("ProjectionRewardChoice.lua: Got rewards") || line.contains("Created /Lotus/Interface/ProjectionRewardChoice.swf") {
+            if self.has_triggered_reward {
+                return;
             }
-            return;
-        }
-
-        // --- Step 4: Reward Screen Initialization (Slot Count) ---
-        // Trigger: "ProjectionRewardChoice.lua: Got rewards" - marks start of reward screen init
-        // Then wait for next ResourceLoader "(x root types)" to get actual count
-        if line.contains("ProjectionRewardChoice.lua: Got rewards") {
-            self.wait_for_root_types = true;
-            crate::logger::log_to_disk(app, "[LOG SCANNER] Step 4: GOT REWARDS");
-            return;
-        }
-
-        // Step 4 continued: Get root types count from ResourceLoader
-        if self.wait_for_root_types && line.contains("root types") {
-            // Pattern: "ResourceLoader 0x... (X root types) Found ..."
-            if let Some(start) = line.find('(') {
-                if let Some(end) = line[start..].find(" root types)") {
-                    let count_str = &line[start + 1..start + end];
-                    if let Ok(count) = count_str.trim().parse::<usize>() {
-                        if count > 0 {
-                            self.squad_size = count;
-                        }
-                    }
-                }
+            self.has_triggered_reward = true;
+            crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Step 3: GOT REWARDS / REWARD SCREEN OPEN (EE: {}s)", ts));
+            
+            // Refine squad size based on detected relics if it's higher than what we know
+            if self.squad_relics.len() > self.squad_size {
+                self.squad_size = self.squad_relics.len();
             }
-            self.wait_for_root_types = false;
-            crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Step 4: ROOT_TYPES - slots:{}", self.squad_size));
+
             self.trigger_overlay(app);
             return;
         }
 
-        // --- Step 6: Reward Screen Close ---
+        // --- Step 5: Reward Screen Closure ---
         if line.contains("ProjectionRewardChoice.lua: Relic reward screen shut down") {
-            crate::logger::log_to_disk(app, "[LOG SCANNER] Step 6: REWARD SCREEN CLOSE");
-            self.wait_for_root_types = false;
+            self.has_triggered_reward = false;
+            crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Step 5: REWARD SCREEN CLOSE (EE: {}s)", ts));
             app.emit_all("fissure-reward-closed", ()).unwrap_or_default();
             return;
         }
 
-        // --- Step 7: Endless Continue ---
+        // --- Step 6: Endless Mission Handling ---
         if line.contains("Created /Lotus/Interface/ThemedProjectionManager.swf") {
-            self.wait_for_root_types = false;
-            crate::logger::log_to_disk(app, "[LOG SCANNER] Step 7: ENDLESS CONTINUE");
+            crate::logger::log_to_disk(app, &format!("[LOG SCANNER] Step 6: ENDLESS CONTINUE (EE: {}s)", ts));
+            // Clear relics for the next round
+            self.squad_relics.clear();
+            self.has_triggered_reward = false;
             return;
         }
     }
 
     fn trigger_overlay(&self, app: &AppHandle) {
+        let app_c = app.clone();
         let sz = self.squad_size;
         let relics = self.squad_relics.clone();
 
@@ -167,20 +164,28 @@ impl LogScanner {
             let _ = window.show();
         }
         
+        let event_payload = FissureEvent {
+            event_type: "relic_phase_start".to_string(),
+            squad_relics: relics,
+            local_reward: None,
+            squad_size: sz,
+            void_tier: None,
+        };
+
+        // Cache the session data in AppState
+        let state = app.state::<crate::AppState>();
+        if let Ok(mut cached) = state.active_relic_data.lock() {
+            *cached = Some(serde_json::to_value(&event_payload).unwrap_or(serde_json::Value::Null));
+        }
+
         app.emit_all("scanner-relic-phase-start", serde_json::json!({ "squad_size": sz })).unwrap_or_default();
+        app.emit_all("fissure-relic-phase", &event_payload).unwrap_or_default();
         
-        app.emit_all(
-            "fissure-relic-phase",
-            FissureEvent {
-                event_type: "relic_phase_start".to_string(),
-                squad_relics: relics,
-                local_reward: None,
-                squad_size: sz,
-                void_tier: None,
-            },
-        ).unwrap_or_default();
-        
-        crate::ocr::run_ocr_pipeline_with_size(app.clone(), sz);
+        std::thread::spawn(move || {
+            // Wait slightly longer for UI animations before starting OCR
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            crate::ocr::run_ocr_pipeline_with_size(app_c.clone(), sz);
+        });
     }
 }
 
@@ -248,7 +253,7 @@ pub fn spawn_log_watcher(app: AppHandle, log_path: PathBuf) -> Result<LogScanner
         if let Ok(mut file) = File::open(&log_path) {
             if let Ok(metadata) = file.metadata() {
                 let total_len = metadata.len();
-                const BACKFILL_BYTES: u64 = 32 * 1024;
+                const BACKFILL_BYTES: u64 = 1024 * 1024; // 1MB
                 let backfill_start = total_len.saturating_sub(BACKFILL_BYTES);
 
                 if backfill_start < total_len {

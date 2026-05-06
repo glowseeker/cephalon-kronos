@@ -53,12 +53,16 @@ pub fn run_ocr_pipeline_with_size(app: AppHandle, squad_size: usize) {
 }
 
 fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_image: Option<DynamicImage>) {
+    run_ocr_with_retry(app, squad_size, is_debug, captured_image, 0);
+}
+
+fn run_ocr_with_retry(app: AppHandle, squad_size: usize, is_debug: bool, captured_image: Option<DynamicImage>, attempt: u8) {
     let app_c = app.clone();
     std::thread::spawn(move || {
         let start_time = std::time::Instant::now();
 
-        let dynamic_image = if let Some(img) = captured_image {
-            ocr_log!(&app_c, "[OCR] Using provided debug image");
+        let dynamic_image = if let Some(img) = captured_image.clone() {
+            ocr_log!(&app_c, "[OCR] [Attempt {}] Using provided debug image", attempt + 1);
             img
         } else {
             let monitors = Monitor::all().unwrap_or_default();
@@ -68,7 +72,7 @@ fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_
         };
         
         let coords = get_slot_coords(squad_size);
-        ocr_log!(&app_c, "[OCR] Captured image: {}x{}, squad_size={}", dynamic_image.width(), dynamic_image.height(), squad_size);
+        ocr_log!(&app_c, "[OCR] [Attempt {}] Captured image: {}x{}, squad_size={}", attempt + 1, dynamic_image.width(), dynamic_image.height(), squad_size);
         let (bin_path, tessdata_path) = get_tesseract_config(&app_c);
         let bin_path_arc = std::sync::Arc::new(bin_path);
         let tessdata_path_arc = std::sync::Arc::new(tessdata_path);
@@ -93,7 +97,6 @@ fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_
             let slot_crop = dynamic_image.crop_imm(full_slot_x, full_slot_y, full_slot_w, full_slot_h);
             
             // ── PREPROCESS ──
-            // Nearest is faster and often better for binary text than CatmullRom
             let upscaled = slot_crop.resize(full_slot_w * 3, full_slot_h * 3, image::imageops::FilterType::Nearest);
             let mut gray = upscaled.to_luma8();
             for p in gray.pixels_mut() { p[0] = 255 - p[0]; }
@@ -131,6 +134,7 @@ fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_
                 let bin_path_c = std::sync::Arc::clone(&bin_path_arc);
                 let tessdata_path_c = std::sync::Arc::clone(&tessdata_path_arc);
                 let wordlist_path_c = std::sync::Arc::clone(&wordlist_path_arc);
+                let app_for_thread = app_c.clone();
                 let slot_idx = i;
 
                 handles.push((slot_idx, l_idx, std::thread::spawn(move || {
@@ -157,17 +161,7 @@ fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_
                         cmd.env("TESSDATA_PREFIX", tp_str);
                     }
 
-                    #[cfg(target_os = "linux")]
-                    if let Some(bin_dir) = bin_path_c.parent() {
-                        let existing_ldpath = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
-                        let new_ldpath = if existing_ldpath.is_empty() { bin_dir.to_string_lossy().to_string() }
-                        else { format!("{}:{}", bin_dir.to_string_lossy(), existing_ldpath) };
-                        cmd.env("LD_LIBRARY_PATH", new_ldpath);
-                    }
-
-                    // No visible console window on Windows.
-                    #[cfg(windows)]
-                    { use std::os::windows::process::CommandExt; cmd.creation_flags(0x08000000); }
+                    #[cfg(windows)] { use std::os::windows::process::CommandExt; cmd.creation_flags(0x08000000); }
 
                     let child = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn();
                     if let Ok(mut child) = child {
@@ -175,19 +169,9 @@ fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_
                         if let Ok(output) = child.wait_with_output() {
                             if output.status.success() {
                                 let text = String::from_utf8_lossy(&output.stdout).trim().to_uppercase();
-                                eprintln!("[OCR] Slot {} Line {}: \"{}\"", slot_idx + 1, l_idx + 1, text);
-                                if !text.is_empty() { return Some(text); }
-                            } else {
-                                let err = String::from_utf8_lossy(&output.stderr);
-                                let err_msg = format!("[OCR] Slot {} Line {} FAILED (exit {:?}): {}", slot_idx + 1, l_idx + 1, output.status.code(), err.trim());
-                                eprintln!("{}", err_msg);
-                                let _ = std::fs::write(crate::get_data_root().join("data/user/ocr_error.log"), &err_msg);
+                                return Some(text);
                             }
                         }
-                    } else if let Err(e) = child {
-                        let err_msg = format!("[OCR] Slot {} Line {} FAILED to spawn tesseract: {}", slot_idx + 1, l_idx + 1, e);
-                        eprintln!("{}", err_msg);
-                        let _ = std::fs::write(crate::get_data_root().join("data/user/ocr_error.log"), &err_msg);
                     }
                     None
                 })));
@@ -204,15 +188,26 @@ fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_
         let mut slot_results = Vec::new();
         let mut sorted_slots: Vec<usize> = slot_lines.keys().cloned().collect();
         sorted_slots.sort();
+        
+        let mut found_loading = false;
         for slot_idx in sorted_slots {
             let mut lines = slot_lines.remove(&slot_idx).unwrap();
             lines.sort_by_key(|(l, _)| *l);
             let combined = lines.into_iter().map(|(_, t)| t).collect::<Vec<_>>().join(" ");
-            ocr_log!(&app_c, "[OCR] Slot {} text: \"{}\"", slot_idx + 1, combined);
+            if combined.contains("LOADING") { found_loading = true; }
+            ocr_log!(&app_c, "[OCR] [Attempt {}] Slot {} text: \"{}\"", attempt + 1, slot_idx + 1, combined);
             slot_results.push(OcrSlotResult { slot: slot_idx + 1, text: combined });
         }
+
+        if found_loading && attempt < 1 {
+            ocr_log!(&app_c, "[OCR] [Attempt {}] LOADING detected, retrying in 500ms...", attempt + 1);
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            run_ocr_with_retry(app_c, squad_size, is_debug, captured_image, attempt + 1);
+            return;
+        }
+
         let combined_text = slot_results.iter().map(|r| r.text.clone()).collect::<Vec<_>>().join(" | ");
-        ocr_log!(&app_c, "[OCR] Total pipeline time: {}ms — results: {}", start_time.elapsed().as_millis(), combined_text);
+        ocr_log!(&app_c, "[OCR] [Attempt {}] Total pipeline time: {}ms — results: {}", attempt + 1, start_time.elapsed().as_millis(), combined_text);
         let _ = app_c.emit_all("overlay-debug-text", serde_json::json!({ "text": combined_text }));
         app_c.emit_all("fissure-ocr-band", OcrBandResult { text: combined_text, slot_results, is_debug }).unwrap_or_default();
     });

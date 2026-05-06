@@ -722,7 +722,7 @@ export function MonitoringProvider({ children }) {
 
               // GLUE CHECK: If the candidate word is stuck to another word (e.g. MIRAGPRIME)
               // we check the best similarity of any SUBSTRING of the mangled OCR
-              if (bestWordSim < 0.8) {
+              if (bestWordSim < 0.85) {
                 for (const ow of ocrWords) {
                   if (ow.length > cw.length && ow.includes(cw)) {
                     bestWordSim = Math.max(bestWordSim, 0.9);
@@ -745,10 +745,10 @@ export function MonitoringProvider({ children }) {
             // We check if at least one 'meaningful' word from the candidate exists in OCR.
             const meaningfulWords = candWords.filter(w => w.length > 3 && w !== 'PRIME' && w !== 'BLUEPRINT');
             const hasAnyMeaningfulMatch = meaningfulWords.length === 0 || meaningfulWords.some(mw =>
-              ocrWords.some(ow => ow.includes(mw) || mw.includes(ow) || wordSimilarity(ow, mw) > 0.7)
+              ocrWords.some(ow => ow.includes(mw) || mw.includes(ow) || wordSimilarity(ow, mw) > 0.8)
             );
 
-            if (!hasAnyMeaningfulMatch && score < 0.9) score = 0;
+            if (!hasAnyMeaningfulMatch && score < 0.95) score = 0;
           }
 
           if (score > bestScore) {
