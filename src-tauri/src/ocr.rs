@@ -1,4 +1,4 @@
-use xcap::Monitor;
+﻿use xcap::Monitor;
 use image::DynamicImage;
 use tauri::{AppHandle, Manager};
 use serde::Serialize;
@@ -11,14 +11,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 /// closes or mission exits. The icon poll loop checks this each iteration.
 pub static ICON_SCAN_ACTIVE: AtomicBool = AtomicBool::new(false);
 
-/// Logs to stderr (dev) and disk (prod). Requires an `AppHandle` reference named `app_c` in scope.
-macro_rules! ocr_log {
-    ($app:expr, $($arg:tt)*) => {{
-        let msg = format!($($arg)*);
-        eprintln!("{}", msg);
-        crate::logger::log_to_disk($app, &msg);
-    }};
-}
+/// Stores the user's custom UI Scale percentage (e.g. 100 for 1.0, 80 for 0.8)
+pub static USER_UI_SCALE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(100);
 
 /// Logs to stderr (dev) and disk (prod). Requires an `AppHandle` reference named `app_c` in scope.
 macro_rules! ocr_log {
@@ -70,11 +64,6 @@ pub fn run_ocr_pipeline_with_size(app: AppHandle, squad_size: usize) {
 // Templates are 40×30px crops of each rarity icon at 1920×1080, embedded at
 // compile time. They are decoded once on first use via OnceLock and reused
 // for the lifetime of the process.
-//
-// Place these files in src-tauri/data/bin/ (next to the tessdata/ folder):
-//   rarity_rare.png     — gold lotus    (from slot 1 of 4Slots.png)
-//   rarity_uncommon.png — silver lotus  (from slot 3 of 4Slots.png)
-//   rarity_common.png   — bronze diamond(from slot 2 of 4Slots.png)
 
 static RARITY_TEMPLATES: std::sync::OnceLock<Vec<image::GrayImage>> =
     std::sync::OnceLock::new();
@@ -94,10 +83,9 @@ fn get_templates() -> &'static Vec<image::GrayImage> {
 
 /// Polls the screen after the 10-reactant trigger until rarity icons are found,
 /// then fires the OCR pipeline with the correct slot count.
-///
-/// Stops immediately if `ICON_SCAN_ACTIVE` is cleared (reward screen closed
-/// or mission exited) without ever finding icons — no default fallback.
-pub fn detect_slot_count_from_icons(app: AppHandle) {
+/// If `manual` is true, stops after 5 seconds (for manual trigger buttons).
+/// If `manual` is false, loops forever until icons found or flag cleared.
+pub fn detect_slot_count_from_icons(app: AppHandle, manual: bool) {
     std::thread::spawn(move || {
         let templates = get_templates();
         if templates.is_empty() {
@@ -106,32 +94,26 @@ pub fn detect_slot_count_from_icons(app: AppHandle) {
         }
 
         let mut attempt = 0u32;
+        let start_time = std::time::Instant::now();
+        const MAX_SCAN_DURATION_SECS: u64 = 5;
 
         loop {
-            attempt += 1;
+            if manual && start_time.elapsed().as_secs() >= MAX_SCAN_DURATION_SECS {
+                ocr_log!(&app, "[OCR] Icon scan timed out after {} attempts", attempt);
+                return;
+            }
 
-            // Wait before each capture — this also serves as the initial delay
-            // so the first capture doesn't happen before the screen animates in.
+            attempt += 1;
             std::thread::sleep(std::time::Duration::from_millis(400));
 
-            // Stop if log_scanner cleared the flag (mission exit / reward closed)
             if !ICON_SCAN_ACTIVE.load(Ordering::SeqCst) {
                 ocr_log!(&app, "[OCR] Icon scan: flag cleared, stopping (attempt {})", attempt);
                 return;
             }
 
-            // ── Capture primary monitor ──────────────────────────────────────
-            let monitors = match Monitor::all() {
-                Ok(m) if !m.is_empty() => m,
-                _ => {
-                    ocr_log!(&app, "[OCR] Icon scan attempt {}: no monitors", attempt);
-                    continue;
-                }
-            };
-            let monitor = monitors.iter()
-                .find(|m| m.is_primary().unwrap_or(false))
-                .or_else(|| monitors.first())
-                .unwrap();
+            let monitors = Monitor::all().unwrap_or_default();
+            if monitors.is_empty() { continue; }
+            let monitor = monitors.iter().find(|m| m.is_primary().unwrap_or(false)).unwrap_or(&monitors[0]);
 
             let screen = match monitor.capture_image() {
                 Ok(s) => s,
@@ -143,55 +125,35 @@ pub fn detect_slot_count_from_icons(app: AppHandle) {
 
             let sw = screen.width()  as f64;
             let sh = screen.height() as f64;
+            let sx = sw / 1920.0;
+            let sy = sh / 1080.0;
 
-            // ── Crop a horizontal strip where rarity icons live ──────────────
-            // Icons sit at y≈476 in 1080p. The strip covers all 4 possible slot
-            // positions horizontally (x≈555..1365 at 1920px wide).
-            let strip_y = ((456.0 / 1080.0) * sh) as u32;
-            let strip_h = ((40.0  / 1080.0) * sh).max(1.0) as u32;
+            let strip_y = ((430.0 / 1080.0) * sh) as u32;
+            let strip_h = ((100.0  / 1080.0) * sh).max(1.0) as u32;
             let strip_x = ((555.0 / 1920.0) * sw) as u32;
             let strip_w = ((810.0 / 1920.0) * sw).max(1.0) as u32;
 
             let gray_full = DynamicImage::ImageRgba8(screen).to_luma8();
+            if strip_x + strip_w > gray_full.width() || strip_y + strip_h > gray_full.height() { continue; }
 
-            if strip_x + strip_w > gray_full.width()
-                || strip_y + strip_h > gray_full.height()
-            {
-                ocr_log!(&app, "[OCR] Icon scan attempt {}: strip OOB, skipping", attempt);
-                continue;
-            }
-
-            let strip = image::imageops::crop_imm(
-                &gray_full, strip_x, strip_y, strip_w, strip_h,
-            ).to_image();
-
-            // ── Match all three rarity templates against the strip ───────────
-            let sx = sw / 1920.0;
-            let sy = sh / 1080.0;
-            // Minimum x-distance between two distinct icon peaks (≈ half a slot width)
-let min_dist_px = ((90.0 * sx) as i32).max(30);
-
-            // Accumulate absolute-x positions of all confirmed icon matches
+            let strip = image::imageops::crop_imm(&gray_full, strip_x, strip_y, strip_w, strip_h).to_image();
+            let min_dist_px = ((90.0 * sx) as i32).max(30);
+            let active_scale = USER_UI_SCALE.load(Ordering::SeqCst) as f64 / 100.0;
+            
             let mut peaks: Vec<u32> = Vec::new();
 
-            for tmpl in templates {
-                let tw = ((tmpl.width()  as f64) * sx).round() as u32;
-                let th = ((tmpl.height() as f64) * sy).round() as u32;
-                if tw == 0 || th == 0 || tw > strip_w || th > strip_h {
-                    continue;
-                }
+            for tidx in 0..templates.len() {
+                let tmpl = &templates[tidx];
+                let tw = ((tmpl.width()  as f64) * sx * active_scale).round() as u32;
+                let th = ((tmpl.height() as f64) * sy * active_scale).round() as u32;
+                if tw == 0 || th == 0 || tw > strip_w || th > strip_h { continue; }
 
-                let scaled = image::imageops::resize(
-                    tmpl, tw, th, image::imageops::FilterType::Lanczos3,
-                );
+                let scaled = image::imageops::resize(tmpl, tw, th, image::imageops::FilterType::Lanczos3);
+                let matches = ncc_scan(&strip, &scaled, 0.85, 1);
 
-const THRESHOLD: f32 = 0.65;
-                for (x, _y, _score) in ncc_scan(&strip, &scaled, THRESHOLD) {
-                    let abs_x = strip_x + x;
-                    let too_close = peaks.iter().any(|&px| {
-                        (px as i32 - abs_x as i32).abs() < min_dist_px
-                    });
-                    if !too_close {
+                for (x, _y, _score) in matches {
+                    let abs_x = strip_x + x + (tw / 2);
+                    if !peaks.iter().any(|&px| (px as i32 - abs_x as i32).abs() < min_dist_px) {
                         peaks.push(abs_x);
                     }
                 }
@@ -199,146 +161,116 @@ const THRESHOLD: f32 = 0.65;
 
             peaks.sort_unstable();
             
-            let mut has_3_slot = false;
-            let mut has_4_slot_outer = false;
-            let mut has_4_slot_inner = false;
-
+            // FILTER: Real icons are ~240px apart. Reject peaks that are too close (noise).
+            let mut valid_peaks = Vec::new();
             for &p in &peaks {
-                let norm_x = (p as f64 / sx).round() as i32;
-                if (norm_x - 698).abs() < 30 || (norm_x - 940).abs() < 30 || (norm_x - 1182).abs() < 30 {
-                    has_3_slot = true;
-                }
-                if (norm_x - 575).abs() < 30 || (norm_x - 1304).abs() < 30 {
-                    has_4_slot_outer = true;
-                }
-                if (norm_x - 819).abs() < 30 || (norm_x - 1060).abs() < 30 {
-                    has_4_slot_inner = true;
+                if valid_peaks.iter().all(|&vp: &u32| (vp as i32 - p as i32).abs() > (200.0 * sx) as i32) {
+                    valid_peaks.push(p);
                 }
             }
 
-            let deduced_size = if has_3_slot && !has_4_slot_outer && !has_4_slot_inner {
-                3
-            } else if has_4_slot_outer {
-                4
-            } else if has_4_slot_inner {
-                if peaks.len() >= 3 { 4 } else { 2 }
-            } else {
-                peaks.len().max(2).min(4)
-            };
+            let mut has_center = false;   // 3-slot center (~960)
+            let mut has_4_outer = false;  // 4-slot outer (595, 1323)
+            let mut has_inner = false;    // 2/4-slot inner (838, 1080)
+            let mut has_3_outer = false;  // 3-slot outer (717, 1202)
 
-            ocr_log!(
-                &app,
-                "[OCR] Icon scan attempt {}: {} peaks at x={:?}, deduced size={}",
-                attempt, peaks.len(), peaks, deduced_size
-            );
+            for &p in &valid_peaks {
+                let norm_x = (p as f64 / sx).round() as i32;
+                if (norm_x - 960).abs() < 40 { has_center = true; }
+                if (norm_x - 595).abs() < 40 || (norm_x - 1323).abs() < 40 { has_4_outer = true; }
+                if (norm_x - 838).abs() < 40 || (norm_x - 1080).abs() < 40 { has_inner = true; }
+                if (norm_x - 717).abs() < 40 || (norm_x - 1202).abs() < 40 { has_3_outer = true; }
+            }
 
-            if peaks.len() >= 2 {
-                let slot_count = deduced_size;
-                // Clear the flag — scan is done
+            // Priority-based deduction:
+            let deduced_size = if has_center || has_3_outer { 3 }
+                else if has_4_outer { 4 }
+                else if has_inner { if valid_peaks.len() >= 3 { 4 } else { 2 } }
+                else { valid_peaks.len().clamp(2, 4) as usize };
+
+            ocr_log!(&app, "[OCR] Icon scan attempt {}: {} peaks (filtered) at x={:?}, deduced size={} (scale={})", 
+                attempt, valid_peaks.len(), valid_peaks, deduced_size, active_scale);
+
+            if !has_center && !has_4_outer && !has_inner && !has_3_outer {
+                continue;
+            }
+
+            if valid_peaks.len() >= 2 {
                 ICON_SCAN_ACTIVE.store(false, Ordering::SeqCst);
+                if let Some(window) = app.get_window("overlay-relic") { let _ = window.show(); }
                 
-                // Trigger overlay when slots detected
-                if let Some(window) = app.get_window("overlay-relic") {
-                    let _ = window.show();
-                }
-                
-                // Get cached relic data from AppState or create default
                 let state = app.state::<crate::AppState>();
                 let relics: Vec<crate::log_scanner::RelicInfo> = if let Ok(cached) = state.active_relic_data.lock() {
                     if let Some(ref val) = *cached {
-                        val.get("squad_relics")
-                            .and_then(|v| serde_json::from_value(v.clone()).ok())
-                            .unwrap_or_default()
-                    } else {
-                        Vec::new()
-                    }
-                } else {
-                    Vec::new()
-                };
+                        val.get("squad_relics").and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default()
+                    } else { Vec::new() }
+                } else { Vec::new() };
                 
                 let event_payload = crate::log_scanner::FissureEvent {
                     event_type: "relic_phase_start".to_string(),
                     squad_relics: relics,
                     local_reward: None,
-                    squad_size: slot_count,
+                    squad_size: deduced_size,
                     void_tier: None,
                 };
-                app.emit_all("scanner-relic-phase-start", serde_json::json!({ "squad_size": slot_count })).unwrap_or_default();
+                app.emit_all("scanner-relic-phase-start", serde_json::json!({ "squad_size": deduced_size })).unwrap_or_default();
                 app.emit_all("fissure-relic-phase", &event_payload).unwrap_or_default();
                 
-                run_ocr_pipeline_with_size(app, slot_count);
+                run_ocr_pipeline_with_size(app, deduced_size);
                 return;
             }
-            // < 2 matches: reward screen not up yet, loop and try again
         }
     });
 }
 
-
-/// Zero-mean normalized cross-correlation scan.
-/// Returns (x, y, score) for every position where score >= threshold
-/// AND the position is a local horizontal maximum within ±4px.
-/// No external crates — avoids image version conflicts.
-fn ncc_scan(
-    strip: &image::GrayImage,
-    template: &image::GrayImage,
-    threshold: f32,
-) -> Vec<(u32, u32, f32)> {
+fn ncc_scan(strip: &image::GrayImage, template: &image::GrayImage, threshold: f32, step: u32) -> Vec<(u32, u32, f32)> {
     let (sw, sh) = strip.dimensions();
     let (tw, th) = template.dimensions();
     if tw > sw || th > sh { return vec![]; }
 
-    // Precompute mean-centered template and its L2 norm
     let t_pixels: Vec<f32> = template.pixels().map(|p| p[0] as f32).collect();
     let t_mean = t_pixels.iter().sum::<f32>() / t_pixels.len() as f32;
     let t_centered: Vec<f32> = t_pixels.iter().map(|&v| v - t_mean).collect();
     let t_norm = t_centered.iter().map(|v| v * v).sum::<f32>().sqrt();
     if t_norm < 1e-6 { return vec![]; }
 
+    let s_pixels = strip.as_raw(); // &[u8]
     let x_count = sw - tw + 1;
     let y_count = sh - th + 1;
-    let mut score_map = vec![0f32; (x_count * y_count) as usize];
+    let mut peaks = Vec::new();
 
-    for y in 0..y_count {
-        for x in 0..x_count {
-            let n = (tw * th) as f32;
-            let mut patch_sum = 0f32;
-            for dy in 0..th {
-                for dx in 0..tw {
-                    patch_sum += strip.get_pixel(x + dx, y + dy)[0] as f32;
+    let tw_usize = tw as usize;
+    let th_usize = th as usize;
+    let sw_usize = sw as usize;
+
+    for y in (0..y_count as usize).step_by(step as usize) {
+        for x in (0..x_count as usize).step_by(step as usize) {
+            let mut p_sum = 0.0f32;
+            for dy in 0..th_usize {
+                let row_offset = (y + dy) * sw_usize;
+                for dx in 0..tw_usize {
+                    p_sum += s_pixels[row_offset + x + dx] as f32;
                 }
             }
-            let p_mean = patch_sum / n;
+            let p_mean = p_sum / (tw * th) as f32;
 
-            let mut dot = 0f32;
-            let mut p_sq = 0f32;
-            for dy in 0..th {
-                for dx in 0..tw {
-                    let pc = strip.get_pixel(x + dx, y + dy)[0] as f32 - p_mean;
-                    dot += pc * t_centered[(dy * tw + dx) as usize];
+            let mut dot = 0.0f32;
+            let mut p_sq = 0.0f32;
+            for dy in 0..th_usize {
+                let row_offset = (y + dy) * sw_usize;
+                let t_row_offset = dy * tw_usize;
+                for dx in 0..tw_usize {
+                    let pc = s_pixels[row_offset + x + dx] as f32 - p_mean;
+                    dot += pc * t_centered[t_row_offset + dx];
                     p_sq += pc * pc;
                 }
             }
             let p_norm = p_sq.sqrt();
             if p_norm > 1e-6 {
-                score_map[(y * x_count + x) as usize] = dot / (t_norm * p_norm);
-            }
-        }
-    }
-
-    // Collect peaks above threshold that are local horizontal maxima within ±4px
-    let mut peaks = Vec::new();
-    for y in 0..y_count {
-        for x in 0..x_count {
-            let score = score_map[(y * x_count + x) as usize];
-            if score < threshold { continue; }
-            let lo = x.saturating_sub(4);
-            let hi = (x + 4).min(x_count - 1);
-            let is_hmax = (lo..=hi).all(|nx| {
-                score_map[(y * x_count + nx) as usize] <= score
-            });
-            if is_hmax {
-                peaks.push((x, y, score));
+                let score = dot / (t_norm * p_norm);
+                if score >= threshold {
+                    peaks.push((x as u32, y as u32, score));
+                }
             }
         }
     }
@@ -353,11 +285,7 @@ fn run_ocr_with_retry(app: AppHandle, squad_size: usize, is_debug: bool, capture
     let app_c = app.clone();
     std::thread::spawn(move || {
         let start_time = std::time::Instant::now();
-
-        let dynamic_image = if let Some(img) = captured_image.clone() {
-            ocr_log!(&app_c, "[OCR] [Attempt {}] Using provided debug image", attempt + 1);
-            img
-        } else {
+        let dynamic_image = if let Some(img) = captured_image.clone() { img } else {
             let monitors = Monitor::all().unwrap_or_default();
             if monitors.is_empty() { return; }
             let Ok(image) = monitors[0].capture_image() else { return; };
@@ -365,7 +293,6 @@ fn run_ocr_with_retry(app: AppHandle, squad_size: usize, is_debug: bool, capture
         };
         
         let coords = get_slot_coords(squad_size);
-        ocr_log!(&app_c, "[OCR] [Attempt {}] Captured image: {}x{}, squad_size={}", attempt + 1, dynamic_image.width(), dynamic_image.height(), squad_size);
         let (bin_path, tessdata_path) = get_tesseract_config(&app_c);
         let bin_path_arc = std::sync::Arc::new(bin_path);
         let tessdata_path_arc = std::sync::Arc::new(tessdata_path);
@@ -377,124 +304,82 @@ fn run_ocr_with_retry(app: AppHandle, squad_size: usize, is_debug: bool, capture
         };
         let wordlist_path_arc = std::sync::Arc::new(wordlist_path);
 
-        let mut handles: Vec<(usize, usize, std::thread::JoinHandle<Option<String>>)> = Vec::new();
+        let mut handles = Vec::new();
 
         for (i, (x_off, y_off, w, h)) in coords.iter().enumerate() {
-            let full_slot_w = (*w * dynamic_image.width() as f64) as u32;
-            let full_slot_h = (*h * dynamic_image.height() as f64) as u32;
-            let full_slot_x = (*x_off * dynamic_image.width() as f64) as u32;
-            let full_slot_y = (*y_off * dynamic_image.height() as f64) as u32;
+            let sw = dynamic_image.width() as f64;
+            let sh = dynamic_image.height() as f64;
+            let fx = (*x_off * sw) as u32;
+            let fy = (*y_off * sh) as u32;
+            let fw = (*w * sw) as u32;
+            let fh = (*h * sh) as u32;
 
-            if full_slot_x + full_slot_w > dynamic_image.width() || full_slot_y + full_slot_h > dynamic_image.height() { continue; }
-
-            let slot_crop = dynamic_image.crop_imm(full_slot_x, full_slot_y, full_slot_w, full_slot_h);
+            if fx + fw > dynamic_image.width() || fy + fh > dynamic_image.height() { continue; }
+            let slot_crop = dynamic_image.crop_imm(fx, fy, fw, fh);
             
-            // ── PREPROCESS ──
-            // Upscale 2x instead of 3x to cut Tesseract processing time in half
-            let upscaled = slot_crop.resize(full_slot_w * 2, full_slot_h * 2, image::imageops::FilterType::Nearest);
-            let mut gray = upscaled.to_luma8();
-            for p in gray.pixels_mut() { p[0] = 255 - p[0]; }
-            let blurred = image::imageops::blur(&gray, 0.5);
+            let bin_path_c = std::sync::Arc::clone(&bin_path_arc);
+            let tessdata_path_c = std::sync::Arc::clone(&tessdata_path_arc);
+            let wordlist_path_c = std::sync::Arc::clone(&wordlist_path_arc);
+            let app_for_thread = app_c.clone();
+            let slot_idx = i;
 
-            // --- DYNAMIC OTSU ---
-            let mut hist = [0u32; 256];
-            for p in blurred.pixels() { hist[p[0] as usize] += 1; }
-            let total = (blurred.width() * blurred.height()) as f64;
-            let (mut sum, mut sum_b, mut q1, mut max_var) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
-            for i in 0..256usize { sum += i as f64 * hist[i] as f64; }
-            let mut threshold = 128u8;
-            for i in 0..256usize {
-                q1 += hist[i] as f64;
-                if q1 == 0.0 { continue; }
-                let q2 = total - q1;
-                if q2 == 0.0 { break; }
-                sum_b += i as f64 * hist[i] as f64;
-                let m1 = sum_b / q1;
-                let m2 = (sum - sum_b) / q2;
-                let var_between = q1 * q2 * (m1 - m2).powi(2);
-                if var_between > max_var { max_var = var_between; threshold = i as u8; }
-            }
-            let mut binary = blurred.clone();
-            for p in binary.pixels_mut() { p[0] = if p[0] <= threshold { 0 } else { 255 }; }
+            handles.push(std::thread::spawn(move || {
+                let binary = apply_ocr_preprocessing(&slot_crop);
+                let (uw, uh) = binary.dimensions();
+                let midpoint = uh / 2;
+                let overlap = (uh as f32 * 0.05) as u32;
+                let dyn_binary = image::DynamicImage::ImageLuma8(binary);
+                let line1 = dyn_binary.crop_imm(0, 0, uw, (midpoint + overlap).min(uh)).to_luma8();
+                let line2 = dyn_binary.crop_imm(0, (midpoint - overlap).max(0), uw, uh - ((midpoint - overlap).max(0))).to_luma8();
 
-            let (uw, uh) = binary.dimensions();
-            let midpoint = uh / 2;
-            let overlap = (uh as f32 * 0.05) as u32;
-            let dyn_binary = image::DynamicImage::ImageLuma8(binary);
-            let line1 = dyn_binary.crop_imm(0, 0, uw, midpoint + overlap).to_luma8();
-            let line2 = dyn_binary.crop_imm(0, midpoint - overlap, uw, uh - (midpoint - overlap)).to_luma8();
-
-            for (l_idx, line_img) in [(0usize, line1), (1usize, line2)] {
-                let bin_path_c = std::sync::Arc::clone(&bin_path_arc);
-                let tessdata_path_c = std::sync::Arc::clone(&tessdata_path_arc);
-                let wordlist_path_c = std::sync::Arc::clone(&wordlist_path_arc);
-                let app_for_thread = app_c.clone();
-                let slot_idx = i;
-
-                handles.push((slot_idx, l_idx, std::thread::spawn(move || {
+                let mut combined_lines = Vec::new();
+                for (_l_idx, line_img) in [(0usize, line1), (1usize, line2)] {
                     let pad = 30u32;
                     let (lw, lh) = (line_img.width(), line_img.height());
                     let mut padded = image::GrayImage::new(lw + pad * 2, lh + pad * 2);
                     padded.fill(255);
                     image::imageops::overlay(&mut padded, &line_img, pad as i64, pad as i64);
 
-                    let mut buffer = Vec::new();
-                    let mut cursor = std::io::Cursor::new(&mut buffer);
-                    let _ = padded.write_to(&mut cursor, image::ImageFormat::Pnm);
 
-                    let bin_path_str = bin_path_c.to_string_lossy().replace("\\\\?\\", "");
-                    let mut cmd = Command::new(&bin_path_str);
+
+                    let mut buffer = Vec::new();
+                    let _ = padded.write_to(&mut std::io::Cursor::new(&mut buffer), image::ImageFormat::Pnm);
+
+                    let mut cmd = Command::new(bin_path_c.to_string_lossy().replace("\\\\?\\", ""));
                     cmd.args(["-", "stdout", "--oem", "1", "--psm", "7", "-l", "warframe"]);
                     cmd.args(["-c", "load_system_dawg=0", "-c", "load_freq_dawg=0", "-c", "tessedit_write_images=false"]);
 
-                    if let Some(ref wl) = *wordlist_path_c {
-                        if wl.exists() { cmd.args(["--user-words", &wl.to_string_lossy()]); }
-                    }
-                    if let Some(ref tp) = *tessdata_path_c {
-                        let tp_str = tp.to_string_lossy().replace("\\\\?\\", "");
-                        cmd.env("TESSDATA_PREFIX", tp_str);
-                    }
+                    if let Some(ref wl) = *wordlist_path_c { if wl.exists() { cmd.args(["--user-words", &wl.to_string_lossy()]); } }
+                    if let Some(ref tp) = *tessdata_path_c { cmd.env("TESSDATA_PREFIX", tp.to_string_lossy().replace("\\\\?\\", "")); }
 
                     #[cfg(windows)] { use std::os::windows::process::CommandExt; cmd.creation_flags(0x08000000); }
 
-                    let child = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn();
-                    if let Ok(mut child) = child {
+                    if let Ok(mut child) = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn() {
                         if let Some(mut stdin) = child.stdin.take() { let _ = stdin.write_all(&buffer); }
                         if let Ok(output) = child.wait_with_output() {
-if output.status.success() {
+                            if output.status.success() {
                                 let text = String::from_utf8_lossy(&output.stdout).trim().to_uppercase();
-                                crate::logger::log_to_disk(&app_for_thread, &format!("[OCR] Slot {} Line {}: \"{}\"", slot_idx + 1, l_idx + 1, text));
-                                return Some(text);
-                            } else {
-                                let err = String::from_utf8_lossy(&output.stderr);
-                                crate::logger::log_to_disk(&app_for_thread, &format!("[OCR] Slot {} Line {} FAILED: {}", slot_idx + 1, l_idx + 1, err.trim()));
+                                combined_lines.push(text);
                             }
                         }
                     }
-                    None
-                })));
-            }
-        }
-
-        let mut slot_lines: std::collections::HashMap<usize, Vec<(usize, String)>> = std::collections::HashMap::new();
-        for (slot_idx, l_idx, handle) in handles {
-            if let Ok(Some(text)) = handle.join() {
-                slot_lines.entry(slot_idx).or_default().push((l_idx, text));
-            }
+                }
+                
+                if !combined_lines.is_empty() {
+                    let full_text = combined_lines.join(" ");
+                    ocr_log!(&app_for_thread, "[OCR] Slot {}: \"{}\"", slot_idx + 1, full_text);
+                    Some(full_text)
+                } else { None }
+            }));
         }
 
         let mut slot_results = Vec::new();
-        let mut sorted_slots: Vec<usize> = slot_lines.keys().cloned().collect();
-        sorted_slots.sort();
-        
         let mut found_loading = false;
-        for slot_idx in sorted_slots {
-            let mut lines = slot_lines.remove(&slot_idx).unwrap();
-            lines.sort_by_key(|(l, _)| *l);
-            let combined = lines.into_iter().map(|(_, t)| t).collect::<Vec<_>>().join(" ");
-            if combined.contains("LOADING") { found_loading = true; }
-            ocr_log!(&app_c, "[OCR] [Attempt {}] Slot {} text: \"{}\"", attempt + 1, slot_idx + 1, combined);
-            slot_results.push(OcrSlotResult { slot: slot_idx + 1, text: combined });
+        for (i, h) in handles.into_iter().enumerate() {
+            if let Ok(Some(text)) = h.join() {
+                if text.contains("LOADING") { found_loading = true; }
+                slot_results.push(OcrSlotResult { slot: i + 1, text });
+            }
         }
 
         if found_loading && attempt < 1 {
@@ -505,22 +390,21 @@ if output.status.success() {
         }
 
         let combined_text = slot_results.iter().map(|r| r.text.clone()).collect::<Vec<_>>().join(" | ");
-        ocr_log!(&app_c, "[OCR] [Attempt {}] Total pipeline time: {}ms — results: {}", attempt + 1, start_time.elapsed().as_millis(), combined_text);
+        ocr_log!(&app_c, "[OCR] [Attempt {}] Total pipeline time: {}ms", attempt + 1, start_time.elapsed().as_millis());
         let _ = app_c.emit_all("overlay-debug-text", serde_json::json!({ "text": combined_text }));
         app_c.emit_all("fissure-ocr-band", OcrBandResult { text: combined_text, slot_results, is_debug }).unwrap_or_default();
     });
 }
 
 /// Core preprocessing logic used by both live OCR and debug screenshots.
-/// Performs 4x upscale, inversion, blurring, and dynamic Otsu thresholding.
 fn apply_ocr_preprocessing(slot_crop: &DynamicImage) -> image::GrayImage {
-    let (full_slot_w, full_slot_h) = (slot_crop.width(), slot_crop.height());
-    let upscaled = slot_crop.resize(full_slot_w * 4, full_slot_h * 4, image::imageops::FilterType::CatmullRom);
+    let (fw, fh) = (slot_crop.width(), slot_crop.height());
+    // Upscale 3x is a good balance for Tesseract
+    let upscaled = slot_crop.resize(fw * 3, fh * 3, image::imageops::FilterType::CatmullRom);
     let mut gray = upscaled.to_luma8();
     for p in gray.pixels_mut() { p[0] = 255 - p[0]; }
     let blurred = image::imageops::blur(&gray, 0.5);
 
-    // --- DYNAMIC OTSU ---
     let mut hist = [0u32; 256];
     for p in blurred.pixels() { hist[p[0] as usize] += 1; }
     let total = (blurred.width() * blurred.height()) as f64;
@@ -543,8 +427,6 @@ fn apply_ocr_preprocessing(slot_crop: &DynamicImage) -> image::GrayImage {
     binary
 }
 
-/// Preprocesses a single image for OCR.
-/// Now uses the same dynamic Otsu pipeline as the live `run_ocr_internal`.
 fn preprocess_for_ocr(image: DynamicImage) -> image::GrayImage {
     let binary = apply_ocr_preprocessing(&image);
     let pad = 30u32;
@@ -615,141 +497,32 @@ pub async fn save_debug_screenshot(_app: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn trigger_manual_ocr(app: AppHandle, squad_size: Option<usize>) -> Result<(), String> {
-    let size = squad_size.unwrap_or(4);
-    eprintln!("[OCR] Manual trigger called (size={})", size);
-    
-    if let Some(w) = app.get_window("overlay-relic") {
-        let _ = w.show();
-        let _ = w.set_always_on_top(true);
-    }
-    
-    use crate::log_scanner::{FissureEvent, RelicInfo};
-    let mut mock_relics = Vec::new();
-    for _ in 0..size {
-        mock_relics.push(RelicInfo {
-            unique_name: "MANUAL".to_string(),
-            tier: "MANUAL".to_string(),
-            refinement: "MANUAL".to_string(),
-            era: "MANUAL".to_string(),
-        });
-    }
-    
-    app.emit_all("overlay-update-relics", FissureEvent {
-        event_type: "reward_phase".to_string(),
-        squad_relics: mock_relics,
-        local_reward: None,
-        squad_size: size,
-        void_tier: None
-    }).unwrap_or_default();
-
-    run_ocr_internal(app, size, true, None);
+pub async fn trigger_manual_ocr(app: AppHandle, _squad_size: Option<usize>) -> Result<(), String> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let msg = format!("[SHORTCUT] trigger_manual_ocr called at {}", now);
+    eprintln!("{}", msg);
+    crate::logger::log_to_disk(&app, &msg);
+    ICON_SCAN_ACTIVE.store(true, Ordering::SeqCst);
+    if let Some(w) = app.get_window("overlay-relic") { let _ = w.show(); let _ = w.set_always_on_top(true); }
+    detect_slot_count_from_icons(app, true);
     Ok(())
 }
 
 #[tauri::command]
 pub async fn start_debug_ocr_session(app: AppHandle) -> Result<(), String> {
-    use xcap::Monitor;
-    use image::DynamicImage;
-    
-    let app_c = app.clone();
-    std::thread::spawn(move || {
-        // Wait for user to switch to game
-        std::thread::sleep(std::time::Duration::from_secs(5));
-        
-        // Single capture
-        let monitors = Monitor::all().unwrap_or_default();
-        if monitors.is_empty() { return; }
-        let monitor = &monitors[0];
-        let Ok(image) = monitor.capture_image() else { return; };
-        let screen = DynamicImage::ImageRgba8(image);
-        
-        let sw = screen.width()  as f64;
-        let sh = screen.height() as f64;
-        
-        // Crop the icon strip
-        let strip_y = ((456.0 / 1080.0) * sh) as u32;
-        let strip_h = ((40.0  / 1080.0) * sh).max(1.0) as u32;
-        let strip_x = ((555.0 / 1920.0) * sw) as u32;
-        let strip_w = ((810.0 / 1920.0) * sw).max(1.0) as u32;
-        
-        let gray_full = screen.to_luma8();
-        if strip_x + strip_w > gray_full.width() || strip_y + strip_h > gray_full.height() {
-            return;
-        }
-        
-        let strip = image::imageops::crop_imm(&gray_full, strip_x, strip_y, strip_w, strip_h).to_image();
-        
-        // Run detection with lowered threshold for 3-slot detection
-        let templates = get_templates();
-        let sx = sw / 1920.0;
-        let sy = sh / 1080.0;
-let min_dist_px = ((90.0 * sx) as i32).max(30);
-        
-        let mut peaks: Vec<u32> = Vec::new();
-        for tmpl in templates {
-            let tw = ((tmpl.width() as f64) * sx).round() as u32;
-            let th = ((tmpl.height() as f64) * sy).round() as u32;
-            if tw == 0 || th == 0 || tw > strip_w || th > strip_h { continue; }
-            
-            let scaled = image::imageops::resize(tmpl, tw, th, image::imageops::FilterType::Lanczos3);
-const THRESHOLD: f32 = 0.65;
-            
-            for (x, _y, _score) in ncc_scan(&strip, &scaled, THRESHOLD) {
-                let abs_x = strip_x + x;
-                let too_close = peaks.iter().any(|&px| (px as i32 - abs_x as i32).abs() < min_dist_px);
-                if !too_close { peaks.push(abs_x); }
-            }
-        }
-        
-        peaks.sort_unstable();
-        
-        let mut has_3_slot = false;
-        let mut has_4_slot_outer = false;
-        let mut has_4_slot_inner = false;
-
-        for &p in &peaks {
-            let norm_x = (p as f64 / sx).round() as i32;
-            if (norm_x - 698).abs() < 30 || (norm_x - 940).abs() < 30 || (norm_x - 1182).abs() < 30 {
-                has_3_slot = true;
-            }
-            if (norm_x - 575).abs() < 30 || (norm_x - 1304).abs() < 30 {
-                has_4_slot_outer = true;
-            }
-            if (norm_x - 819).abs() < 30 || (norm_x - 1060).abs() < 30 {
-                has_4_slot_inner = true;
-            }
-        }
-
-        let deduced_size = if has_3_slot && !has_4_slot_outer && !has_4_slot_inner {
-            3
-        } else if has_4_slot_outer {
-            4
-        } else if has_4_slot_inner {
-            if peaks.len() >= 3 { 4 } else { 2 }
-        } else {
-            peaks.len().max(2).min(4)
-        };
-        
-        ocr_log!(&app_c, "[DEBUG] Single scan: {} peaks at x={:?}, deduced size={}", peaks.len(), peaks, deduced_size);
-        
-        if peaks.len() >= 2 {
-            let slot_count = deduced_size;
-            if let Some(w) = app_c.get_window("overlay-relic") { let _ = w.show(); let _ = w.set_always_on_top(true); }
-            
-            // Emit relic events for overlay
-            let event_payload = crate::log_scanner::FissureEvent {
-                event_type: "relic_phase_start".to_string(),
-                squad_relics: Vec::new(),
-                local_reward: None,
-                squad_size: slot_count,
-                void_tier: None,
-            };
-            app_c.emit_all("scanner-relic-phase-start", serde_json::json!({ "squad_size": slot_count })).unwrap_or_default();
-            app_c.emit_all("fissure-relic-phase", &event_payload).unwrap_or_default();
-            
-            run_ocr_pipeline_with_size(app_c, slot_count);
-        }
-    });
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let msg = format!("[DEBUG] start_debug_ocr_session called at {}", now);
+    eprintln!("{}", msg);
+    crate::logger::log_to_disk(&app, &msg);
+    ICON_SCAN_ACTIVE.store(true, Ordering::SeqCst);
+    if let Some(w) = app.get_window("overlay-relic") { let _ = w.show(); let _ = w.set_always_on_top(true); }
+    std::thread::sleep(std::time::Duration::from_secs(5));
+    detect_slot_count_from_icons(app, true);
     Ok(())
 }

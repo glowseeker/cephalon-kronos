@@ -154,6 +154,9 @@ export default function SettingsScreen() {
   const [eeLogPath, setEeLogPath] = useState(
     () => getSetting('ee_log_path', '')
   )
+  const [fissureUiScale, setFissureUiScale] = useState(
+    () => parseInt(getSetting('fissure_ui_scale', 100))
+  )
   const [debugSquadSize, setDebugSquadSize] = useState(4)
 
   // Listen for calibration window close from X button
@@ -198,6 +201,10 @@ export default function SettingsScreen() {
     // Sync current sound to Rust backend on mount
     const savedSound = getSetting('notif_sound', 'notification1.wav')
     invoke('set_notification_sound', { sound: savedSound }).catch(console.error)
+
+    // Sync current UI scale to Rust backend on mount
+    const savedScale = parseInt(getSetting('fissure_ui_scale', 100))
+    invoke('set_fissure_ui_scale', { scale: savedScale }).catch(console.error)
   }, [])
 
   const handleSetSound = async (sound) => {
@@ -275,6 +282,12 @@ export default function SettingsScreen() {
     } else {
       invoke('stop_log_scanner').catch(console.error)
     }
+  }
+
+  const handleSetUiScale = async (val) => {
+    setFissureUiScale(val)
+    await setSetting('fissure_ui_scale', val)
+    invoke('set_fissure_ui_scale', { scale: val }).catch(console.error)
   }
 
   const handleBrowseLog = async () => {
@@ -669,6 +682,29 @@ export default function SettingsScreen() {
                 <div>
                   <p className="text-zinc-400 mb-1 tracking-widest">Common Linux Path:</p>
                   <p className="font-mono text-kronos-accent/70">steamapps/compatdata/230410/pfx/drive_c/users/steamuser/AppData/Local/Warframe/EE.log</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 bg-kronos-panel/20 rounded-lg border border-white/5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-kronos-text uppercase">In-Game UI Scale</p>
+                  <p className="text-xs text-kronos-dim uppercase">Set this to match your Warframe 'Menu Scale' setting (e.g. 100 for default)</p>
+                </div>
+                <div className="w-32">
+                  <select
+                    value={fissureUiScale}
+                    onChange={(e) => handleSetUiScale(parseInt(e.target.value))}
+                    className="w-full kronos-select"
+                  >
+                    <option value={100}>100</option>
+                    <option value={90}>90</option>
+                    <option value={80}>80</option>
+                    <option value={70}>70</option>
+                    <option value={60}>60</option>
+                    <option value={50}>50</option>
+                  </select>
                 </div>
               </div>
             </div>
