@@ -149,7 +149,7 @@ pub fn detect_slot_count_from_icons(app: AppHandle, manual: bool) {
                 if tw == 0 || th == 0 || tw > strip_w || th > strip_h { continue; }
 
                 let scaled = image::imageops::resize(tmpl, tw, th, image::imageops::FilterType::Lanczos3);
-                let matches = ncc_scan(&strip, &scaled, 0.85, 1);
+                let matches = ncc_scan(&strip, &scaled, 0.70, 1);
 
                 for (x, _y, _score) in matches {
                     let abs_x = strip_x + x + (tw / 2);
