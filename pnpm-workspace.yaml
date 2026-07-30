@@ -3,3 +3,6 @@ packages:
 allowBuilds:
   es5-ext: true
   esbuild: true
+minimumReleaseAge: 10080
+blockExoticSubdeps: true
+trustPolicy: no-downgrade
