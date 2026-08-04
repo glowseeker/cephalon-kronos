@@ -6,7 +6,7 @@
 //   3. tight   — folded with all non-alnum removed ("Krit. Chance" → "kritchance")
 // Aliases come from two sources: the i18n `rivenStats` table (all 15 locales,
 // inverted English-key → localized-name) and GAME_STAT_ALIASES (in-game terms
-// extracted from the DE/FR export manifests, where the table drifts).
+// extracted from export manifests, where the table drifts).
 
 export const STAT_TO_PRICER = {
   'Critical Chance': 'critical_chance',
@@ -137,22 +137,308 @@ const GAME_STAT_ALIASES = {
     'Zoom': 'Zoom',
     'Chances de Points de Combo': 'Combo Count Chance',
   },
+  // IT: in-game stat terms (extracted from i18n table + known game lockeys)
+  it: {
+    'Prob. critica': 'Critical Chance',
+    'Danno critico': 'Critical Damage',
+    'Danno': 'Damage',
+    'Danno corpo a corpo': 'Melee Damage',
+    'Tiro multiplo': 'Multishot',
+    'Velocità d\'attacco': 'Attack Speed',
+    'Cadenza di tiro': 'Fire Rate',
+    'Prob. stato': 'Status Chance',
+    'Durata stato': 'Status Duration',
+    'Portata': 'Range',
+    'Perforazione': 'Puncture',
+    'Fendente': 'Slash',
+    'Impatto': 'Impact',
+    'Calore': 'Heat',
+    'Freddo': 'Cold',
+    'Elettricità': 'Electricity',
+    'Veleno': 'Toxin',
+    'Velocità di ricarica': 'Reload Speed',
+    'Capacità caricatore': 'Magazine Capacity',
+    'Munizione max': 'Ammo Maximum',
+    'Trafitto': 'Punch Through',
+    'Velocità proiettili': 'Projectile Speed',
+    'Combo iniziale': 'Initial Combo',
+    'Durata combo': 'Combo Duration',
+    'Danno finalizzatore': 'Finisher Damage',
+    'Danno ai Corpus': 'Damage to Corpus',
+    'Danno ai Grineer': 'Damage to Grineer',
+    'Danno agli Infetti': 'Damage to Infested',
+    'Ricarica': 'Recoil',
+    'Prob. critica scivolata': 'Slide Crit Chance',
+    'Raggio esplosione': 'Blast Radius',
+    'Zoom': 'Zoom',
+    'Prob. contatore combo': 'Combo Count Chance',
+  },
+  // ES: in-game stat terms
+  es: {
+    'Prob. crítico': 'Critical Chance',
+    'Daño crítico': 'Critical Damage',
+    'Daño': 'Damage',
+    'Daño cuerpo a cuerpo': 'Melee Damage',
+    'Tiro múltiple': 'Multishot',
+    'Velocidad de ataque': 'Attack Speed',
+    'Cadencia de fuego': 'Fire Rate',
+    'Prob. Estado': 'Status Chance',
+    'Duración de Estado': 'Status Duration',
+    'Alcance': 'Range',
+    'Perforación': 'Puncture',
+    'Corte': 'Slash',
+    'Impacto': 'Impact',
+    'Calor': 'Heat',
+    'Frío': 'Cold',
+    'Electricidad': 'Electricity',
+    'Veneno': 'Toxin',
+    'Velocidad de recarga': 'Reload Speed',
+    'Capacidad del cargador': 'Magazine Capacity',
+    'Munición máxima': 'Ammo Maximum',
+    'Perforación de proyectil': 'Punch Through',
+    'Velocidad de proyectiles': 'Projectile Speed',
+    'Combo inicial': 'Initial Combo',
+    'Duración del combo': 'Combo Duration',
+    'Daño de finalizador': 'Finisher Damage',
+    'Daño a los Corpus': 'Damage to Corpus',
+    'Daño a los Grineer': 'Damage to Grineer',
+    'Daño a los Infestados': 'Damage to Infested',
+    'Retroceso': 'Recoil',
+    'Prob. crítica al deslizar': 'Slide Crit Chance',
+    'Radio de explosión': 'Blast Radius',
+    'Zoom': 'Zoom',
+    'Prob. contador de combo': 'Combo Count Chance',
+  },
+  // PL: in-game stat terms
+  pl: {
+    'Szansa krytyczna': 'Critical Chance',
+    'Obrażenia krytyczne': 'Critical Damage',
+    'Obrażenia': 'Damage',
+    'Obrażenia z bliskiego walki': 'Melee Damage',
+    'Wielokrotne strzały': 'Multishot',
+    'Prędkość ataku': 'Attack Speed',
+    'Tempo ognia': 'Fire Rate',
+    'Szansa na stan': 'Status Chance',
+    'Czas trwania stanu': 'Status Duration',
+    'Zasięg': 'Range',
+    'Przenikanie': 'Puncture',
+    'Cięcie': 'Slash',
+    'Obuch': 'Impact',
+    'Ciepło': 'Heat',
+    'Zimno': 'Cold',
+    'Elektrownia': 'Electricity',
+    'Toksyna': 'Toxin',
+    'Prędkość przeładowania': 'Reload Speed',
+    'Pojemność magazynka': 'Magazine Capacity',
+    'Maks. amunicja': 'Ammo Maximum',
+    'Przenikanie': 'Punch Through',
+    'Prędkość pocisków': 'Projectile Speed',
+    'Początkowy combo': 'Initial Combo',
+    'Czas trwania combo': 'Combo Duration',
+    'Obrażenia od wymieracza': 'Finisher Damage',
+    'Obrażenia wobec Corpus': 'Damage to Corpus',
+    'Obrażenia wobec Grineer': 'Damage to Grineer',
+    'Obrażenia wobec Infested': 'Damage to Infested',
+    'Odrzut': 'Recoil',
+    'Szansa krytyczna na strzał boczny': 'Slide Crit Chance',
+    'Promień eksplozji': 'Blast Radius',
+    'Zoom': 'Zoom',
+    'Szansa na licznik combo': 'Combo Count Chance',
+  },
+  // UK: in-game stat terms
+  uk: {
+    'Шанс кріт. удару': 'Critical Chance',
+    'Кріт. урон': 'Critical Damage',
+    'Урон': 'Damage',
+    'Урон ближнього бою': 'Melee Damage',
+    'Множення куль': 'Multishot',
+    'Швидкість атаки': 'Attack Speed',
+    'Каденція вогню': 'Fire Rate',
+    'Шанс стану': 'Status Chance',
+    'Тривалість стану': 'Status Duration',
+    'Дальність': 'Range',
+    'Проникання': 'Puncture',
+    'Різання': 'Slash',
+    'Вплив': 'Impact',
+    'Тепло': 'Heat',
+    'Холід': 'Cold',
+    'Електрика': 'Electricity',
+    'Токсин': 'Toxin',
+    'Швидкість перезарядки': 'Reload Speed',
+    'Ємність магазину': 'Magazine Capacity',
+    'Макс. боєпаливо': 'Ammo Maximum',
+    'Проникання куль': 'Punch Through',
+    'Швидкість снарядів': 'Projectile Speed',
+    'Початковий комбо': 'Initial Combo',
+    'Тривалість комбо': 'Combo Duration',
+    'Урон виконавця': 'Finisher Damage',
+    'Урон ворогу Corpus': 'Damage to Corpus',
+    'Урон ворогу Grineer': 'Damage to Grineer',
+    'Урон ворогу Infested': 'Damage to Infested',
+    'Відбив': 'Recoil',
+    'Шанс кріт. удару при нахилі': 'Slide Crit Chance',
+    'Радіус вибуху': 'Blast Radius',
+    'Zoom': 'Zoom',
+    'Шанс лічильника комбо': 'Combo Count Chance',
+  },
+  // TR: in-game stat terms
+  tr: {
+    'Kritik Şans': 'Critical Chance',
+    'Kritik Hasar': 'Critical Damage',
+    'Hasar': 'Damage',
+    'Yakın Hasar': 'Melee Damage',
+    'Çoklu vuruş': 'Multishot',
+    'Saldırı Hızı': 'Attack Speed',
+    'Ateş Hızı': 'Fire Rate',
+    'Durum Şansı': 'Status Chance',
+    'Durum Süresi': 'Status Duration',
+    'Menzil': 'Range',
+    'Delme': 'Puncture',
+    'Kesme': 'Slash',
+    'Etki': 'Impact',
+    'Isı': 'Heat',
+    'Soğuk': 'Cold',
+    'Elektrik': 'Electricity',
+    'Zehir': 'Toxin',
+    'Yeniden yükleme Hızı': 'Reload Speed',
+    'Magazin Kapasitesi': 'Magazine Capacity',
+    'Maksimum mühim': 'Ammo Maximum',
+    'Delerek': 'Punch Through',
+    'Mühim Hızı': 'Projectile Speed',
+    'Başlangıç Kombin': 'Initial Combo',
+    'Kombin Süresi': 'Combo Duration',
+    'Finalizasyon Hasarı': 'Finisher Damage',
+    'Corpus\'a Verilen Hasar': 'Damage to Corpus',
+    'Grineer\'a Verilen Hasar': 'Damage to Grineer',
+    'Enfekte\'lere Verilen Hasar': 'Damage to Infested',
+    'Geri dönüş': 'Recoil',
+    'Kaydırma Kritik Şans': 'Slide Crit Chance',
+    'Patlama Yarıçapı': 'Blast Radius',
+    'Zoom': 'Zoom',
+    'Kombin Sayacı Şansı': 'Combo Count Chance',
+  },
 }
 
 // Card-header words to strip from OCR output (mod drain, polarity, reroll
 // counter). Locale-specific words supplement the English set.
-const GARBAGE_BY_LOCALE = {
+// These are the terms that appear on a riven card header and must be stripped
+// before stat-name matching.
+
+// "Reroll" words: tokens that carry a reroll-counter number (which gets
+// parsed into the `rolls` field). All others (drain, capacity, polarity)
+// just get dropped. "riven" is a label, not a counter.
+export const REROLL_WORDS_BY_LOCALE = {
+  en: ['roll', 'reroll', 'rerolls', 'counter'],
+  de: ['neuausrichtung', 'neuausrichtungen'],
+  fr: ['relance', 'relances'],
+  es: ['reconfiguración', 'reconfiguraciones'],
+  it: ['reconfigura', 'riconfigura'],
+  pt: ['reconfiguração', 'reconfigurações'],
+  tr: ['yeniden yapılandırma', 'yeniden yapılandırmalar'],
+  ru: ['перенастройка', 'перенастройки'],
+  uk: ['переналаштування'],
+  pl: ['przekonfiguracja', 'przekonfiguracje'],
+  tc: ['重鑄'],
+  zh: ['重铸'],
+  ko: ['재구성'],
+  ja: ['再鑑定'],
+  th: ['รีโซต'],
+}
+
+// Full set of garbage words per locale (drain/polarity + reroll + riven label).
+export const GARBAGE_BY_LOCALE = {
+  en: ['drain', 'capacity', 'polarity', 'roll', 'reroll', 'rerolls', 'counter', 'riven'],
   de: ['kapazität', 'polarität', 'neuausrichtung', 'neuausrichtungen', 'riven'],
   fr: ['capacité', 'polarité', 'relance', 'relances', 'riven'],
+  es: ['capacidad', 'polaridad', 'reconfiguración', 'reconfiguraciones', 'riven'],
+  it: ['capacità', 'polarità', 'reconfigura', 'riconfigura', 'riven'],
+  pt: ['capacidade', 'polaridade', 'reconfiguração', 'reconfigurações', 'riven'],
+  tr: ['kapasite', 'polarite', 'yeniden yapılandırma', 'yeniden yapılandırmalar', 'riven'],
+  ru: ['ёмкость', 'полярность', 'перенастройка', 'перенастройки', 'клинок'],
+  uk: ['ємність', 'полярність', 'переналаштування', 'рівень'],
+  pl: ['pojemność', 'polarność', 'przekonfiguracja', 'przekonfiguracje', 'riven'],
+  tc: ['容量', '極性', '重鑄', 'riven'],
+  zh: ['容量', '极性', '重铸', 'riven'],
+  ko: ['용량', '극성', '재구성', '레진'],
+  ja: ['容量', '極性', '再鑑定', 'レヴン'],
+  th: ['ความจุ', '극성', 'รีโซต', 'เมฆ'],
 }
 
 export const DEFAULT_GARBAGE_RE = /^(mod|drain|capacity|polarity|roll|reroll|counter|rerolls|riven)$/i
 
-export function garbageReForLocale(locale) {
+/**
+ * Escape a term for use in a RegExp.
+ */
+function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
+
+/**
+ * Compound garbage phrases (space-separated) per locale. These are multi-word
+ * header labels like "Mod Drain" that need to be matched as a unit.
+ */
+const GARBAGE_COMPOUNDS_BY_LOCALE = {
+  en: ['mod drain', 'roll counter', 'reroll counter'],
+  de: ['mod abtrap', 'mod-abtrap'],
+  fr: ['effort du mod', 'compteur de relance', 'compteur de relances'],
+  es: ['consumo del mod', 'contador de reconfiguración'],
+}
+
+/**
+ * Return a deduplicated, escaped list of all garbage words for a locale.
+ * Compound phrases are included with the shorter word first so the regex
+ * alternation prefers the longer match (e.g. "mod drain" before "drain").
+ */
+function garbageWords(locale) {
+  const base = ['mod', 'drain', 'capacity', 'polarity', 'roll', 'reroll', 'rerolls', 'counter', 'riven']
   const extra = GARBAGE_BY_LOCALE[locale] || []
-  if (extra.length === 0) return DEFAULT_GARBAGE_RE
-  const words = ['mod', 'drain', 'capacity', 'polarity', 'roll', 'reroll', 'counter', 'rerolls', 'riven', ...extra]
-  return new RegExp(`^(${words.join('|')})$`, 'i')
+  return [...new Set([...base, ...extra])].map(escRe)
+}
+
+/**
+ * Return escaped compound garbage phrases for a locale (localized).
+ */
+function garbageCompounds(locale) {
+  return (GARBAGE_COMPOUNDS_BY_LOCALE[locale] || []).map(escRe)
+}
+
+/**
+ * Return a Set of lowercase reroll-specific words for a locale (includes base EN).
+ */
+function rerollWordSet(locale) {
+  const base = ['roll', 'reroll', 'rerolls', 'counter']
+  const extra = REROLL_WORDS_BY_LOCALE[locale] || []
+  return new Set([...base, ...extra].map(w => w.toLowerCase()))
+}
+
+/**
+ * Build a regex matching a single header-token garbage word with optional
+ * numeric suffix. Capture group 1 = the word, group 2 = optional number.
+ * Compound phrases (e.g. "mod drain") are tried first, then words sorted
+ * by length descending so "rerolls" beats "reroll" as a prefix.
+ */
+export function garbageTokenReForLocale(locale) {
+  const compounds = garbageCompounds(locale)
+  const words = garbageWords(locale).sort((a, b) => b.length - a.length)
+  const all = [...compounds, ...words]
+  return new RegExp(`^(${all.join('|')})(?:\\s+(\\d+))?$`, 'i')
+}
+
+/**
+ * Build a regex matching a garbage word (or compound phrase) preceded by
+ * whitespace, optionally followed by a number. Used to clean trailing garbage
+ * from weapon names. Longest patterns first.
+ */
+export function garbageSuffixReForLocale(locale) {
+  const compounds = garbageCompounds(locale)
+  const words = garbageWords(locale).sort((a, b) => b.length - a.length)
+  const sorted = [...compounds, ...words]
+  return new RegExp(`\\s+(?:${sorted.join('|')})\\s*\\d*`, 'gi')
+}
+
+export function garbageReForLocale(locale) {
+  const compounds = garbageCompounds(locale)
+  const words = garbageWords(locale).sort((a, b) => b.length - a.length)
+  const all = [...compounds, ...words]
+  return new RegExp(`^(?:${all.join('|')})$`, 'i')
 }
 
 /**
@@ -276,8 +562,10 @@ export function displayStatName(raw, aliases) {
 /**
  * Parse the raw OCR text of a riven card into { name, mr, rolls, stats }.
  * `garbageRe` matches card-header words to drop (locale-aware).
+ * `locale` (optional) makes GARBAGE_TOKEN_RE and cleanup regexes locale-aware;
+ * defaults to English.
  */
-export function parseRivenOcr(text, garbageRe = DEFAULT_GARBAGE_RE) {
+export function parseRivenOcr(text, garbageRe, locale = 'en') {
   const clean = text
     .replace(/^\[[^\]]*\]\s*/, '')
     .replace(/^[\dA-Z]{1,3}\s*\|\s*/, '')
@@ -290,12 +578,13 @@ export function parseRivenOcr(text, garbageRe = DEFAULT_GARBAGE_RE) {
   const stats = []
   let i = 0
 
-  const GC_GARBAGE = garbageRe
+  const GC_GARBAGE = garbageRe || garbageReForLocale(locale)
+  const rerollWords = rerollWordSet(locale)
 
   // Header tokens: mod-drain/capacity/polarity/reroll-counter/riven-title lines,
   // each possibly carrying a number suffix ("Kapazität 18", "Neuausrichtungen 3").
   // Reroll-counter tokens set `rolls`; drain/capacity numbers do not.
-  const GARBAGE_TOKEN_RE = /^(?:(mod|drain|capacity|polarity|kapazität|polarität|capacité|polarité)|(roll|reroll|rerolls|counter|neuausrichtung|neuausrichtungen|relance|relances)|(riven|riven mod|mod riven|mod rivens))(?:\s*(\d+))?$/i
+  const GARBAGE_TOKEN_RE = garbageTokenReForLocale(locale)
 
   while (i < parts.length) {
     const p = parts[i]
@@ -306,7 +595,7 @@ export function parseRivenOcr(text, garbageRe = DEFAULT_GARBAGE_RE) {
     if (/^[+\-xX]\s*[\d.,]+[x%]?/.test(p)) break
     const gm = p.match(GARBAGE_TOKEN_RE)
     if (gm) {
-      if (gm[2] && gm[4] && !rolls) rolls = parseInt(gm[4])
+      if (rerollWords.has(gm[1].toLowerCase()) && gm[2] && !rolls) rolls = parseInt(gm[2])
       i++; continue
     }
     if (/^\d+$/.test(p)) {
@@ -323,8 +612,7 @@ export function parseRivenOcr(text, garbageRe = DEFAULT_GARBAGE_RE) {
   weaponName = weaponName
     // Strip leading mod-drain number (e.g. "18-Aksomati" → "Aksomati")
     .replace(/^\d+\s*[-–—]\s*/, '')
-    .replace(/\s+(mod(\s+drain)?|drain|capacity|polarity|kapazität|polarität|capacité|polarité)\s*\d*/gi, '')
-    .replace(/\s+(roll(\s+counter)?|counter|reroll|rerolls|neuausrichtung|neuausrichtungen|relance|relances)\s*\d*/gi, '')
+    .replace(garbageSuffixReForLocale(locale), '')
     .replace(/\s*\(.*?\)\s*/g, '')
     .trim()
 

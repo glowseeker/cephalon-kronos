@@ -182,7 +182,7 @@ export default function RivenOverlay() {
     invoke('ocr_riven_card', { position: pos }).
     then((res) => {
       if (aliveRef.current) {
-        const p = parseRivenOcr(res.text, garbageRe);
+        const p = parseRivenOcr(res.text, garbageRe, locale);
         setParsed(p);
         doPricing(p);
       }
@@ -217,7 +217,7 @@ export default function RivenOverlay() {
       if (aliveRef.current) {
         setVisible(true);
         setOcrLoading(false);
-        const p = parseRivenOcr(payload, garbageRe);
+        const p = parseRivenOcr(payload, garbageRe, locale);
         setParsed(p);
         doPricing(p);
       }
