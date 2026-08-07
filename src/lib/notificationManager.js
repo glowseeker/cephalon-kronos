@@ -42,14 +42,14 @@ const TRIGGER_DEFINITIONS = [
       {
         key: 'tiers', label: 'Tiers', labelKey: 'ui.notif_mgr.col_tiers', type: 'multi-select', options: [
           'Lith', 'Meso', 'Neo', 'Axi', 'Requiem', 'Omnia',
-        ].map(v => ({ value: v, label: v }))
+        ].map(v => ({ value: v, label: v, labelKey: `ui.notif_mgr.tier_${v.toLowerCase()}` }))
       },
       {
         key: 'missionTypes', label: 'Mission Types', labelKey: 'ui.notif_mgr.col_mission_types', type: 'multi-select', options: [
           'Extermination', 'Capture', 'Survival', 'Defense', 'Interception',
           'Sabotage', 'Rescue', 'Spy', 'Mobile Defense', 'Disruption',
           'Void Flood', 'Void Cascade', 'Void Armageddon',
-        ].map(v => ({ value: v, label: v }))
+        ].map(v => ({ value: v, label: v, labelKey: `ui.notif_mgr.mtype_${v.toLowerCase().replace(/[^a-z]+/g, '_')}` }))
       },
     ],
     defaultConfig: { difficulties: ['normal', 'steel_path'], tiers: [], missionTypes: [] },
@@ -167,7 +167,7 @@ const TRIGGER_DEFINITIONS = [
           'Sabotage', 'Rescue', 'Spy', 'Mobile Defense', 'Disruption',
           'Void Flood', 'Void Cascade', 'Void Armageddon',
           'Assassination', 'Excavation',
-        ].map(v => ({ value: v, label: v }))
+        ].map(v => ({ value: v, label: v, labelKey: `ui.notif_mgr.mtype_${v.toLowerCase().replace(/[^a-z]+/g, '_')}` }))
       },
     ],
     defaultConfig: { syndicates: [], missionTypes: [] },

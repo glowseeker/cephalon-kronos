@@ -215,11 +215,11 @@ function buildSyndicateConfig(exportSyndicates) {
 }
 
 const FOCUS_SCHOOLS = [
-{ id: 'zenurik', label: 'Zenurik', key: 'AP_POWER' },
-{ id: 'naramon', label: 'Naramon', key: 'AP_ATTACK' },
-{ id: 'vazarin', label: 'Vazarin', key: 'AP_WARD' },
-{ id: 'madurai', label: 'Madurai', key: 'AP_TACTIC' },
-{ id: 'unairu', label: 'Unairu', key: 'AP_DEFENSE' }];
+{ id: 'zenurik', label: 'Zenurik', key: 'AP_POWER', nameKey: '/Lotus/Language/Items/OperatorPowerAbilityName' },
+{ id: 'naramon', label: 'Naramon', key: 'AP_ATTACK', nameKey: '/Lotus/Language/Items/OperatorTacticAbilityName' },
+{ id: 'vazarin', label: 'Vazarin', key: 'AP_WARD', nameKey: '/Lotus/Language/Items/OperatorDefenseAbilityName' },
+{ id: 'madurai', label: 'Madurai', key: 'AP_TACTIC', nameKey: '/Lotus/Language/Items/OperatorAttackAbilityName' },
+{ id: 'unairu', label: 'Unairu', key: 'AP_DEFENSE', nameKey: '/Lotus/Language/Items/OperatorWardAbilityName' }];
 
 
 const standings = [
@@ -227,39 +227,39 @@ const standings = [
 { id: 'focus_total', label: 'Daily Focus', color: 'focus' },
 
 // Focus schools
-...FOCUS_SCHOOLS.map((s) => ({ id: s.id, label: s.label, color: s.id, focusKey: s.key })),
+...FOCUS_SCHOOLS.map((s) => ({ id: s.id, label: s.label, color: s.id, focusKey: s.key, nameKey: s.nameKey })),
 
 // Faction Syndicates
-{ id: 'steel', label: 'Steel Meridian', tag: 'steel' },
-{ id: 'perrin', label: 'Perrin Sequence', tag: 'perrin' },
-{ id: 'arbiters', label: 'Arbiters of Hexis', tag: 'arbiters' },
-{ id: 'suda', label: 'Cephalon Suda', tag: 'suda' },
-{ id: 'veil', label: 'Red Veil', tag: 'veil' },
-{ id: 'newloka', label: 'New Loka', tag: 'newloka' },
+{ id: 'steel', label: 'Steel Meridian', tag: 'steel', nameKey: '/Lotus/Language/Syndicates/SteelMeridianName' },
+{ id: 'perrin', label: 'Perrin Sequence', tag: 'perrin', nameKey: '/Lotus/Language/Syndicates/PerrinSequenceName' },
+{ id: 'arbiters', label: 'Arbiters of Hexis', tag: 'arbiters', nameKey: '/Lotus/Language/Syndicates/ArbitersName' },
+{ id: 'suda', label: 'Cephalon Suda', tag: 'suda', nameKey: '/Lotus/Language/Syndicates/CephalonSudaName' },
+{ id: 'veil', label: 'Red Veil', tag: 'veil', nameKey: '/Lotus/Language/Syndicates/RedVeilName' },
+{ id: 'newloka', label: 'New Loka', tag: 'newloka', nameKey: '/Lotus/Language/Syndicates/NewLokaName' },
 
 // Cephalon Simaris
-{ id: 'simaris', label: 'Cephalon Simaris', tag: 'simaris' },
+{ id: 'simaris', label: 'Cephalon Simaris', tag: 'simaris', nameKey: '/Lotus/Language/Syndicates/LibraryTitle' },
 
 // Open World - Cetus
-{ id: 'ostron', label: 'Ostron', tag: 'ostron' },
-{ id: 'quills', label: 'The Quills', tag: 'quills' },
+{ id: 'ostron', label: 'Ostron', tag: 'ostron', nameKey: '/Lotus/Language/Syndicates/CetusName' },
+{ id: 'quills', label: 'The Quills', tag: 'quills', nameKey: '/Lotus/Language/Syndicates/QuillsName' },
 
 // Open World - Fortuna
-{ id: 'solaris', label: 'Solaris United', tag: 'solaris' },
-{ id: 'vox', label: 'Vox Solaris', tag: 'vox' },
-{ id: 'ventkids', label: 'Ventkids', tag: 'ventkids' },
+{ id: 'solaris', label: 'Solaris United', tag: 'solaris', nameKey: '/Lotus/Language/Syndicates/SolarisSecretName' },
+{ id: 'vox', label: 'Vox Solaris', tag: 'vox', nameKey: '/Lotus/Language/Syndicates/VoxSolName' },
+{ id: 'ventkids', label: 'Ventkids', tag: 'ventkids', nameKey: '/Lotus/Language/Syndicates/VentkidsName' },
 
 // Open World - Necralisk
-{ id: 'entrati', label: 'Entrati', tag: 'entrati' },
-{ id: 'necraloid', label: 'Necraloid', tag: 'necraloid' },
-{ id: 'cavia', label: 'Cavia', tag: 'cavia' },
+{ id: 'entrati', label: 'Entrati', tag: 'entrati', nameKey: '/Lotus/Language/InfestedMicroplanet/EntratiSyndicateName' },
+{ id: 'necraloid', label: 'Necraloid', tag: 'necraloid', nameKey: '/Lotus/Language/InfestedMicroplanet/NecraloidSyndicateName' },
+{ id: 'cavia', label: 'Cavia', tag: 'cavia', nameKey: '/Lotus/Language/EntratiLab/EntratiGeneral/EntratiLabSyndicateName' },
 
 // Zariman
-{ id: 'holdfasts', label: 'Holdfasts', tag: 'holdfasts' },
-{ id: 'hex', label: 'The Hex', tag: 'hex' },
+{ id: 'holdfasts', label: 'Holdfasts', tag: 'holdfasts', nameKey: '/Lotus/Language/Syndicates/ZarimanName' },
+{ id: 'hex', label: 'The Hex', tag: 'hex', nameKey: '/Lotus/Language/1999/MessengerHexName' },
 
 // Other
-{ id: 'conclave', label: 'Conclave', tag: 'conclave' }];
+{ id: 'conclave', label: 'Conclave', tag: 'conclave', nameKey: '/Lotus/Language/Syndicates/ConclaveName' }];
 
 
 const formatTimeLeft = (ms) => {
@@ -272,8 +272,8 @@ const formatTimeLeft = (ms) => {
   return `${minutes}m`;
 };
 
-const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextResetTime }) => {
-  const resetLabels = { daily: 'Daily', weekly: 'Weekly', biweekly: 'Biweekly', other: '8h', baro: 'Trader' };
+const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextResetTime, t }) => {
+  const resetLabels = { daily: t('checklist.daily'), weekly: t('checklist.weekly'), biweekly: t('checklist.biweekly'), other: t('checklist.other_8h'), baro: t('checklist.trader') };
   const getIntervalMs = (resetType) => {
     if (resetType === 'daily') return 24 * 60 * 60 * 1000;
     if (resetType === 'weekly') return 7 * 24 * 60 * 60 * 1000;
@@ -309,7 +309,7 @@ const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextRes
       
       <div className="flex items-start justify-between mb-1">
         <span className={`text-[14px] ${completed ? 'line-through text-kronos-dim' : ''}`}>
-          {task.labelKey ? t(task.labelKey) : task.label}
+          {task.labelKey ? (t(task.labelKey) === task.labelKey ? task.label : t(task.labelKey)) : task.label}
         </span>
         <span className="text-[10px] px-1.5 py-0.5 rounded text-kronos-accent flex-shrink-0" style={{ backgroundColor: 'rgba(var(--color-accent-rgb), 0.2)' }}>
           {resetLabels[task.reset]}
@@ -321,7 +321,7 @@ const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextRes
           <button
             onClick={onHide}
             className="p-1 rounded hover:bg-white/10"
-            title={hidden ? 'Show' : 'Hide'}>
+            title={hidden ? t('checklist.show') : t('checklist.hide')}>
             
             {hidden ? <Eye size={14} /> : <EyeOff size={14} />}
           </button>
@@ -380,7 +380,7 @@ const TintedIcon = ({ src, size = 'w-8 h-8', accent }) => {
 };
 const FACTION_TAGS = new Set(['steel', 'perrin', 'arbiters', 'suda', 'veil', 'newloka']);
 
-const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap, iconUrl, localIconUrl, supportedSyndicate, syndicateConfig, hoveredTag, onHover }) => {
+const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap, iconUrl, localIconUrl, supportedSyndicate, syndicateConfig, hoveredTag, onHover, dict }) => {
   const rank = affiliation?.Title ?? 0;
   const { t } = useUi();
   const tagKey = standing.tag || standing.color;
@@ -434,11 +434,10 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
         {/* Row 1: Name -- Rank X */}
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-[15px] font-mono font-bold" style={{ color: config.accent }}>
-            {standing.label}{isPledged ? ' ★' : ''}
+            {(standing.nameKey && dict && dict[standing.nameKey]) ? (dict[standing.nameKey] + (isPledged ? ' ★' : '')) : (standing.label + (isPledged ? ' ★' : ''))}
           </span>
           {rank !== 0 &&
-          <span className="text-[11px] flex-shrink-0 font-mono font-bold" style={{ color: config.accent, opacity: 0.6 }}>{t('ui.comp.rank')}
-            {rank}
+          <span className="text-[11px] flex-shrink-0 font-mono font-bold" style={{ color: config.accent, opacity: 0.6 }}>{t('ui.comp.rank')} {rank}
             </span>
           }
         </div>
@@ -459,8 +458,7 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
 
         {/* Row 4: daily remaining */}
         {dailyCap > 0 &&
-        <span className="text-[12px] font-mono font-bold" style={{ color: config.accent, opacity: 0.6 }}>{t('checklist.daily')}
-          {dailyCap.toLocaleString()}
+        <span className="text-[12px] font-mono font-bold" style={{ color: config.accent, opacity: 0.6 }}>{t('checklist.daily')} {dailyCap.toLocaleString()}
           </span>
         }
 
@@ -482,11 +480,16 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
 
 export default function Checklist() {
   const { t } = useUi()
-  const { inventoryData, ExportTextIcons, worldState, ES } = useMonitoring();
+  const { inventoryData, ExportTextIcons, worldState, ES, dict } = useMonitoring();
   const supportedSyndicate = inventoryData?.SupportedSyndicate || null;
   const SYNDICATE_CONFIG = useMemo(() => buildSyndicateConfig(ES), [ES]);
   const [hoveredTag, setHoveredTag] = useState(null);
   const [uiPath, setUiPath] = useState('');
+  
+  const resolveStandingLabel = (standing) => {
+    if (standing.nameKey && dict && dict[standing.nameKey]) return dict[standing.nameKey];
+    return standing.label;
+  };
 
   useEffect(() => {invoke('get_ui_path').then(setUiPath).catch(() => {});}, []);
 
@@ -771,7 +774,7 @@ export default function Checklist() {
   return (
     <>
       <ColorFilters config={SYNDICATE_CONFIG} />
-      <PageLayout titleKey="screen.checklist" subtitle="Track daily and weekly activities">
+      <PageLayout titleKey="screen.checklist" subtitle={t('checklist.subtitle')}>
         {/* Focus Section - Full Width */}
         {hasInventory &&
         <div className="mb-6">
@@ -786,7 +789,7 @@ export default function Checklist() {
               })()}
                 <span className="text-[18px] font-semibold text-kronos-text">{t('checklist.daily_focus')}</span>
               </div>
-              <span className="text-[18px] font-mono text-kronos-accent">{dailyFocus.toLocaleString()}{t('checklist.left')}</span>
+              <span className="text-[18px] font-mono text-kronos-accent">{dailyFocus.toLocaleString()} {t('checklist.left')}</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
               {standings.filter((s) => s.focusKey).map((standing) => {
@@ -801,7 +804,7 @@ export default function Checklist() {
                       </div>
                   }
                     <div className="flex-1 min-w-0 p-2 flex flex-col gap-1">
-                      <span className="text-[18px] font-medium truncate" style={{ color: config.accent }}>{standing.label}</span>
+                      <span className="text-[18px] font-medium truncate" style={{ color: config.accent }}>{resolveStandingLabel(standing)}</span>
                       <span className="text-[18px] font-mono" style={{ color: config.accent }}>
                         {earned.toLocaleString()}
                       </span>
@@ -842,7 +845,8 @@ export default function Checklist() {
                   supportedSyndicate={supportedSyndicate}
                   syndicateConfig={SYNDICATE_CONFIG}
                   hoveredTag={hoveredTag}
-                  onHover={setHoveredTag} />);
+                  onHover={setHoveredTag}
+                  dict={dict} />);
 
 
             })}
@@ -890,7 +894,8 @@ export default function Checklist() {
               onToggle={() => toggleTask(task.id)}
               onHide={() => toggleHidden(task.id)}
               timeLeft={task.timeLeft}
-              nextResetTime={task.nextResetTime} />
+              nextResetTime={task.nextResetTime}
+              t={t} />
 
             )}
           </div>

@@ -375,7 +375,7 @@ export default function Maps() {
   }, [activeTab]);
 
   const addConfig = useCallback((name, description) => {
-    const newConfig = { id: genId(), name: name || 'New Configuration', description: description || '', enabled: true, markers: [], paths: [] };
+    const newConfig = { id: genId(), name: name || t('maps.new_config').replace(/^./, s => s.toUpperCase()), description: description || '', enabled: true, markers: [], paths: [] };
     updateConfigs([...configsForCurrentMap, newConfig]);
   }, [configsForCurrentMap, updateConfigs]);
 
@@ -501,10 +501,10 @@ export default function Maps() {
       const tabId = ti.toString();
       setAllConfigs((prev) => {
         const current = prev[tabId] || [];
-        let config = current.find((c) => c.name === 'Game Markers');
+        let config = current.find((c) => c.name === t('maps.game_markers'));
         let next;
         if (!config) {
-          config = { id: genId(), name: 'Game Markers', description: 'Imported in-game custom markers', enabled: true, markers: [], paths: [] };
+          config = { id: genId(), name: t('maps.game_markers'), description: t('maps.imported_markers_desc'), enabled: true, markers: [], paths: [] };
           next = [...current, config];
         } else {
           next = current;
@@ -531,7 +531,7 @@ export default function Maps() {
                 <Tabs tabs={mapTabs} activeTab={activeTab} onChange={switchTab} />
                 {activeTab === '3' && duviriCycle &&
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 backdrop-blur border border-white/5">
-                    <span className="text-[11px] font-black uppercase tracking-wider text-kronos-accent">{duviriCycle.state}</span>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-kronos-accent">{t(`ui.dashboard.duviri_state.${duviriCycle.state}`)}</span>
                     <span className="text-[11px] text-kronos-dim font-mono">{timeLeft}</span>
                   </div>
                 }
@@ -541,7 +541,7 @@ export default function Maps() {
                 <ZoomBadge xfRef={xfRef} />
                 <button onClick={() => setUseRawMap((v) => !v)}
                 className={`p-2 rounded-lg transition-colors ${useRawMap ? 'bg-kronos-accent/20 text-kronos-accent border border-kronos-accent/30' : 'bg-kronos-bg/80 backdrop-blur text-kronos-dim hover:text-kronos-text border border-white/5'}`}
-                title={useRawMap ? 'Switch to labeled map' : 'Switch to raw terrain map'}>
+                title={useRawMap ? t('maps.switch_labeled') : t('maps.switch_raw')}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
                     <line x1="8" y1="2" x2="8" y2="18" />
@@ -838,7 +838,7 @@ export default function Maps() {
                       <div className="flex items-center gap-2">
                         <button onClick={() => updateConfig(config.id, { enabled: !config.enabled })}
                       className={`p-1 rounded transition-colors flex-shrink-0 ${config.enabled ? 'text-kronos-accent' : 'text-kronos-dim hover:text-kronos-text'}`}
-                      title={config.enabled ? 'Visible' : 'Hidden'}>
+                      title={config.enabled ? t('maps.visible') : t('maps.hidden')}>
                           {config.enabled ? <Eye size={16} /> : <EyeOff size={16} />}
                         </button>
                         <div className="flex-1 min-w-0">
@@ -855,8 +855,8 @@ export default function Maps() {
                           placeholder={t('maps.config_desc')} />
                         
                           <div className="text-[11px] text-kronos-dim mt-0.5 font-medium">
-                            {config.markers.length}{t('maps.marker')}{config.markers.length !== 1 ? 's' : ''}
-                            {config.paths.length > 0 && ` · ${config.paths.length} path${config.paths.length !== 1 ? 's' : ''}`}
+                            {config.markers.length} {config.markers.length === 1 ? t('maps.marker') : t('maps.marker_plural')}
+                            {config.paths.length > 0 && ` · ${config.paths.length} ${config.paths.length === 1 ? t('maps.path') : t('maps.path_plural')}`}
                           </div>
                         </div>
                         <button onClick={() => setDeleteConfirm({ type: 'config', id: config.id, name: config.name })}
@@ -871,7 +871,7 @@ export default function Maps() {
                           {setMode('addMarker');setPendingConfigId(config.id);setSelectedMarker(null);closeMarkerPanel();}
                         }}
                         className={`flex-1 text-xs py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${isAdding ? 'bg-kronos-accent text-kronos-bg font-black' : 'hover:bg-white/5 text-kronos-dim hover:text-kronos-text'}`}>
-                          <MapPin size={12} /> {isAdding ? 'Adding...' : 'Marker'}
+                          <MapPin size={12} /> {isAdding ? t('maps.adding') : t('maps.marker_btn')}
                         </button>
                       </div>
                     </div>);
@@ -917,7 +917,7 @@ export default function Maps() {
           <div className="flex flex-col gap-4">
             <p className="text-sm text-kronos-dim">{t('notes.delete')}
             <span className="text-kronos-text font-bold">{deleteConfirm.name}</span>?
-              {deleteConfirm.type === 'config' && ' All markers and paths in this configuration will be removed.'}
+              {deleteConfirm.type === 'config' && t('maps.delete_config_warning')}
             </p>
             <div className="flex gap-2 pt-2 border-t border-white/5">
               <Button variant="ghost" className="flex-1 text-xs" onClick={() => setDeleteConfirm(null)}>{t('notes.cancel')}</Button>
@@ -971,7 +971,7 @@ export default function Maps() {
 
           </button>
             <div className="px-3 py-1 text-[10px] text-kronos-dim uppercase tracking-wider border-t border-white/5 mt-1 pt-2">{t('maps.to')}
-            {configsForCurrentMap.find((c) => c.id === contextMenu.configId)?.name || 'Config'}
+            {configsForCurrentMap.find((c) => c.id === contextMenu.configId)?.name || t('maps.config')}
             </div>
           </div>
         </div>

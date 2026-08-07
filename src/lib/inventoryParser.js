@@ -215,28 +215,52 @@ const FOLDER_OVERRIDES = {
  * Strips common suffix tokens (Suit, Blueprint, etc.) and converts PascalCase
  * to spaced words.  Also handles skin folder overrides.
  */
-const BOOSTER_NAME_MAP = {
-  'ResourceAmount3Day': '3 Day Resource Booster',
-  'ResourceDropChance3Day': '3 Day Resource Drop Chance Booster',
-  'Affinity3Day': '3 Day Affinity Booster',
-  'Credit3Day': '3 Day Credit Booster',
-  'ModDropChance3Day': '3 Day Mod Drop Chance Booster',
-  'ResourceAmount7Day': '7 Day Resource Booster',
-  'ResourceDropChance7Day': '7 Day Resource Drop Chance Booster',
-  'Affinity7Day': '7 Day Affinity Booster',
-  'Credit7Day': '7 Day Credit Booster',
-  'ModDropChance7Day': '7 Day Mod Drop Chance Booster',
-  'ResourceAmount30Day': '30 Day Resource Booster',
-  'ResourceDropChance30Day': '30 Day Resource Drop Chance Booster',
-  'Affinity30Day': '30 Day Affinity Booster',
-  'Credit30Day': '30 Day Credit Booster',
-  'ModDropChance30Day': '30 Day Mod Drop Chance Booster',
-  'ResourceAmount': 'Resource Booster',
-  'ResourceDropChance': 'Resource Drop Chance Booster',
-  'Affinity': 'Affinity Booster',
-  'Credit': 'Credit Booster',
-  'ModDropChance': 'Mod Drop Chance Booster',
+// Resolves a booster/blessing display name from the localisation dict.
+// Store-item leaf like "AffinityBoosterThreeDayStoreItem" or "DamageBlessingStoreItem"
+// maps to dict key /Lotus/Language/{Items|Items|Items|Blessings}/...{Blessing|Booster}Name
+// Returns null if the dict has no entry (caller falls through to export tables).
+function resolveBoosterName(leaf, dict) {
+  // Blessings: no duration, path /Lotus/Language/Blessings/
+  const blessings = ['Damage', 'Health', 'Shield', 'Affinity', 'Credit', 'ResourceDropChance'];
+  for (const b of blessings) {
+    if (leaf.startsWith(b + 'Blessing')) {
+      const key = `/Lotus/Language/Blessings/${b}BlessingName`;
+      const val = dict[key] || dict[key.replace(/^\//, '')];
+      if (val && !val.startsWith('/Lotus/')) return cleanName(val);
+    }
+  }
+  // Boosters: path /Lotus/Language/Items/{Type}Booster{Duration}Name
+  const boosters = [
+    { short: 'Affinity', game: 'AffinityBooster' },
+    { short: 'Credit', game: 'CreditBooster' },
+    { short: 'Damage', game: 'DamageBooster' },
+    { short: 'Health', game: 'HealthBooster' },
+    { short: 'Shield', game: 'ShieldBooster' },
+    { short: 'ResourceAmount', game: 'ResourceAmountBooster' },
+    { short: 'ResourceDropChance', game: 'ResourceDropChanceBooster' },
+    { short: 'ModDropChance', game: 'ModDropChanceBooster' },
+  ];
+  const durations = [
+    { short: 'ThreeDay', dict: 'ThreeDay' },
+    { short: 'SevenDay', dict: 'SevenDay' },
+    { short: 'ThirtyDay', dict: 'ThirtyDay' },
+    { short: '', dict: '' },
+  ];
+  for (const b of boosters) {
+    if (leaf.startsWith(b.short)) {
+      const suffix = leaf.slice(b.short.length).replace(/StoreItem$/i, '');
+      for (const d of durations) {
+        if (suffix === d.short) {
+          const key = `/Lotus/Language/Items/${b.game}${d.dict}Name`;
+          const val = dict[key] || dict[key.replace(/^\//, '')];
+          if (val && !val.startsWith('/Lotus/')) return cleanName(val);
+        }
+      }
+    }
+  }
+  return null;
 }
+
 
 // Prime part paths end with the weapon name + part word (always English even in
 // localized builds), e.g. .../WeaponParts/AfurisPrimeBarrel.  Used to separate
@@ -334,12 +358,9 @@ function _resolveNameInternal(un, dict, locale = 'en', depth, ...tables) {
     if (fragName) return cleanName(fragName);
   }
 
-  // Fallback for known booster patterns (StoreItem paths use "3Day" but human names use "3 Day")
-  const leaf = un.split('/').pop().replace(/StoreItem$/i, '');
-  if (BOOSTER_NAME_MAP[leaf]) return BOOSTER_NAME_MAP[leaf];
-  for (const [key, name] of Object.entries(BOOSTER_NAME_MAP)) {
-    if (leaf.startsWith(key)) return name;
-  }
+  // Resolve booster/blessing names from dict (no hardcoded English)
+  const boosterName = resolveBoosterName(un.split('/').pop(), dict);
+  if (boosterName) return boosterName;
 
   return cleanName(nameFromPath(un));
 }
@@ -422,10 +443,10 @@ function rivenWeaponType(itemType = '') {
  * Extract the modular component names for an Operator Amp or Zaw.
  * Some amps store components in ModularParts; others encode them in UpgradeFingerprint.
  */
-function resolveAmpComponents(sourceItem, dict, EW, ER) {
+function resolveAmpComponents(sourceItem, dict, locale, EW, ER) {
   const modParts = sourceItem?.ModularParts ?? [];
   if (modParts.length > 0) {
-    return modParts.map(c => resolveName(c, dict, EW, ER)).filter(Boolean);
+    return modParts.map(c => resolveName(c, dict, locale, EW, ER)).filter(Boolean);
   }
   if (!sourceItem?.UpgradeFingerprint) return [];
   const fp = parseFP(sourceItem.UpgradeFingerprint);
@@ -434,13 +455,13 @@ function resolveAmpComponents(sourceItem, dict, EW, ER) {
     : Array.isArray(fp.ModularParts) && fp.ModularParts.length > 0
       ? fp.ModularParts
       : [];
-  return compPaths.map(c => resolveName(c, dict, EW, ER)).filter(Boolean);
+  return compPaths.map(c => resolveName(c, dict, locale, EW, ER)).filter(Boolean);
 }
 
 /** Extract component display names for a K-Drive from its ModularParts list. */
-function resolveHoverboardComponents(sourceItem, dict, EW) {
+function resolveHoverboardComponents(sourceItem, dict, locale, EW) {
   const modParts = sourceItem?.ModularParts ?? [];
-  return modParts.map(c => resolveName(c, dict, EW)).filter(Boolean);
+  return modParts.map(c => resolveName(c, dict, locale, EW)).filter(Boolean);
 }
 
 // ─── Relic Reward Resolution ──────────────────────────────────────────────────
@@ -497,11 +518,11 @@ const TYPE_TO_EXPORT_CATEGORY = {
 }
 
 const TYPE_TO_CATEGORY = {
-  Rifle: 'Rifle', Shotgun: 'Shotgun', Primary: 'Primary', Bows: 'Bows',
-  Pistol: 'Pistol', Secondary: 'Secondary',
-  Melee: 'Melee', Sword: 'Sword', Glaive: 'Glaive', Heavy: 'Heavy', NoFire: 'Melee',
+  Rifle: 'Primary', Shotgun: 'Primary', Primary: 'Primary', Bows: 'Primary',
+  Pistol: 'Secondary', Secondary: 'Secondary',
+  Melee: 'Melee', Sword: 'Melee', Glaive: 'Melee', Heavy: 'Melee', NoFire: 'Melee',
   Warframe: 'Warframe', Avatar: 'Warframe', Necramech: 'Vehicles', Necromech: 'Vehicles',
-  Sentinel: 'Sentinel', Sentinels: 'Sentinel',
+  Sentinel: 'Sentinels', Sentinels: 'Sentinels',
   Kubrow: 'Beasts', Kavat: 'Beasts',
   Beast: 'Beasts', Beasts: 'Beasts',
   Stance: 'Stance',
@@ -1140,11 +1161,18 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
     let components = [];
 
     if (category === 'amps') {
-      components = resolveAmpComponents(sourceItem, dict, EW, ER);
+      components = resolveAmpComponents(sourceItem, dict, locale, EW, ER);
       const prismPart = sourceItem?.ModularParts?.[0] || parseFP(sourceItem.UpgradeFingerprint)?.ModularParts?.[0];
       if (prismPart) image = resolveImage(prismPart, EW, ER);
       if (un.includes('DrifterPistol')) name = 'Sirocco';
-      else name = (customName && !customName.startsWith('/Lotus/')) ? customName : 'Operator Amp';
+      else {
+        // The game calls the weapon "Amp" in EN and most locales; FR uses
+        // "Amplificateur" (dict: /Lotus/Language/Items/OperatorVoidBeam).
+        const ampDictKey = '/Lotus/Language/Items/OperatorVoidBeam';
+        const ampName = dict[ampDictKey] || dict['/' + ampDictKey];
+        name = (ampName && !ampName.startsWith('/Lotus/')) ? cleanName(ampName) : 'Amp';
+        if (customName && !customName.startsWith('/Lotus/')) name = customName;
+      }
     } else {
       components = fp?.components?.map(c => resolveName(c, dict, locale, EW, ES, ER, EA)) ?? [];
     }
@@ -1321,7 +1349,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
   });
   if (raw.Hoverboards) {
     raw.Hoverboards.forEach(h => {
-      const components = resolveHoverboardComponents(h, dict, EW);
+      const components = resolveHoverboardComponents(h, dict, locale, EW);
       // The deck/board is the mastery-granting part - find it by path, not position,
       // since ModularParts order varies and index 0 may be an engine (e.g. Hothead).
       const deckPart = (h.ModularParts ?? []).find(p => p.includes('Deck')) ?? h.ModularParts?.[0];
@@ -1510,7 +1538,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
         image, category: 'amps',
         xp, rank, mastery_xp, owned, mastered,
         ownedCustomName,
-        components: resolveAmpComponents(a, dict, EW, ER),
+        components: resolveAmpComponents(a, dict, locale, EW, ER),
       };
     }
   });
@@ -2384,7 +2412,9 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
         // XP is keyed by resultType (item path), not blueprint path (bpKey)
         const xp = xpMap[recipe.resultType] ?? 0;
         const isMastered = (masteredEntry?.mastered ?? false) || (xp > 0);
-        let hasMastery = masteredEntry ? (masteredEntry.category !== 'resources' && masteredEntry.category !== 'mods' && masteredEntry.category !== 'arcanes' && masteredEntry.category !== 'prime_parts') : (xp > 0);
+// Skip items that don't grant mastery — gear, resources, mods, arcanes, prime parts, etc.
+        const NO_MASTERY_CATEGORIES = new Set(['resources', 'mods', 'arcanes', 'prime_parts', 'gear', 'consumables', 'keys', 'misc', 'resources_enemy']);
+        let hasMastery = masteredEntry ? !NO_MASTERY_CATEGORIES.has(masteredEntry.category) : (xp > 0);
 
         // Modular parts mastery fix: only Strikes, Chambers, and Heads provide mastery
         if (hasMastery && (bpKey.includes('Modular') || bpKey.includes('/Ostron/Melee/') || bpKey.includes('/SolarisUnited/') || bpKey.includes('/InfKitGun/'))) {

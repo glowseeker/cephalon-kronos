@@ -382,7 +382,7 @@ const ModCard = memo(function ModCard({ mod, framesPath, iconsPath, cardImagesPa
     return '';
   })();
   const cat = mod.category || '';
-  const displayCompleteLine = mod.max_rank > 0 && rank >= mod.max_rank && mf !== 'Arcanes' && (mf === 'Tektolyst' || !custom);
+  const displayCompleteLine = mod.max_rank > 0 && rank >= mod.max_rank && mf !== 'Arcanes' && (mf === 'Tektolyst' || mf === 'Antivirus' || mf === 'Potency' || mf === 'Requiem' || mf === 'Tome' || !custom);
   const completeLine = displayCompleteLine ? u(framesPath, mf, mf === 'Tektolyst' ? `RankCompleteLine${tektolystGroup}.png` : 'RankCompleteLine.png') : null;
   const hasDesc = desc && desc.length > 0;
   const contentBottom = mf === 'Requiem' ? 80 : mf === 'Antivirus' ? 110 : mf === 'Potency' ? 45 : mf === 'Tektolyst' ? 55 + (hasDesc ? 25 : 0) : 45 + (hasDesc ? 25 : 0);
@@ -437,7 +437,7 @@ const ModCard = memo(function ModCard({ mod, framesPath, iconsPath, cardImagesPa
       }}>
           <div className="absolute inset-0 flex items-start justify-center" style={{ bottom: '70px' }}>
             {rank >= mod.max_rank ?
-          <img src={f('Depleted')} className="w-2/5 h-auto object-contain" style={{ marginTop: '20%' }} alt="" onError={(e) => e.target.style.display = 'none'} /> :
+          <SafeImg src={f('Depleted')} className="w-2/5 h-auto object-contain" style={{ marginTop: '20%' }} /> :
           finalSrc ?
           <SafeImg src={finalSrc} className="w-2/5 h-auto object-contain" style={{ marginTop: '20%' }} onError={() => setLocalImageFailed(true)} /> :
           null}
@@ -497,7 +497,7 @@ const ModCard = memo(function ModCard({ mod, framesPath, iconsPath, cardImagesPa
       }}>
           <div className="flex-1 overflow-hidden flex items-start justify-center">
             {rank >= mod.max_rank && (mf === 'Requiem' || mf === 'Potency') ?
-          <img src={f('Depleted')} className="w-full h-full object-contain" alt="" onError={(e) => e.target.style.display = 'none'} style={mf === 'Potency' ? { transform: 'scale(1.12)' } : undefined} /> :
+          <SafeImg src={f('Depleted')} className="w-full h-full object-contain" style={mf === 'Potency' ? { transform: 'scale(1.1)', transformOrigin: 'center' } : undefined} onError={() => setLocalImageFailed(true)} /> :
           finalSrc && mf !== 'Tektolyst' ?
           mf === 'Requiem' ?
           <div className="flex items-start justify-center w-full pt-1" style={{ marginTop: '7%' }}>

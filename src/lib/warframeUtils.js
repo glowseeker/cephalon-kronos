@@ -44,18 +44,18 @@ export const GeneralOverrides = {
   'EleanorAllyAgent': 'Eleanor',
   'LettieAllyAgent': 'Lettie',
   'AmirAllyAgent': 'Amir',
-  // Factions
-  'FC_CORPUS': 'Corpus',
-  'FC_GRINEER': 'Grineer',
-  'FC_INFESTATION': 'Infested',
-  'FC_OROKIN': 'Orokin',
-  'FC_SENTIENT': 'Sentient',
-  'FC_MURMUR': 'The Murmur',
-  'FC_NARMON': 'Narmer',
-  'FC_NARMER': 'Narmer',
-  'FC_MITW': 'The Murmur',
-  'FC_TECHROT': 'Techrot',
-  'FC_SCALDRA': 'Scaldra',
+  // Factions — use DE dict paths for proper locale resolution
+  'FC_CORPUS': '/Lotus/Language/Game/Faction_CorpusUC',
+  'FC_GRINEER': '/Lotus/Language/Game/Faction_GrineerUC',
+  'FC_INFESTATION': '/Lotus/Language/Game/Faction_InfestationUC',
+  'FC_OROKIN': '/Lotus/Language/Game/Faction_OrokinUC',
+  'FC_SENTIENT': '/Lotus/Language/Game/Faction_SentientUC',
+  'FC_MURMUR': '/Lotus/Language/Game/Faction_MITW',
+  'FC_NARMON': '/Lotus/Language/Game/Faction_NarmerUC',
+  'FC_NARMER': '/Lotus/Language/Game/Faction_NarmerUC',
+  'FC_MITW': '/Lotus/Language/Game/Faction_MITW',
+  'FC_TECHROT': '/Lotus/Language/1999/Faction_Techrot',
+  'FC_SCALDRA': '/Lotus/Language/1999/Faction_Scaldra',
   'SORTIE_BOSS_HEK': 'Vay Hek',
   'SORTIE_BOSS_RUK': 'Sargas Ruk',
   'SORTIE_BOSS_KELA': 'Kela De Thaym',
@@ -74,12 +74,15 @@ export const GeneralOverrides = {
   'SORTIE_BOSS_ROPALOLYST': 'The Ropalolyst',
   'SORTIE_BOSS_EXPLOITER': 'Exploiter Orb',
   // Archon Hunt bosses
-  'SORTIE_BOSS_AMAR': 'Amar',
-  'SORTIE_BOSS_NIRA': 'Nira',
-  'SORTIE_BOSS_BOREAL': 'Boreal',
-  'SORTIE_BOSS_NIHIL': 'Nihil',
+  SORTIE_BOSS_AMAR: 'Amar',
+  SORTIE_BOSS_NIRA: 'Nira',
+  SORTIE_BOSS_BOREAL: 'Boreal',
+  SORTIE_BOSS_NIHIL: 'Nihil',
 
-  // Sortie modifiers
+  // Sortie modifiers and bosses are now resolved per-locale via
+  // resolveSortieKey() in sortieTranslations.js (sourced from the DE manifest).
+  // The English fallbacks below are kept only as a last resort for keys
+  // not yet in the translation table.
   'SORTIE_MODIFIER_POISON': 'Toxin',
   'SORTIE_MODIFIER_SLASH': 'Slash',
   'SORTIE_MODIFIER_LOW_ENERGY': 'Energy Reduction',
@@ -178,6 +181,9 @@ const MISSION_NAME_KEYS = {
   'Rush': 'Rush',
 }
 
+// ── Sortie translations (per-locale boss/modifier strings from DE manifest) ──
+import { resolveSortieKey } from './sortieTranslations.js';
+
 const clean = (s) => {
   if (!s || typeof s !== 'string') return ''
   return s.replace(/<[^>]*>/g, '').replace(/\|[^|]*\|/g, '').replace(/\\n/g, ' ').trim()
@@ -204,7 +210,7 @@ export const DescriptionOverrides = {
  * Priority: description overrides → dict → ExportRegions → GeneralOverrides →
  *   MAPPING_TYPES → dict tail → prefix formatting → PascalCase → raw string.
  */
-export function resolveNode(node, dict, ERg) {
+export function resolveNode(node, dict, ERg, locale = 'en') {
   if (!node) return 'Unknown Node'
 
   // Check Description Overrides if the key looks like a description request
@@ -216,6 +222,29 @@ export function resolveNode(node, dict, ERg) {
   if (dict[node]) return clean(dict[node])
   if (dict['/' + node]) return clean(dict['/' + node])
 
+  // Sortie boss / modifier keys (SORTIE_BOSS_*, SORTIE_MODIFIER_*) are not in
+  // the language dicts — resolve from the per-locale DE manifest table.
+  const leaf = node.split('/').at(-1);
+  if (leaf.startsWith('SORTIE_')) {
+    const translated = resolveSortieKey(leaf, locale);
+    if (translated) return translated;
+  }
+
+  // AvatarImage store item glyphs (e.g. AvatarImageDogDaysErraGlyph) map to
+  // /Lotus/Language/Glyphs/{Leaf}Name in the game dict (e.g.
+  // DogDaysErraGlyphName → "Dog Days Erra Glyph").  Strip the "AvatarImage"
+  // prefix and "Glyph" suffix to build the dict key.
+  if (leaf.startsWith('AvatarImage')) {
+    const stripped = leaf.replace(/^AvatarImage/, '')
+      .replace(/Glyph$/, '')
+      .replace(/Item$/, '');
+    const glyphKey = `/Lotus/Language/Glyphs/${stripped}Name`;
+    const glyphVal = dict[glyphKey] || dict['/' + glyphKey];
+    if (glyphVal && typeof glyphVal === 'string' && !glyphVal.startsWith('/Lotus/')) {
+      return clean(glyphVal);
+    }
+  }
+
   const entry = ERg[node]
   if (entry && entry.name) {
     const res = dict[entry.name] || dict['/' + entry.name]
@@ -223,19 +252,19 @@ export function resolveNode(node, dict, ERg) {
   }
 
   const last = node.split('/').at(-1)
-  if (GeneralOverrides[last]) return GeneralOverrides[last]
+  // GeneralOverrides may contain either a plain label or a DE dict path.
+  // If it's a dict path, resolve it through the dict for proper locale output.
+  if (GeneralOverrides[last]) {
+    const ov = GeneralOverrides[last]
+    if (ov.startsWith('/')) return clean(dict[ov] || dict['/' + ov] || ov)
+    return ov
+  }
   if (DescriptionOverrides[last]) return DescriptionOverrides[last]
   if (MAPPING_TYPES[last]) return MAPPING_TYPES[last]
   if (dict[last]) return clean(dict[last])
   if (dict['/' + last]) return clean(dict['/' + last])
 
   // Fallback cleanup
-  if (last.startsWith('SORTIE_MODIFIER_')) {
-    return last.replace('SORTIE_MODIFIER_', '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
-  }
-  if (last.startsWith('SORTIE_BOSS_')) {
-    return last.replace('SORTIE_BOSS_', '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
-  }
   if (last.startsWith('MT_')) {
     return last.replace('MT_', '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
   }
@@ -256,7 +285,7 @@ export function resolveNode(node, dict, ERg) {
  * Resolve a raw mission type value (MT_ code, text alias) to a display name.
  * Wraps resolveNode() and also consults MAPPING_TYPES directly.
  */
-export function resolveMissionType(raw, dict, ERg) {
+export function resolveMissionType(raw, dict, ERg, locale = 'en') {
   if (!raw) return ''
   // The worldstate sends ALLCAPS MT_ codes (MT_SURVIVAL, MT_EXCAVATE,
   // MT_ALCHEMY, MT_CORRUPTION…) but DE ships the dict keys PascalCase
@@ -279,7 +308,7 @@ export function resolveMissionType(raw, dict, ERg) {
     }
     return english
   }
-  const resolved = resolveNode(raw, dict, ERg)
+  const resolved = resolveNode(raw, dict, ERg, locale)
   const english = MAPPING_TYPES[resolved]
   if (english !== undefined) {
     const mk = MISSION_NAME_KEYS[english]
@@ -474,7 +503,7 @@ export function resolveChallengeFlavour(path, dict, EC, ERg, allyPath = '') {
  * human-readable comma-separated string (or the chosen separator).
  * Returns null if the reward object is empty / unresolvable.
  */
-export function resolveRewardText(reward, dict, ERg, uniqueNameToName = {}, sep = ', ') {
+export function resolveRewardText(reward, dict, ERg, uniqueNameToName = {}, sep = ', ', locale = 'en') {
   if (!reward) return null
   const cItems = reward.countedItems ?? reward.CountedItems ?? []
   const rawItems = reward.items ?? reward.Items ?? []
@@ -482,9 +511,9 @@ export function resolveRewardText(reward, dict, ERg, uniqueNameToName = {}, sep 
   const resolveNameStr = (name) => {
     if (!name) return ''
     if (name.startsWith('/Lotus/')) {
-      const resolved = resolveItemName(name, dict, uniqueNameToName)
+      const resolved = resolveItemName(name, dict, uniqueNameToName, locale)
       if (resolved && !resolved.startsWith('/Lotus/')) return resolved
-      return resolveNode(name, dict, ERg)
+      return resolveNode(name, dict, ERg, locale)
     }
     return name
   }
@@ -507,9 +536,9 @@ export function resolveRewardText(reward, dict, ERg, uniqueNameToName = {}, sep 
 
   let fb = reward.itemString || reward.asString || null
   if (fb && fb.startsWith('/Lotus/')) {
-    const resolved = resolveItemName(fb, dict, uniqueNameToName)
+    const resolved = resolveItemName(fb, dict, uniqueNameToName, locale)
     if (resolved && !resolved.startsWith('/Lotus/')) return resolved
-    fb = resolveNode(fb, dict, ERg)
+    fb = resolveNode(fb, dict, ERg, locale)
   }
   return fb
 }
@@ -539,8 +568,38 @@ const FOLDER_OVERRIDES = {
 // Riven stat name translations moved to src/lib/i18n/{locale}.json (rivenStats).
 // Generation seed: scripts/riven-stat-translations.seed.json.
 
-// Locale-aware suffix for recipe/blueprint names.
-// The Warframe game dict has no standalone "Blueprint" key, so we map it here.
+// Locale-aware rendering for recipe/blueprint names.
+// The Warframe game dict has no standalone "Blueprint" key, so we map the
+// per-locale pattern here (prefix languages: fr "Schéma de X", es "Plano de X",
+// ru "Чертёж X"; suffix languages: en "X Blueprint", de "X Blaupause",
+// ja "X 設計図"…). Verified against the game dict's own blueprint strings
+// (e.g. /Lotus/Language/JunctionReworkChallenges/Challenge_VMPurchaseRhinoBlueprint_Name).
+const BLUEPRINT_TEMPLATE = {
+  en: '{name} Blueprint',
+  de: '{name} Blaupause',
+  fr: 'Schéma de {name}',
+  es: 'Plano de {name}',
+  it: 'Schema {name}',
+  pt: 'Diagrama do {name}',
+  tr: '{name} Kalıbı',
+  ru: 'Чертёж {name}',
+  uk: 'Кресленик {name}',
+  pl: 'Schemat {name}',
+  tc: '{name} 藍圖',
+  zh: '{name} 蓝图',
+  ko: '{name} 설계도',
+  ja: '{name} 設計図',
+  th: 'พิมพ์เขียว {name}',
+}
+/** Render a localized blueprint name ("Schéma de Latron Wraith", "Latron Wraith Blueprint", …). */
+export function blueprintName(name, locale = 'en') {
+  if (!name) return name
+  return (BLUEPRINT_TEMPLATE[locale] || BLUEPRINT_TEMPLATE.en).replace('{name}', name)
+}
+
+// Legacy suffix-only map kept for inventoryParser (which appends suffixes).
+// New code should use blueprintName() — the game uses PREFIX forms for
+// fr/es/it/pt/ru/uk/pl/th ("Schéma de X", "Plano de X"…), not suffixes.
 const BLUEPRINT_SUFFIX = {
   en: ' Blueprint',
   de: ' Blaupause',
@@ -608,7 +667,11 @@ function nameFromPath(path = '', locale = 'en') {
   }
 
   const stripped = leaf
-    .replace(/(BaseSuit|PowerSuit|PrimeName|OperatorAmp|HoverboardSuit|MotorcyclePowerSuit|MoaPetPowerSuit|Blueprint)$/, '');
+    .replace(/(BaseSuit|PowerSuit|PrimeName|OperatorAmp|HoverboardSuit|MotorcyclePowerSuit|MoaPetPowerSuit|Blueprint)$/, '')
+    // AvatarImage store items (e.g. AvatarImageDogDaysErraGlyph) are plain
+    // glyphs — drop the internal "AvatarImage" prefix so the display name is
+    // "Dog Days Erra Glyph", not "Avatar Image Dog Days Erra Glyph".
+    .replace(/^AvatarImage/, '');
   const name = splitPascal(stripped).trim() || leaf;
   return leaf.endsWith('Blueprint') && !name.endsWith('Blueprint')
     ? name + (BLUEPRINT_SUFFIX[locale] ?? ' Blueprint')
@@ -626,7 +689,7 @@ export function resolveItemName(path, dict, uniqueNameToName, locale = 'en') {
   if (!path) return ''
 
   const isBlueprint = path.includes('/Recipes/') || path.endsWith('Blueprint');
-  const bpSuffix = BLUEPRINT_SUFFIX[locale] ?? ' Blueprint';
+  const isWeaponPart = path.includes('/WeaponParts/') || PART_SUFFIX_RE.test(path.split('/').pop() || '');
 
   // Handle StoreItem paths by trying to resolve the actual item
   let actualPath = path;
@@ -634,12 +697,15 @@ export function resolveItemName(path, dict, uniqueNameToName, locale = 'en') {
     actualPath = path.replace('/StoreItems/', '/');
   }
 
+  // wfcd names are ENGLISH display names, not dict keys. Remember them as a
+  // last-resort fallback, but keep searching for a localized dict entry first.
+  let englishFallback = null;
   const lookup = (p) => {
     if (!uniqueNameToName || !uniqueNameToName[p]) return null;
     const locKey = uniqueNameToName[p];
     const res = dict[locKey] || dict['/' + locKey];
     if (res && !res.startsWith('/Lotus/')) return clean(res);
-    if (locKey && !locKey.startsWith('/Lotus/')) return clean(locKey);
+    if (locKey && !locKey.startsWith('/Lotus/') && !englishFallback) englishFallback = clean(locKey);
     return null;
   };
 
@@ -658,15 +724,30 @@ export function resolveItemName(path, dict, uniqueNameToName, locale = 'en') {
     if (d1 && typeof d1 === 'string' && !d1.startsWith('/Lotus/')) resolved = clean(d1);
   }
 
+  // 3b. Weapon-part blueprints: /Lotus/Types/Recipes/Weapons/WeaponParts/XxxBarrel
+  //     → /Lotus/Language/Menu/CraftingComponent_XxxBarrel (localized part name,
+  //     e.g. fr "Snipetron Vandal - Canon" for SnipetronVandalBarrel). This is
+  //     already the game's complete localized name — return it as-is, no
+  //     blueprint template on top.
+  if (!resolved && isWeaponPart) {
+    const leaf = path.split('/').pop().replace(/StoreItem$/i, '');
+    const compKey = `/Lotus/Language/Menu/CraftingComponent_${leaf}`;
+    const compVal = dict[compKey] || dict['/' + compKey] || dict[compKey.replace(/^\//, '')];
+    if (compVal && typeof compVal === 'string' && !compVal.startsWith('/Lotus/')) return clean(compVal);
+  }
 
   // 4. Try matching dict keys by leaf name (for StoreItem paths that follow
   //    the pattern /Lotus/Language/{Category}/{Leaf}Name)
   if (!resolved) {
     const leaf = path.split('/').pop();
-    const leafNorm = leaf.replace(/StoreItem$/i, '').toLowerCase();
+    const leafNorm = leaf.replace(/StoreItem$/i, '').replace(/Blueprint$/i, '').toLowerCase();
     for (const [key, val] of Object.entries(dict)) {
-      if (typeof val !== 'string' || val.startsWith('/Lotus/') || !key.endsWith('Name')) continue;
-      if (key.split('/').pop().replace(/Name$/, '').toLowerCase() === leafNorm) {
+      if (typeof val !== 'string' || val.startsWith('/Lotus/')) continue;
+      const keyLeaf = key.split('/').pop();
+      // Prefer Name-suffixed keys, but also match bare leaf keys
+      // (e.g. /Lotus/Language/Events/WaterFightBucks → "Nakak Pearls").
+      const keyNorm = keyLeaf.replace(/Name$/, '').toLowerCase();
+      if (keyNorm === leafNorm && (keyLeaf.endsWith('Name') || !key.includes('/Menu/CraftingComponent_'))) {
         resolved = clean(val);
         break;
       }
@@ -689,6 +770,9 @@ export function resolveItemName(path, dict, uniqueNameToName, locale = 'en') {
     }
   }
 
+  // 4c. English wfcd name as fallback (only if no localized dict entry found)
+  if (!resolved && englishFallback) resolved = englishFallback;
+
   // 5. nameFromPath (fallback)
   if (!resolved) {
     const n = nameFromPath(actualPath, locale);
@@ -697,8 +781,32 @@ export function resolveItemName(path, dict, uniqueNameToName, locale = 'en') {
 
   if (!resolved) resolved = clean(path);
 
-  if (isBlueprint && !resolved.toLowerCase().includes('blueprint') && !resolved.toLowerCase().includes(bpSuffix.trim().toLowerCase())) {
-    return resolved + bpSuffix;
+  // Localized blueprint rendering. The game uses per-locale patterns:
+  // prefix ("Schéma de X" fr, "Plano de X" es, "Чертёж X" ru) or suffix
+  // ("X Blueprint" en, "X Blaupause" de, "X 設計図" ja…). Weapon parts resolve
+  // to already-localized full names (CraftingComponent_ keys) — skip the
+  // template unless the resolved name is still the raw English blueprint form.
+  if (isBlueprint) {
+    const tpl = BLUEPRINT_TEMPLATE[locale] || BLUEPRINT_TEMPLATE.en;
+    const marker = tpl.replace('{name}', '').trim().toLowerCase();
+    const alreadyLocalized = marker
+      ? resolved.toLowerCase().includes(marker)
+      : resolved.toLowerCase().includes('blueprint');
+    if (!alreadyLocalized) {
+      // nameFromPath appends the legacy suffix map (" Latron Wraith Plan");
+      // strip any legacy blueprint word before applying the per-locale
+      // template so we never get "Schéma de Latron Wraith Plan".
+      const legacyWords = Object.values(BLUEPRINT_SUFFIX).map(s => s.trim()).filter(Boolean);
+      let base = resolved;
+      for (const w of legacyWords) {
+        const esc = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (new RegExp(`\\s*${esc}$`, 'i').test(base)) {
+          base = base.replace(new RegExp(`\\s*${esc}$`, 'i'), '').trim();
+          break;
+        }
+      }
+      return blueprintName(base, locale);
+    }
   }
 
   return resolved;

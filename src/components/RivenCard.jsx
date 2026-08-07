@@ -210,7 +210,7 @@ export default function RivenCard({ riven, framesPath, iconsPath, width = 180, e
       <div className="absolute top-1 right-1" style={{ zIndex: 10 }}>
           <span className="flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-600 text-zinc-300">
             {iconSrc('Platinum') && <img src={iconSrc('Platinum')} className="w-3 h-3 object-contain" alt="" />}
-            {Math.round(estimate.price)}p
+            {t('riven_card.plat_short', { p: Math.round(estimate.price) })}
           </span>
         </div>
       }
@@ -227,9 +227,9 @@ export default function RivenCard({ riven, framesPath, iconsPath, width = 180, e
               <div className="text-kronos-dim text-center font-bold uppercase tracking-wider">{t('ui.riven_card.avg_value')}</div>
               <div className="text-kronos-dim text-center font-bold uppercase tracking-wider">{t('ui.riven_card.your_value')}</div>
               <div className="text-kronos-dim text-center font-bold uppercase tracking-wider">{t('ui.riven_card.reroll_potential')}</div>
-              <div className="text-center font-bold">{estimate.weapon_rank != null ? `#${estimate.weapon_rank}/${estimate.total_weapons ?? '?'}` : 'N/A'}</div>
-              <div className="text-center font-bold">{Math.round(estimate.expected_value)}p</div>
-              <div className="text-center font-bold text-yellow-400">{Math.round(estimate.price)}p</div>
+              <div className="text-center font-bold">{estimate.weapon_rank != null ? `#${estimate.weapon_rank}/${estimate.total_weapons ?? '?'}` : t('riven_card.na')}</div>
+              <div className="text-center font-bold">{t('riven_card.plat_short', { p: Math.round(estimate.expected_value) })}</div>
+              <div className="text-center font-bold text-yellow-400">{t('riven_card.plat_short', { p: Math.round(estimate.price) })}</div>
               <div className={`text-center font-bold ${(1 - (estimate.probability_stagnant ?? 0.5)) * 100 > 50 ? 'text-green-400' : 'text-red-400'}`}>
                 {Math.round((1 - (estimate.probability_stagnant ?? 0.5)) * 100)}%
               </div>
@@ -237,9 +237,9 @@ export default function RivenCard({ riven, framesPath, iconsPath, width = 180, e
             {(() => {
             const wr = estimate.weapon_rank ?? 999;
             const total = estimate.total_weapons ?? 1;
-            const tier = wr <= total * 0.2 ? 'Meta' : wr <= total * 0.5 ? 'Popular' : wr <= total * 0.7 ? 'Average' : wr <= total * 0.9 ? 'Niche' : 'Unpopular';
-            const roll = estimate.grade === 'S' ? 'perfect' : estimate.grade === 'A' ? 'Good' : estimate.grade === 'B' ? 'Average' : estimate.grade === 'C' ? 'Mediocre' : 'Bad';
-            return <div className="text-center text-[11px] font-bold text-kronos-accent leading-snug">{tier} weapon, {roll}{t('riven_card.rolls')}</div>;
+            const tier = wr <= total * 0.2 ? t('riven_card.tier_meta') : wr <= total * 0.5 ? t('riven_card.tier_popular') : wr <= total * 0.7 ? t('riven_card.tier_average') : wr <= total * 0.9 ? t('riven_card.tier_niche') : t('riven_card.tier_unpopular');
+            const roll = estimate.grade === 'S' ? t('riven_card.roll_perfect') : estimate.grade === 'A' ? t('riven_card.roll_good') : estimate.grade === 'B' ? t('riven_card.roll_average') : estimate.grade === 'C' ? t('riven_card.roll_mediocre') : t('riven_card.roll_bad');
+            return <div className="text-center text-[11px] font-bold text-kronos-accent leading-snug">{t('riven_card.tier_label', { tier, roll })}</div>;
           })()}
           </div>
         </div>

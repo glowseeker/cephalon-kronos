@@ -267,7 +267,7 @@ export default function Mastery() {
             </span>
             {item.earnedXP > 0 &&
         <span className="text-[10px] text-kronos-dim uppercase font-bold truncate w-full px-1">
-                ({item.earnedXP.toLocaleString()}{t('mastery.mp_close')}
+                ({item.earnedXP.toLocaleString()} {t('mastery.mp_close')}
         </span>
         }
           </div>
@@ -343,7 +343,7 @@ export default function Mastery() {
                   <div>
                     <div className="text-[10px] text-kronos-accent uppercase font-black tracking-[0.3em] mb-1 opacity-80">{t('mastery.current_rank')}</div>
                     <h2 className="text-4xl font-black text-kronos-text leading-none tracking-tight">
-                      {currentRank > 30 ? `Legendary Rank ${currentRank - 30}` : `Mastery Rank ${currentRank}`}
+                      {currentRank > 30 ? t('mastery.legendary_rank', { rank: currentRank - 30 }) : t('mastery.mastery_rank', { rank: currentRank })}
                     </h2>
                     <p className="text-lg text-kronos-dim mt-1 font-bold italic tracking-wider flex items-center gap-2">
                       {currentTitle}
@@ -375,7 +375,7 @@ export default function Mastery() {
                   style={{ left: `${Math.min(Math.max(progress, 15), 85)}%` }}>
                   
                     <div className="text-xs font-black text-kronos-accent uppercase whitespace-nowrap bg-kronos-bg/80 backdrop-blur-md px-3 py-1 rounded border border-kronos-accent/30 mb-1 shadow-lg">
-                      {totalXP.toLocaleString()} mastery | {xpUntilNext.toLocaleString()}{t('checklist.left')}
+                      {totalXP.toLocaleString()} {t('mastery.mp_short')} | {xpUntilNext.toLocaleString()} {t('checklist.left')}
                   </div>
                     <div className="w-px h-3 bg-kronos-accent/60" />
                   </div>
@@ -438,9 +438,9 @@ export default function Mastery() {
           
             <div className="p-6 border-b border-kronos-panel flex items-center justify-between bg-kronos-panel/20">
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-kronos-accent">{selectedCategory.label}{t('mastery.details')}</h3>
+                <h3 className="text-xl font-bold text-kronos-accent">{selectedCategory.label} {t('mastery.details')}</h3>
                 <p className="text-sm text-kronos-dim">
-                  {selectedCategory.mastered} / {selectedCategory.total}{t('mastery.completed')}
+                  {selectedCategory.mastered} / {selectedCategory.total} {t('mastery.completed')}
               </p>
               </div>
 
@@ -519,7 +519,7 @@ export default function Mastery() {
 
                               <div className="text-[10px] font-mono text-right">
                                 {hasXP ?
-                            <span className="text-kronos-accent">+{node.mastery_xp.toLocaleString()}{t('mastery.mp')}</span> :
+                            <span className="text-kronos-accent">+{t('mastery.mp_value', { xp: node.mastery_xp.toLocaleString() })}</span> :
 
                             <span className="text-kronos-dim/30 italic uppercase text-[9px]">{t('mastery.non_mastery')}</span>
                             }
@@ -552,9 +552,9 @@ export default function Mastery() {
                       </div>
                       {/* MODIFIED: Now shows rank and XP */}
                       <div className="text-xs font-mono text-kronos-dim text-right">
-                        <div>{t('ui.comp.rank')}{item.rank || 0}</div>
+                        <div>{t('ui.comp.rank')} {item.rank || 0}</div>
                         <div className="text-[10px] opacity-75">
-                          {item.mastery_xp ? `${item.mastery_xp.toLocaleString()} MP` : '0 MP'}
+                          {item.mastery_xp ? t('mastery.mp_value', { xp: item.mastery_xp.toLocaleString() }) : t('mastery.mp_value', { xp: 0 })}
                         </div>
                       </div>
                     </div>

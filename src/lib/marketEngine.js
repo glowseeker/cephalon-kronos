@@ -134,7 +134,13 @@ export async function getPricesBatch(items, onProgress) {
       results[item.uniqueName] = 0;
       continue;
     }
+    // Relic rewards / store items ship with a /StoreItems/ path prefix that
+    // the relics.run item catalog strips (gameRefs use the /Lotus/... path),
+    // so try the raw key, the normalized key, then the display name.
     let price = priceMap.get(item.uniqueName);
+    if (!price && item.uniqueName?.includes('/StoreItems/')) {
+      price = priceMap.get(item.uniqueName.replace('/StoreItems/', '/'));
+    }
     if (!price) price = priceMap.get(item.name) ?? 0;
     results[item.uniqueName] = price;
     if (onProgress) onProgress({ current: ++done, total, label: item.name });

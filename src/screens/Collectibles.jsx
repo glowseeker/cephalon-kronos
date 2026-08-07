@@ -6,29 +6,29 @@ import { useMonitoring } from '../contexts/MonitoringContext'
 
 const CATEGORIES = [
   // Series
-  { type: 'series', key: '/Lotus/Objects/Orokin/Props/CollectibleSeriesOne', label: 'Kuria', icon: 'IconOrokitty.png', color: '#d4a843' },
-  { type: 'series', key: '/Lotus/Types/Lore/Fragments/DuviriFragments/DuviriCollectibleDeco', label: 'Lost Islands of Duviri', icon: 'DuviriFragment.png', color: '#7ec8e3' },
-  { type: 'series', key: '/Lotus/Types/Lore/Fragments/DuviriMITWFragments/DuviriMITWCollectibleDeco', label: 'Isleweaver Fragments', icon: 'IsleweaverFragment.png', color: '#c084fc' },
+  { type: 'series', key: '/Lotus/Objects/Orokin/Props/CollectibleSeriesOne', labelKey: 'collectibles.category.kuria', icon: 'IconOrokitty.png', color: '#d4a843' },
+  { type: 'series', key: '/Lotus/Types/Lore/Fragments/DuviriFragments/DuviriCollectibleDeco', labelKey: 'collectibles.category.lost_islands', icon: 'DuviriFragment.png', color: '#7ec8e3' },
+  { type: 'series', key: '/Lotus/Types/Lore/Fragments/DuviriMITWFragments/DuviriMITWCollectibleDeco', labelKey: 'collectibles.category.isleweaver', icon: 'IsleweaverFragment.png', color: '#c084fc' },
 
   // Open World
-  { type: 'marker', key: 'EidolonPlainsDiscoverable', label: 'Plains of Eidolon Caves', icon: 'IconPlainsOfEidolon.png', color: '#4ade80' },
-  { type: 'marker', key: 'OrbVallisCaveDiscoverable', label: 'Orb Vallis Caves', icon: 'VallisLandscape.png', color: '#60a5fa' },
-  { type: 'marker', key: 'FortunaMarker', label: 'Fortuna', icon: 'FortunaTown.png', color: '#fbbf24' },
-  { type: 'marker', key: 'NecraliskMarker', label: 'Necralisk', icon: 'IconNecralisk.png', color: '#c084fc' },
+  { type: 'marker', key: 'EidolonPlainsDiscoverable', labelKey: 'collectibles.category.eidolon_caves', icon: 'IconPlainsOfEidolon.png', color: '#4ade80' },
+  { type: 'marker', key: 'OrbVallisCaveDiscoverable', labelKey: 'collectibles.category.vallis_caves', icon: 'VallisLandscape.png', color: '#60a5fa' },
+  { type: 'marker', key: 'FortunaMarker', labelKey: 'collectibles.category.fortuna', icon: 'FortunaTown.png', color: '#fbbf24' },
+  { type: 'marker', key: 'NecraliskMarker', labelKey: 'collectibles.category.necralisk', icon: 'IconNecralisk.png', color: '#c084fc' },
 
   // Lore Fragments
-  { type: 'fragment', label: 'Somachord Tunes', wikiTotal: 55, icon: 'IconSomachord.png', color: '#f472b6', match: (type) => type.includes('/MusicFragments/') },
-  { type: 'fragment', label: 'Frame Fighter Fragments', wikiTotal: 42, icon: 'IconFrameFighter.png', color: '#fb923c', match: (type) => type.includes('/FrameFighterFragments/') },
-  { type: 'fragment', label: 'Cephalon Fragments', wikiTotal: 43, icon: 'IconCephalonFragment.png', color: '#60a5fa', match: (type) => type.startsWith('/Lotus/Types/Lore/Fragments/') && !type.includes('/Eidolon') && !type.includes('/Music') && !type.includes('/FrameFighter') && !type.includes('/LoreCard') && !type.includes('/Solaris') && !type.includes('/GrineerGhoul') && !type.includes('/Albrect') && !type.includes('/Revenant') && !type.includes('/CorpusRelief') && !type.includes('/GasCity') && !type.includes('/GlassFragments') },
-  { type: 'fragment', label: 'Leverian Prex Cards', wikiTotal: 50, icon: 'IconTarotCards.png', color: '#a78bfa', match: (type) => type.includes('/LoreCardFragments/') },
-  { type: 'fragment', label: 'Thousand-Year Fish', wikiTotal: 20, icon: 'GlassFish.png', color: '#34d399', match: (type) => type.includes('/EidolonFragments/') },
-  { type: 'fragment', label: 'Encrypted Journal Fragments', wikiTotal: 13, icon: 'GhoulDataFragment.png', color: '#a3e635', match: (type) => type.includes('/GrineerGhoulFragments/') },
-  { type: 'fragment', label: 'Glass Shard Fragments', wikiTotal: 5, icon: 'GlassFragment.png', color: '#6ee7b7', match: (type) => type.includes('/GlassFragments/') },
-  { type: 'fragment', label: 'Fortuna Fragments', wikiTotal: 35, icon: 'DebtTokenD.png', color: '#facc15', match: (type) => type.includes('/SolarisFragments/') },
-  { type: 'fragment', label: "Albrecht's Notes", wikiTotal: 23, icon: 'Grimoire.png', color: '#818cf8', match: (type) => type.includes('/AlbrectFragments/') },
-  { type: 'fragment', label: 'Nakak Memory Fragments', wikiTotal: 3, icon: 'RevenantQuestKeyChain.png', color: '#c084fc', match: (type) => type.includes('/RevenantFragments/') },
-  { type: 'fragment', label: 'The Tenets', wikiTotal: 11, icon: 'IconCorpusRelief.png', color: '#67e8f9', match: (type) => type.includes('/CorpusReliefFragments/') },
-  { type: 'fragment', label: 'Partnership Fragments', wikiTotal: 8, icon: 'IconGasCityLoreFragment.png', color: '#22d3ee', match: (type) => type.includes('/GasCityFragments/') },
+  { type: 'fragment', labelKey: 'collectibles.category.somachord', wikiTotal: 55, icon: 'IconSomachord.png', color: '#f472b6', match: (type) => type.includes('/MusicFragments/') },
+  { type: 'fragment', labelKey: 'collectibles.category.frame_fighter', wikiTotal: 42, icon: 'IconFrameFighter.png', color: '#fb923c', match: (type) => type.includes('/FrameFighterFragments/') },
+  { type: 'fragment', labelKey: 'collectibles.category.cephalon', wikiTotal: 43, icon: 'IconCephalonFragment.png', color: '#60a5fa', match: (type) => type.startsWith('/Lotus/Types/Lore/Fragments/') && !type.includes('/Eidolon') && !type.includes('/Music') && !type.includes('/FrameFighter') && !type.includes('/LoreCard') && !type.includes('/Solaris') && !type.includes('/GrineerGhoul') && !type.includes('/Albrect') && !type.includes('/Revenant') && !type.includes('/CorpusRelief') && !type.includes('/GasCity') && !type.includes('/GlassFragments') },
+  { type: 'fragment', labelKey: 'collectibles.category.leverian_prex', wikiTotal: 50, icon: 'IconTarotCards.png', color: '#a78bfa', match: (type) => type.includes('/LoreCardFragments/') },
+  { type: 'fragment', labelKey: 'collectibles.category.thousand_year_fish', wikiTotal: 20, icon: 'GlassFish.png', color: '#34d399', match: (type) => type.includes('/EidolonFragments/') },
+  { type: 'fragment', labelKey: 'collectibles.category.encrypted_journal', wikiTotal: 13, icon: 'GhoulDataFragment.png', color: '#a3e635', match: (type) => type.includes('/GrineerGhoulFragments/') },
+  { type: 'fragment', labelKey: 'collectibles.category.glass_shard', wikiTotal: 5, icon: 'GlassFragment.png', color: '#6ee7b7', match: (type) => type.includes('/GlassFragments/') },
+  { type: 'fragment', labelKey: 'collectibles.category.fortuna_fragments', wikiTotal: 35, icon: 'DebtTokenD.png', color: '#facc15', match: (type) => type.includes('/SolarisFragments/') },
+  { type: 'fragment', labelKey: 'collectibles.category.albrechts_notes', wikiTotal: 23, icon: 'Grimoire.png', color: '#818cf8', match: (type) => type.includes('/AlbrectFragments/') },
+  { type: 'fragment', labelKey: 'collectibles.category.nakak', wikiTotal: 3, icon: 'RevenantQuestKeyChain.png', color: '#c084fc', match: (type) => type.includes('/RevenantFragments/') },
+  { type: 'fragment', labelKey: 'collectibles.category.the_tenets', wikiTotal: 11, icon: 'IconCorpusRelief.png', color: '#67e8f9', match: (type) => type.includes('/CorpusReliefFragments/') },
+  { type: 'fragment', labelKey: 'collectibles.category.partnership', wikiTotal: 8, icon: 'IconGasCityLoreFragment.png', color: '#22d3ee', match: (type) => type.includes('/GasCityFragments/') },
 ]
 
 function countBits(n) {
@@ -37,7 +37,7 @@ function countBits(n) {
   return c
 }
 
-function Subpanel({ cat, items, onClose }) {
+function Subpanel({ cat, items, onClose, t }) {
   const panelRef = useRef(null)
 
   useEffect(() => {
@@ -60,8 +60,8 @@ function Subpanel({ cat, items, onClose }) {
             <div className="sticky top-0 z-10 flex items-center gap-4 px-5 py-4 bg-[var(--color-panel)] border-b border-white/10">
               {cat.icon && <img src={cat.icon} alt="" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />}
               <div className="flex-1 min-w-0">
-                <p className="text-lg font-bold text-white truncate">{cat.label}</p>
-                <p className="text-sm" style={{ color: cat.color }}>{cat.count} / {cat.total}</p>
+                <p className="text-lg font-bold text-white truncate">{(cat.label || t(cat.labelKey))}</p>
+                <p className="text-sm" style={{ color: cat.color }}>{t('collectibles.count_of_total', { count: cat.count, total: cat.total })}</p>
               </div>
               <button onClick={onClose} className="text-white/50 hover:text-white p-1">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -86,7 +86,7 @@ function Subpanel({ cat, items, onClose }) {
   )
 }
 
-function ProgressCard({ icon, label, subtitle, count, total, color, onClick }) {
+function ProgressCard({ icon, label, subtitle, count, total, color, onClick, t }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0
   return (
     <div
@@ -109,7 +109,7 @@ function ProgressCard({ icon, label, subtitle, count, total, color, onClick }) {
           {subtitle && <p className="text-[10px] text-kronos-dim leading-tight">{subtitle}</p>}
           {total > 0 && (
             <>
-              <p className="text-xs font-bold mt-1" style={{ color }}>{count} / {total}</p>
+              <p className="text-xs font-bold mt-1" style={{ color }}>{t('collectibles.count_of_total', { count, total })}</p>
               <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden mt-1">
                 <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color, boxShadow: `0 0 4px ${color}66` }} />
               </div>
@@ -157,7 +157,7 @@ export default function Collectibles() {
     const card = {
       key: cat.key,
       icon: cat.icon && uiPath ? convertFileSrc(`${uiPath}/${cat.icon}`) : null,
-      label: cat.label,
+      label: cat.label || t(cat.labelKey),
       color: cat.color,
       count: cs?.Count ?? 0,
       total: cs?.ReqScans ?? 0,
@@ -165,7 +165,7 @@ export default function Collectibles() {
     return {
       ...card,
       onClick: () => openSubpanel(card, () => [
-        { key: 'placeholder', name: `Found ${card.count} of ${card.total}`, found: true },
+        { key: 'placeholder', name: t('collectibles.found_of_total', { found: card.count, total: card.total }), found: true },
       ]),
     }
   }), [collectibleSeries, uiPath, openSubpanel])
@@ -176,8 +176,8 @@ export default function Collectibles() {
     const card = {
       key: cat.key,
       icon: cat.icon && uiPath ? convertFileSrc(`${uiPath}/${cat.icon}`) : null,
-      label: cat.label,
-      subtitle: 'areas discovered',
+      label: cat.label || t(cat.labelKey),
+      subtitle: t('collectibles.areas_discovered'),
       color: cat.color,
       count: m ? (m.discoveryState || []).reduce((s, v) => s + countBits(v), 0) : 0,
       total,
@@ -185,14 +185,14 @@ export default function Collectibles() {
     return {
       ...card,
       onClick: () => openSubpanel(card, () => {
-        if (!m || !m.discoveryState) return [{ key: 'placeholder', name: `Caves not yet loaded from inventory`, found: false }]
+        if (!m || !m.discoveryState) return [{ key: 'placeholder', name: t('collectibles.caves_not_loaded'), found: false }]
         const items = []
         m.discoveryState.forEach((bits, areaIdx) => {
           for (let bit = 0; bit < 32; bit++) {
-            if (bits & (1 << bit)) items.push({ key: `area${areaIdx}_bit${bit}`, name: `Area ${areaIdx + 1}, Bit ${bit + 1}`, found: true })
+            if (bits & (1 << bit)) items.push({ key: `area${areaIdx}_bit${bit}`, name: t('collectibles.area_bit', { area: areaIdx + 1, bit: bit + 1 }), found: true })
           }
         })
-        return items.length ? items : [{ key: 'placeholder', name: `None discovered`, found: false }]
+        return items.length ? items : [{ key: 'placeholder', name: t('collectibles.none_discovered'), found: false }]
       }),
     }
   }), [discoveredMarkers, uiPath, openSubpanel])
@@ -206,9 +206,9 @@ export default function Collectibles() {
     }
     return cats.map((cat) => {
       const card = {
-        key: cat.label,
+        key: cat.labelKey || cat.label,
         icon: cat.icon && uiPath ? convertFileSrc(`${uiPath}/${cat.icon}`) : null,
-        label: cat.label,
+        label: cat.label || t(cat.labelKey),
         color: cat.color,
         count: cat.found,
         total: cat.wikiTotal,
@@ -227,7 +227,7 @@ export default function Collectibles() {
               })
             }
           }
-          return items.length ? items : [{ key: 'placeholder', name: `None collected yet`, found: false }]
+          return items.length ? items : [{ key: 'placeholder', name: t('collectibles.none_collected'), found: false }]
         }),
       }
     })
@@ -236,11 +236,11 @@ export default function Collectibles() {
   return (
     <PageLayout titleKey="screen.collectibles">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 pb-4">
-        {seriesCards.map(({ key, ...card }) => <ProgressCard key={key} {...card} />)}
-        {markerCards.map(({ key, ...card }) => <ProgressCard key={key} {...card} />)}
-        {fragmentCards.map(({ key, ...card }) => <ProgressCard key={key} {...card} />)}
+        {seriesCards.map(({ key, ...card }) => <ProgressCard key={key} {...card} t={t} />)}
+        {markerCards.map(({ key, ...card }) => <ProgressCard key={key} {...card} t={t} />)}
+        {fragmentCards.map(({ key, ...card }) => <ProgressCard key={key} {...card} t={t} />)}
       </div>
-      <Subpanel cat={selectedCat} items={subpanelItems} onClose={closeSubpanel} />
+      <Subpanel cat={selectedCat} items={subpanelItems} onClose={closeSubpanel} t={t} />
     </PageLayout>
   )
 }

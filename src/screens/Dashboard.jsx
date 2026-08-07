@@ -142,7 +142,7 @@ function GradeBadge({ grade, className = "" }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { t } = useUi()
+  const { t, locale } = useUi()
   const {
     exportData, worldState, spIncursions, arbys, archonModifiers, arbitrationModifiers,
     dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, arbyTiers,
@@ -197,7 +197,7 @@ export default function Dashboard() {
       const allDays = (cal.days || []).map((d) => {
         const dDate = new Date(jan1);
         dDate.setDate(d.day);
-        const mName = dDate.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
+        const mName = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'][dDate.getMonth()].toUpperCase();
         return { ...d, date: dDate, monthName: mName };
       }).sort((a, b) => a.day - b.day);
 
@@ -267,16 +267,37 @@ export default function Dashboard() {
   const currentArby = useMemo(() => currentArbyRaw ? { ...currentArbyRaw, grade: arbyTiers?.[currentArbyRaw.node] || 'F' } : null, [currentArbyRaw, arbyTiers]);
   const upcomingArbies = useMemo(() => getUpcomingArbies(arbys, ERg, dict, arbyTiers, 5), [arbys, ERg, dict, arbyTiers]);
 
+  // ── Timers (world-state cycles) ──────────────────────────────────────────────
+  // State labels come from the worldstate API as EN enums (Day/Night/Warm/Cold/
+  // Fass/Vome, Zariman factions, Duviri emotions).  The game dicts don't ship
+  // these strings, so we map them through i18n keys.
+  const timerStates = {
+    Day: t('ui.dashboard.timer_day'),
+    Night: t('ui.dashboard.timer_night'),
+    Warm: t('ui.dashboard.timer_warm'),
+    Cold: t('ui.dashboard.timer_cold'),
+    Fass: t('ui.dashboard.timer_fass'),
+    Vome: t('ui.dashboard.timer_vome'),
+    Sorrow: t('ui.dashboard.timer_sorrow'),
+    Fear: t('ui.dashboard.timer_fear'),
+    Joy: t('ui.dashboard.timer_joy'),
+    Anger: t('ui.dashboard.timer_anger'),
+    Envy: t('ui.dashboard.timer_envy'),
+    Corpus: t('ui.dashboard.timer_corpus'),
+    Grineer: t('ui.dashboard.timer_grineer'),
+    Reset: t('ui.dashboard.timer_reset'),
+  }
+  const localizeTimerState = (raw) => timerStates[raw] ?? raw
   const timers = [
-  { label: 'Cetus', data: worldstate?.cetusCycle, getState: (d) => d.state },
-  { label: 'Orb Vallis', data: worldstate?.vallisCycle, getState: (d) => d.state },
+  { label: t('ui.dashboard.timers_cetus'), data: worldstate?.cetusCycle, getState: (d) => localizeTimerState(d.state) },
+  { label: t('ui.dashboard.timers_orb_vallis'), data: worldstate?.vallisCycle, getState: (d) => localizeTimerState(d.state) },
   {
-    label: 'Cambion Drift', data: worldstate?.cambionCycle, getState: (d) =>
-    typeof d.active === 'boolean' ? d.active ? 'Fass' : 'Vome' : d.active || d.state || '?'
+    label: t('ui.dashboard.timers_cambion_drift'), data: worldstate?.cambionCycle, getState: (d) =>
+    typeof d.active === 'boolean' ? (d.active ? localizeTimerState('Fass') : localizeTimerState('Vome')) : localizeTimerState(d.active || d.state || '?')
   },
-  { label: 'Zariman', data: worldstate?.zarimanCycle, getState: (d) => d.state },
-  { label: 'Duviri', data: worldstate?.duviriCycle, getState: (d) => d.state },
-  { label: 'Daily Reset', data: { expiry: new Date(new Date().setUTCHours(24, 0, 0, 0)) }, getState: () => 'Reset' }].
+  { label: t('ui.dashboard.timers_zariman'), data: worldstate?.zarimanCycle, getState: (d) => localizeTimerState(d.state) },
+  { label: t('ui.dashboard.timers_duviri'), data: worldstate?.duviriCycle, getState: (d) => localizeTimerState(d.state) },
+  { label: t('ui.dashboard.timers_daily_reset'), data: { expiry: new Date(new Date().setUTCHours(24, 0, 0, 0)) }, getState: () => localizeTimerState('Reset') }].
   filter((t) => t.data);
 
   const spIncursionNodes = useMemo(() => {
@@ -284,9 +305,9 @@ export default function Dashboard() {
   }, [spIncursions]);
 
   const fissureTabs = [
-  { id: 'normal', label: 'Normal' },
-  { id: 'steel', label: 'Steel Path' },
-  { id: 'storm', label: 'Void Storm' }];
+  { id: 'normal', label: t('ui.dashboard.fissure_normal') },
+  { id: 'steel', label: t('ui.dashboard.fissure_steel_path') },
+  { id: 'storm', label: t('ui.dashboard.fissure_void_storm') }];
 
 
   const visibleFissures = useMemo(() => {
@@ -308,8 +329,8 @@ export default function Dashboard() {
   }, [worldstate, fissureTab]);
 
   const archimedeaTabs = [
-  { id: 'deep', label: 'Deep' },
-  { id: 'temporal', label: 'Temporal' }];
+  { id: 'deep', label: t('ui.dashboard.archimedea_deep') },
+  { id: 'temporal', label: t('ui.dashboard.archimedea_temporal') }];
 
 
   const bountyTabs = useMemo(() => [
@@ -413,8 +434,7 @@ export default function Dashboard() {
               </div>
               {it.desc && <p className="text-xs text-kronos-text/90 leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.desc}</p>}
               {it.obj &&
-            <p className="text-xs font-medium text-kronos-accent mt-auto leading-tight break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{t('dashboard.challenge')}
-              {it.obj}
+            <p className="text-xs font-medium text-kronos-accent mt-auto leading-tight break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{t('dashboard.challenge')} {it.obj}
                 </p>
             }
             </div>
@@ -511,6 +531,11 @@ export default function Dashboard() {
     const effectiveRank = currentRank + Math.floor(standingInLevelRaw / STANDING_PER_LEVEL);
     const standingInLevel = standingInLevelRaw % STANDING_PER_LEVEL;
     const categories = ['Daily', 'Weekly', 'Elite Weekly'];
+    const categoryLabel = (cat) => ({
+      Daily: t('ui.dashboard.challenge_daily'),
+      Weekly: t('ui.dashboard.challenge_weekly'),
+      'Elite Weekly': t('ui.dashboard.challenge_elite_weekly'),
+    }[cat] || cat);
     const grouped = (nw.challenges || []).reduce((acc, c) => {
       let cat = 'Daily';
       if (c.isElite || c.xp >= 7000) cat = 'Elite Weekly';else
@@ -535,10 +560,6 @@ export default function Dashboard() {
               {hasInventory ?
               <>
                   <div className="flex items-center justify-between">
-                    <span className="text-[12px] text-kronos-dim uppercase">{t('ui.comp.rank')}</span>
-                    <span className="text-[14px] font-black text-kronos-accent">{currentRank}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
                     <span className="text-[12px] text-kronos-dim uppercase">{t('ui.dashboard.ends')}</span>
                     <span className="text-[14px] text-kronos-text">{timeRemaining(nw.expiry)}</span>
                   </div>
@@ -550,13 +571,16 @@ export default function Dashboard() {
                     <span className="text-[12px] text-kronos-dim uppercase">{t('ui.dashboard.standing')}</span>
                     <span className="text-[14px] font-black text-kronos-accent">{standingInLevel.toLocaleString()} / {STANDING_PER_LEVEL.toLocaleString()}</span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] text-kronos-dim uppercase">{t('ui.dashboard.rank')}</span>
+                    <span className="text-[14px] font-black text-kronos-accent">{currentRank}</span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-black text-kronos-text">{currentRank}</span>
                     <div className="relative flex-1 h-3 bg-black/40 rounded overflow-hidden">
                       <div
                       className="absolute top-0 left-0 bottom-0 bg-kronos-accent"
                       style={{ width: `${progressPercent}%` }} />
-                    
                     </div>
                     <span className="text-[11px] font-black text-kronos-dim">{currentRank + 1}</span>
                   </div>
@@ -589,7 +613,7 @@ export default function Dashboard() {
                       key={ri}
                       className={`relative flex-shrink-0 transition-all flex flex-col items-center ${isCurrent ? 'ring-2 ring-kronos-accent rounded p-1 m-1' : ''}`}>
                       
-                        <span className={`text-[9px] font-black uppercase mb-1 ${isCurrent ? 'text-kronos-accent' : 'text-kronos-dim/60'}`}>{t('ui.comp.rank')}{ri + 1}</span>
+                        <span className={`text-[9px] font-black uppercase mb-1 ${isCurrent ? 'text-kronos-accent' : 'text-kronos-dim/60'}`}>{ri + 1}</span>
                         <div className={`w-36 h-full flex items-center justify-center ${isUnlocked ? 'grayscale opacity-60' : ''}`}>
                           {r.modFrame ?
                         <ModCard
@@ -597,7 +621,12 @@ export default function Dashboard() {
                             name: r.name,
                             modFrame: r.modFrame,
                             icon: r.iconPath,
-                            image: r.image
+                            image: r.image,
+                            description: r.description,
+                            levelStats: r.levelStats,
+                            category: r.modFrame,
+                            max_rank: 3,
+                            baseDrain: r.baseDrain,
                           }}
                           framesPath={framesPath}
                           cardImagesPath={cardImagesPath}
@@ -634,7 +663,7 @@ export default function Dashboard() {
           <div key={`${cat}-${idx}`} className="bg-kronos-panel/40 p-2 rounded border border-white/5 hover:border-kronos-accent/20 transition-all">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${cat === 'Elite Weekly' ? 'bg-yellow-500/20 text-yellow-400' : cat === 'Weekly' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
-                    {cat}
+                    {categoryLabel(cat)}
                   </span>
                   <span className="text-[10px] text-kronos-accent font-black">{c.xp.toLocaleString()}{t('ui.inventory.sort_xp')}</span>
                 </div>
@@ -702,7 +731,7 @@ export default function Dashboard() {
       <div className="space-y-4 mt-2">
         {Object.entries(groups).map(([cat, choices], idx) =>
         <div key={idx} className="bg-kronos-panel/40 p-2.5 rounded border border-transparent hover:border-kronos-accent/20 transition-all">
-            <p className="text-[11px] font-black text-kronos-accent uppercase mb-2 tracking-widest text-center">{cat}</p>
+            <p className="text-[11px] font-black text-kronos-accent uppercase mb-2 tracking-widest text-center">{cat === 'Steel Path' ? t('ui.dashboard.fissure_steel_path') : t('ui.dashboard.fissure_normal')}</p>
             <div className="flex flex-wrap justify-center gap-2">
               {choices.map((ch, ci) => {
               const img = getCircuitImage(ch);
@@ -751,12 +780,19 @@ export default function Dashboard() {
     if (!cal) return <p className="text-xs text-kronos-dim italic text-center py-4">{t('ui.dashboard.no_1999')}</p>;
 
     const seasonMap = {
-      'CST_WINTER': { name: 'Winter', color: 'text-blue-300' },
-      'CST_SPRING': { name: 'Spring', color: 'text-green-300' },
-      'CST_SUMMER': { name: 'Summer', color: 'text-yellow-300' },
-      'CST_FALL': { name: 'Autumn', color: 'text-orange-300' }
+      'CST_WINTER': { color: 'text-blue-300' },
+      'CST_SPRING': { color: 'text-green-300' },
+      'CST_SUMMER': { color: 'text-yellow-300' },
+      'CST_FALL': { color: 'text-orange-300' }
     };
-    const seasonInfo = seasonMap[cal.season] || { name: cal.season, color: 'text-kronos-accent' };
+    const seasonLabels = {
+      'CST_WINTER': t('ui.dashboard.season_winter'),
+      'CST_SPRING': t('ui.dashboard.season_spring'),
+      'CST_SUMMER': t('ui.dashboard.season_summer'),
+      'CST_FALL': t('ui.dashboard.season_fall')
+    };
+    const seasonInfo = seasonMap[cal.season] || { color: 'text-kronos-accent' };
+    const seasonName = seasonLabels[cal.season] || cal.season;
 
     const year = new Date().getFullYear();
     const jan1 = new Date(year, 0, 1);
@@ -764,7 +800,7 @@ export default function Dashboard() {
     const allDays = (cal.days || []).map((d) => {
       const dDate = new Date(jan1);
       dDate.setDate(d.day);
-      const mName = dDate.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
+      const mName = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'][dDate.getMonth()].toUpperCase();
       return { ...d, date: dDate, monthName: mName };
     }).sort((a, b) => a.day - b.day);
 
@@ -792,10 +828,10 @@ export default function Dashboard() {
       'CET_BIRTHDAY': 'bg-pink-400   border-pink-400   text-kronos-bg'
     };
     const typeLabels = {
-      'CET_CHALLENGE': 'Challenge',
-      'CET_REWARD': 'Reward',
-      'CET_UPGRADE': 'Upgrade',
-      'CET_BIRTHDAY': 'Birthday'
+      'CET_CHALLENGE': t('ui.dashboard.event_challenge'),
+      'CET_REWARD': t('ui.dashboard.event_reward'),
+      'CET_UPGRADE': t('ui.dashboard.event_upgrade'),
+      'CET_BIRTHDAY': t('ui.dashboard.event_birthday')
     };
     const goToMonth = (idx) => {
       setSelected1999Month(idx);
@@ -823,8 +859,8 @@ export default function Dashboard() {
       <div className="space-y-3 mt-1">
         {/* Season header */}
         <div className="flex items-center justify-between px-1">
-          <p className={`text-sm font-black uppercase tracking-widest ${seasonInfo.color}`}>{seasonInfo.name}{t('dashboard.season')}</p>
-          <p className="text-[10px] text-kronos-dim font-mono">{timeRemaining(nextExpiry)}{t('dashboard.remaining')}</p>
+          <p className={`text-sm font-black uppercase tracking-widest ${seasonInfo.color}`}>{seasonName}</p>
+          <p className="text-[10px] text-kronos-dim font-mono">{timeRemaining(nextExpiry)}{t('ui.dashboard.darvo_left')}</p>
         </div>
 
         {/* Month tabs */}
@@ -838,7 +874,7 @@ export default function Dashboard() {
             'text-kronos-dim hover:text-kronos-text bg-kronos-panel/40 hover:bg-kronos-panel/70'}`
             }>
             
-              {m}
+              {t(`ui.dashboard.month_${m.toLowerCase()}`)}
             </button>
           )}
         </div>
@@ -848,8 +884,8 @@ export default function Dashboard() {
           {/* Calendar grid */}
           <div className="flex-1 min-w-0">
             <div className="grid grid-cols-7 mb-2 bg-zinc-800/50 rounded px-1 py-2">
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) =>
-              <div key={i} className="text-center text-[9px] font-black uppercase text-kronos-dim/50 py-1">{d}</div>
+              {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((d, i) =>
+              <div key={i} className="text-center text-[9px] font-black uppercase text-kronos-dim/50 py-1">{t(`ui.dashboard.weekday_short_${d}`).substring(0, 1)}</div>
               )}
             </div>
             <div className="grid grid-cols-7 gap-1">
@@ -900,7 +936,7 @@ export default function Dashboard() {
                       {selectedDay.date.getDate()}
                     </p>
                     <p className="text-[9px] text-kronos-dim uppercase tracking-widest leading-none pt-0.5">
-                      {selectedDay.date.toLocaleDateString('en-US', { weekday: 'long' })}
+                      {t(`ui.dashboard.weekday_${selectedDay.date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()}`)}
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -949,6 +985,11 @@ export default function Dashboard() {
   const [showDescendiaModal, setShowDescendiaModal] = useState(false);
   const [expandedWeek, setExpandedWeek] = useState(0);
 
+  // Prefer the per-locale i18n description (game terms); fall back to the
+  // English desc shipped in descendia.txt, then to the short label.
+  const penanceDesc = (s) => (s.penanceDescI18nKey ? t(`ui.dashboard.${s.penanceDescI18nKey}`) : s.penanceDesc) || s.penance;
+  const missionTypeDesc = (s) => (s.missionTypeDescI18nKey ? t(`ui.dashboard.${s.missionTypeDescI18nKey}`) : s.missionTypeDesc) || s.missionType;
+
   const renderDescendia = () => {
     if (!worldstate?.descendia?.length) return <p className="text-xs text-kronos-dim italic text-center py-4">{t('ui.dashboard.no_descendia')}</p>;
     const current = worldstate.descendia[0];
@@ -956,7 +997,7 @@ export default function Dashboard() {
     return (
       <div className="mt-2">
         <div className="mb-2">
-          <Tabs tabs={[{ id: 'normal', label: 'Normal' }, { id: 'steelpath', label: 'Steel Path' }]} activeTab={descendiaTab} onChange={setDescendiaTab} fullWidth />
+          <Tabs tabs={[{ id: 'normal', label: t('ui.dashboard.descendia_normal') }, { id: 'steelpath', label: t('ui.dashboard.descendia_steel_path') }]} activeTab={descendiaTab} onChange={setDescendiaTab} fullWidth />
         </div>
         <div className="space-y-1 max-h-[280px] overflow-y-auto custom-scrollbar pr-1">
           {current.stages.map((s) => {
@@ -968,8 +1009,8 @@ export default function Dashboard() {
                   <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-bold text-kronos-accent uppercase">{t('ui.dashboard.marie_sanctuary')}</p>
-                    <Tooltip content={s.penanceDesc || s.penance} position="top">
-                      <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penance}</p>
+                    <Tooltip content={penanceDesc(s)} position="top">
+                      <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
                     </Tooltip>
                   </div>
                 </div>);
@@ -981,8 +1022,8 @@ export default function Dashboard() {
                   <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-bold text-kronos-accent uppercase">{t('ui.dashboard.lyon_sanctuary')}</p>
-                    <Tooltip content={s.penanceDesc || s.penance} position="top">
-                      <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penance}</p>
+                    <Tooltip content={penanceDesc(s)} position="top">
+                      <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
                     </Tooltip>
                   </div>
                 </div>);
@@ -994,8 +1035,8 @@ export default function Dashboard() {
                   <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-bold text-kronos-accent uppercase">{t('ui.dashboard.roathe_oblivion')}</p>
-                    <Tooltip content={s.penanceDesc || s.penance} position="top">
-                      <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penance}</p>
+                    <Tooltip content={penanceDesc(s)} position="top">
+                      <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
                     </Tooltip>
                   </div>
                 </div>);
@@ -1006,20 +1047,20 @@ export default function Dashboard() {
               <div key={s.index} className="p-1.5 rounded bg-kronos-panel/30 flex items-center gap-1.5">
                 <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
                 <div className="flex-1 min-w-0 p-1 rounded bg-kronos-panel/40">
-                  <Tooltip content={s.missionTypeDesc || s.missionType} position="top">
-                    <p className="text-[10px] font-bold text-kronos-text uppercase">{s.missionType}</p>
+                  <Tooltip content={missionTypeDesc(s)} position="top">
+                    <p className="text-[10px] font-bold text-kronos-text uppercase">{s.missionTypeI18nKey ? t(`ui.dashboard.${s.missionTypeI18nKey}`) : s.missionType}</p>
                   </Tooltip>
                 </div>
                 <div className="flex-1 min-w-0 p-1 rounded bg-kronos-panel/20">
-                  <Tooltip content={s.penanceDesc || s.penance} position="top">
-                    <p className="text-[10px] text-kronos-dim uppercase">{s.penance}</p>
+                  <Tooltip content={penanceDesc(s)} position="top">
+                    <p className="text-[10px] text-kronos-dim uppercase">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
                   </Tooltip>
                 </div>
               </div>);
 
           })}
         </div>
-        <p className="text-[10px] text-kronos-dim font-mono mt-2 text-right">{timeRemaining(current.expiry)}{t('dashboard.remaining_caps')}</p>
+        <p className="text-[10px] text-kronos-dim font-mono mt-2 text-right">{timeRemaining(current.expiry)}{t('ui.dashboard.darvo_left')}</p>
       </div>);
 
   };
@@ -1038,7 +1079,7 @@ export default function Dashboard() {
         <div className="space-y-2">
           {upcoming.map((set, setIdx) => {
             const isExpanded = expandedWeek === setIdx;
-            const label = setIdx === 0 ? 'Next Week' : `In ${setIdx + 1} Weeks`;
+            const label = setIdx === 0 ? t('ui.dashboard.next_week') : t('ui.dashboard.in_weeks', { weeks: setIdx + 1 });
 
             return (
               <div key={setIdx} className="bg-kronos-panel/20 rounded-lg border border-transparent hover:border-kronos-accent/10 transition-all overflow-hidden">
@@ -1057,15 +1098,15 @@ export default function Dashboard() {
                     {set.stages.map((s) =>
                   <div key={s.index} className={`p-2 rounded flex justify-between items-center gap-2 ${s.isCheckpoint ? 'bg-kronos-accent/10 border border-kronos-accent/20' : 'bg-black/20'}`}>
                         <div className="min-w-0">
-                          <Tooltip content={s.missionTypeDesc || s.missionType} position="top">
-                            <p className="text-[10px] font-bold text-kronos-text uppercase truncate">{s.missionType}{s.isBoss ? ' - Roathe' : ''}</p>
+                          <Tooltip content={missionTypeDesc(s)} position="top">
+                            <p className="text-[10px] font-bold text-kronos-text uppercase truncate">{s.missionTypeI18nKey ? t(`ui.dashboard.${s.missionTypeI18nKey}`) : s.missionType}{s.isBoss ? ` - ${t('ui.dashboard.roathe_oblivion')}` : ''}</p>
                           </Tooltip>
-                          <Tooltip content={s.penanceDesc || s.penance} position="bottom">
-                            <p className="text-[9px] text-kronos-dim truncate uppercase">{s.penance}</p>
+                          <Tooltip content={penanceDesc(s)} position="bottom">
+                            <p className="text-[9px] text-kronos-dim truncate uppercase">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
                           </Tooltip>
                         </div>
                         <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${s.isCheckpoint ? 'text-kronos-accent bg-kronos-accent/20' : 'text-kronos-dim bg-kronos-panel/40'}`}>
-                          {s.isCheckpoint ? `CHECKPOINT ${s.index}` : `INF. ${s.index}`}
+                          {s.isCheckpoint ? `${t('ui.dashboard.checkpoint')} ${s.index}` : `${t('ui.dashboard.inf')} ${s.index}`}
                         </span>
                       </div>
                   )}
@@ -1135,7 +1176,7 @@ export default function Dashboard() {
         <div className="bg-kronos-panel/40 rounded p-2">
           <p className="text-sm font-bold text-kronos-text uppercase">{vt.node}</p>
           <p className="text-xs text-kronos-dim mt-0.5 font-mono">
-            {vt.active ? 'Departing in ' + timeRemaining(vt.expiry) : 'Arriving in ' + timeRemaining(vt.activation)}
+            {vt.active ? t('ui.dashboard.baro_departing', { time: timeRemaining(vt.expiry) }) : t('ui.dashboard.baro_arriving', { time: timeRemaining(vt.activation) })}
           </p>
         </div>
       </Card>);
@@ -1216,8 +1257,8 @@ export default function Dashboard() {
           {worldstate?.globalBoosters?.map((b, idx) =>
           <div key={`booster-${idx}`} className="space-y-1 pb-2 border-kronos-panel/40 last:border-0">
               <div className="flex justify-between items-start">
-                <p className="text-xs font-black text-kronos-accent uppercase tracking-widest">{b.name}</p>
-                <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(b.expiry)}{t('dashboard.left')}</span>
+                <p className="text-xs font-black text-kronos-accent uppercase tracking-widest">{b.nameI18nKey ? t(b.nameI18nKey) : b.name}</p>
+                <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(b.expiry)}{t('ui.dashboard.darvo_left')}</span>
               </div>
             </div>
           )}
@@ -1227,7 +1268,7 @@ export default function Dashboard() {
           <div key={idx} className="space-y-1 pb-2 border-b border-kronos-panel/40 last:border-0">
               <div className="flex justify-between items-start">
                 <p className="text-xs font-black text-kronos-accent uppercase tracking-widest">{e.name}</p>
-                <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(e.expiry)}{t('dashboard.left')}</span>
+                <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(e.expiry)}{t('ui.dashboard.darvo_left')}</span>
               </div>
 
               {(e.rewards?.length > 0 || e.mainReward) &&
@@ -1261,10 +1302,10 @@ export default function Dashboard() {
       <div className="space-y-1.5">
         {spIncursionNodes.map((n, idx) => {
           const entry = ERg[n];
-          const nodeName = resolveNode(n, dict, ERg);
-          const mType = entry ? resolveMissionType(entry.missionName || entry.missionType, dict, ERg) : 'Unknown Mission';
-          const faction = entry ? resolveNode(entry.faction, dict, ERg) : 'Unknown Faction';
-          const planet = entry ? resolveNode(entry.regionName || entry.systemName, dict, ERg) : '';
+          const nodeName = resolveNode(n, dict, ERg, locale);
+          const mType = entry ? resolveMissionType(entry.missionName || entry.missionType, dict, ERg, locale) : 'Unknown Mission';
+          const faction = entry ? resolveNode(entry.faction, dict, ERg, locale) : 'Unknown Faction';
+          const planet = entry ? resolveNode(entry.regionName || entry.systemName, dict, ERg, locale) : '';
           const planetStr = planet && planet !== 'Unknown Node' ? `, ${planet}` : '';
 
           return (
@@ -1285,7 +1326,7 @@ export default function Dashboard() {
               </div>
               <div className="flex flex-col items-end flex-shrink-0 ml-2">
                 <span className="text-[10px] text-kronos-accent font-black px-2 py-0.5 bg-kronos-accent/10 rounded-full">
-                  5 Essence
+                  5 {t('ui.dashboard.sp_essence')}
                 </span>
               </div>
             </div>);
@@ -1341,25 +1382,25 @@ export default function Dashboard() {
               </div>
               <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 {[
-            { id: 'bounty', label: 'Bounties' },
-            { id: 'news', label: 'Latest News' },
-            { id: 'timers', label: 'World Timers' },
-            { id: 'arb', label: 'Arbitration' },
-            { id: 'nightwave', label: 'Nightwave' },
-            { id: 'inv', label: 'Invasions' },
-            { id: 'fiss', label: 'Fissures' },
-            { id: 'baro', label: 'Baro Ki\'Teer' },
-            { id: 'arch', label: 'Archimedea' },
-            { id: '1999', label: '1999 Calendar' },
-            { id: 'inf', label: 'SP Incursions' },
-            { id: 'desc', label: 'Descendia' },
-            { id: 'sortie', label: 'Sorties' },
-            { id: 'hunt', label: 'Archon Hunts' },
-            { id: 'circuit', label: 'The Circuit' },
-            { id: 'deal', label: 'Daily Deals' },
-            { id: 'sales', label: 'Market Sales' },
-            { id: 'alerts', label: 'Alerts' },
-            { id: 'event', label: 'Events' }].
+            { id: 'bounty', label: t('ui.dashboard.card_bounties') },
+            { id: 'news', label: t('ui.dashboard.card_news') },
+            { id: 'timers', label: t('ui.dashboard.card_world_timers') },
+            { id: 'arb', label: t('ui.dashboard.card_arbitration') },
+            { id: 'nightwave', label: t('ui.dashboard.card_nightwave') },
+            { id: 'inv', label: t('ui.dashboard.card_invasions') },
+            { id: 'fiss', label: t('ui.dashboard.card_fissures') },
+            { id: 'baro', label: t('ui.dashboard.card_baro') },
+            { id: 'arch', label: t('ui.dashboard.card_archimedea') },
+            { id: '1999', label: t('ui.dashboard.card_1999') },
+            { id: 'inf', label: t('ui.dashboard.card_sp_incursions') },
+            { id: 'desc', label: t('ui.dashboard.card_descendia') },
+            { id: 'sortie', label: t('ui.dashboard.card_sorties') },
+            { id: 'hunt', label: t('ui.dashboard.card_archon_hunts') },
+            { id: 'circuit', label: t('ui.dashboard.card_circuit') },
+            { id: 'deal', label: t('ui.dashboard.card_daily_deals') },
+            { id: 'sales', label: t('ui.dashboard.card_market_sales') },
+            { id: 'alerts', label: t('ui.dashboard.card_alerts') },
+            { id: 'event', label: t('ui.dashboard.card_events') }].
             map((card) =>
             <label key={card.id} className="flex items-center justify-between group cursor-pointer">
                     <span className="text-xs text-kronos-dim group-hover:text-kronos-text transition-colors">{card.label}</span>
@@ -1448,8 +1489,8 @@ export default function Dashboard() {
                   <div className="bg-kronos-panel/40 rounded p-2 flex justify-between items-start gap-4">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-kronos-dim uppercase mb-0.5">{t('ui.dashboard.current')}</p>
-                      <p className="text-sm font-bold text-kronos-accent truncate">{resolveNode(currentArby.type, dict, ERg)}</p>
-                      <p className="text-sm font-bold truncate">{resolveNode(currentArby.node, dict, ERg)}</p>
+                      <p className="text-sm font-bold text-kronos-accent truncate">{resolveNode(currentArby.type, dict, ERg, locale)}</p>
+                      <p className="text-sm font-bold truncate">{resolveNode(currentArby.node, dict, ERg, locale)}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 mt-1">
                       <span className="text-[12px] text-kronos-dim font-mono">
@@ -1464,7 +1505,7 @@ export default function Dashboard() {
                       <div className="space-y-1">
                         {upcomingArbies.map((a, i) =>
                   <div key={i} className="bg-kronos-panel/40 rounded p-1.5 flex justify-between items-center text-xs uppercase">
-                            <span className="font-bold truncate">{resolveNode(a.type, dict, ERg)} - {resolveNode(a.node, dict, ERg)}</span>
+                            <span className="font-bold truncate">{resolveNode(a.type, dict, ERg, locale)} - {resolveNode(a.node, dict, ERg, locale)}</span>
                             <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                               <span className="text-kronos-dim font-mono">
                                 {new Date(a.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1539,9 +1580,9 @@ export default function Dashboard() {
 
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-[10px] text-kronos-dim font-bold uppercase tracking-wider">
-                        {left}/{deal.total}{t('dashboard.in_stock')}{isSoldOut && <span className="text-red-500 font-black ml-1">(SOLD OUT)</span>}
+                        {left}/{deal.total}{isSoldOut && <span className="text-red-500 font-black ml-1">({t('ui.dashboard.sold_out')})</span>}
                       </span>
-                      <span className="text-[10px] text-kronos-dim font-mono uppercase">{timeRemaining(deal.expiry)}{t('dashboard.left')}</span>
+                      <span className="text-[10px] text-kronos-dim font-mono uppercase">{timeRemaining(deal.expiry)}{t('ui.dashboard.darvo_left')}</span>
                     </div>
                   </div>
                 </div>
@@ -1620,8 +1661,8 @@ export default function Dashboard() {
           <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('FactionNarmer')} title={t('ui.dashboard.archon_hunt')} />
               <div className="flex items-center gap-2 mb-2">
-                {iconSrc(`Archon${worldstate.archonHunt.boss.replace(/[^a-zA-Z0-9]/g, '')}Icon`) &&
-              <img src={iconSrc(`Archon${worldstate.archonHunt.boss.replace(/[^a-zA-Z0-9]/g, '')}Icon`)} className="w-5 h-5 object-contain" alt="" />
+                {iconSrc(`Archon${worldstate.archonHunt.bossKey?.split('/').pop()?.replace('SORTIE_BOSS_', '').replace(/^Archon/, '').replace(/^(\w)(\w+)/, (m, f, r) => f + r.toLowerCase())}Icon`) &&
+              <img src={iconSrc(`Archon${worldstate.archonHunt.bossKey?.split('/').pop()?.replace('SORTIE_BOSS_', '').replace(/^Archon/, '').replace(/^(\w)(\w+)/, (m, f, r) => f + r.toLowerCase())}Icon`)} className="w-5 h-5 object-contain" alt="" />
               }
                 <p className="text-sm font-bold text-red-400 uppercase">{worldstate.archonHunt.boss}</p>
               </div>
@@ -1701,7 +1742,7 @@ export default function Dashboard() {
           {/* 1999 Calendar */}
           {isVisible('1999') &&
           <Card glow className="p-3">
-              <CardHeader imageSrc={iconSrc('RetroTaskbarCalendarLg')} title="1999 Calendar" />
+              <CardHeader imageSrc={iconSrc('RetroTaskbarCalendarLg')} title={t('ui.dashboard.calendar_1999')} />
               {render1999()}
             </Card>
           }

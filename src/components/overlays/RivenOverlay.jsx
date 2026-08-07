@@ -3,14 +3,16 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { useUi } from '../../contexts/UiContext';
-import { loadSettings, getSetting } from '../../lib/settings';
+import { loadSettings, getSetting, onSettingsChanged } from '../../lib/settings';
+import { loadLocale } from '../../lib/i18n';
 import {
   cleanStatName,
   displayStatName,
   parseRivenOcr,
   foldVariants,
   buildStatAliases,
-  garbageReForLocale } from
+  garbageReForLocale,
+  garbageSuffixReForLocale } from
 '../../lib/rivenOcrI18n';
 
 
@@ -30,40 +32,59 @@ export default function RivenOverlay() {
   const [estimatedPrice, setEstimatedPrice] = useState(null);
   const [rivenInfo, setRivenInfo] = useState(null);
   const [knownWeapons, setKnownWeapons] = useState([]);
-  const { locale, i18nData, t } = useUi();
-  const statAliases = useMemo(() => buildStatAliases(locale, i18nData?.rivenStats), [locale, i18nData]);
-  const garbageRe = useMemo(() => garbageReForLocale(locale), [locale]);
+  const { t } = useUi();
+  // Riven cards are rendered by the game in the *game* locale, not the UI
+  // locale — so the OCR stat aliases, garbage words, and parse locale must all
+  // follow `gameLocale` (weapon names below already do).
+  const [gameLocale, setGameLocale] = useState('en');
+  const [gameI18n, setGameI18n] = useState(null);
+  const statAliases = useMemo(() => buildStatAliases(gameLocale, gameI18n?.rivenStats), [gameLocale, gameI18n]);
+  const garbageRe = useMemo(() => garbageReForLocale(gameLocale), [gameLocale]);
 
   useEffect(() => {
-    invoke('get_known_weapon_names').then((names) => {
-      setKnownWeapons(names);
-      knownWeaponsRef.current = names;
-      knownWeaponsLowerRef.current = names.map((w) => w.toLowerCase());
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
+    let cancelled = false;
+    const applyGameLocale = (gl) => {
+      if (cancelled) return;
+      setGameLocale(gl);
+      loadLocale(gl).then((data) => { if (!cancelled) setGameI18n(data); });
+      invoke('get_localized_weapon_names', { locale: gl }).then((pairs) => {
+        if (!cancelled) {
+          localizedWeaponsRef.current = (pairs || []).map((p) => ({
+            variants: foldVariants(p.localized),
+            english: p.english
+          }));
+        }
+      }).catch(() => {});
+    };
     loadSettings().then(() => {
-      const gameLocale = getSetting('gameLocale', 'en');
-      invoke('get_localized_weapon_names', { locale: gameLocale }).then((pairs) => {
-        localizedWeaponsRef.current = (pairs || []).map((p) => ({
-          variants: foldVariants(p.localized),
-          english: p.english
-        }));
+      const gl = getSetting('gameLocale', 'en');
+      applyGameLocale(gl);
+      invoke('get_known_weapon_names').then((names) => {
+        if (!cancelled) {
+          setKnownWeapons(names);
+          knownWeaponsRef.current = names;
+          knownWeaponsLowerRef.current = names.map((w) => w.toLowerCase());
+        }
       }).catch(() => {});
     });
+    // Re-apply when the user changes the game language in Settings.
+    const unsub = onSettingsChanged((s) => {
+      const gl = s?.gameLocale || getSetting('gameLocale', 'en');
+      applyGameLocale(gl);
+    });
+    return () => { cancelled = true; unsub(); };
   }, []);
 
   function extractWeaponName(ocrName) {
     if (!ocrName) return '';
     const known = knownWeaponsRef.current;
     const knownLower = knownWeaponsLowerRef.current;
-    let cleaned = ocrName.
-    replace(/\s+(mod(\s+drain)?|drain|capacity|polarity|kapazität|polarität|capacité|polarité)\s*\d*$/i, '').
-    replace(/\s+(roll(\s+counter)?|counter|reroll|rerolls|neuausrichtung|neuausrichtungen|relance|relances)\s*\d*$/i, '').
-    replace(/\s+riven$/i, '').
-    replace(/\s*\(.*?\)\s*$/, '').
-    trim();
+    // Locale-aware garbage strip (drain/capacity/polarity/reroll/riven-label
+    // words for the current game locale, plus the EN base set).
+    let cleaned = ocrName
+    .replace(garbageSuffixReForLocale(gameLocale), '')
+    .replace(/\s*\(.*?\)\s*$/, '')
+    .trim();
     if (!cleaned) cleaned = ocrName;
     const lower = cleaned.toLowerCase();
 
@@ -182,14 +203,14 @@ export default function RivenOverlay() {
     invoke('ocr_riven_card', { position: pos }).
     then((res) => {
       if (aliveRef.current) {
-        const p = parseRivenOcr(res.text, garbageRe, locale);
+        const p = parseRivenOcr(res.text, garbageRe, gameLocale);
         setParsed(p);
         doPricing(p);
       }
     }).
     catch(() => {if (aliveRef.current) setParsed({ name: '', mr: '', stats: [], raw: '[OCR failed]' });}).
     finally(() => {if (aliveRef.current) setOcrLoading(false);});
-  }, [doPricing, garbageRe]);
+  }, [doPricing, garbageRe, gameLocale]);
 
   const show = useCallback(() => {
     if (showingRef.current) return;
@@ -217,7 +238,7 @@ export default function RivenOverlay() {
       if (aliveRef.current) {
         setVisible(true);
         setOcrLoading(false);
-        const p = parseRivenOcr(payload, garbageRe, locale);
+        const p = parseRivenOcr(payload, garbageRe, gameLocale);
         setParsed(p);
         doPricing(p);
       }

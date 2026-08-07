@@ -8,28 +8,28 @@ import BackToTop from '../components/BackToTop';
 import RivenCard from '../components/RivenCard';
 
 const TYPE_TABS = [
-{ id: 'all', label: 'All' },
-{ id: 'rifle', label: 'Rifle' },
-{ id: 'pistol', label: 'Pistol' },
-{ id: 'melee', label: 'Melee' },
-{ id: 'shotgun', label: 'Shotgun' },
-{ id: 'sniper', label: 'Sniper' },
-{ id: 'kitgun', label: 'Kitgun' },
-{ id: 'zaw', label: 'Zaw' },
-{ id: 'archgun', label: 'Archgun' }];
+  { id: 'all', key: 'rivens.type_all', labelKey: 'rivens.type_all', icon: 'All' },
+  { id: 'rifle', key: 'rivens.type_rifle', labelKey: 'rivens.type_rifle', icon: 'Primary' },
+  { id: 'pistol', key: 'rivens.type_pistol', labelKey: 'rivens.type_pistol', icon: 'Secondary' },
+  { id: 'melee', key: 'rivens.type_melee', labelKey: 'rivens.type_melee', icon: 'Melee' },
+  { id: 'shotgun', key: 'rivens.type_shotgun', labelKey: 'rivens.type_shotgun', icon: 'Shotgun' },
+  { id: 'sniper', key: 'rivens.type_sniper', labelKey: 'rivens.type_sniper', icon: 'Sniper' },
+  { id: 'kitgun', key: 'rivens.type_kitgun', labelKey: 'rivens.type_kitgun', icon: 'Kitgun' },
+  { id: 'zaw', key: 'rivens.type_zaw', labelKey: 'rivens.type_zaw', icon: 'Zaw' },
+  { id: 'archgun', key: 'rivens.type_archgun', labelKey: 'rivens.type_archgun', icon: 'Archgun' }]
 
 
 const STATE_TABS = [
-{ id: 'all', label: 'All States' },
-{ id: 'unveiled', label: 'Unveiled' },
-{ id: 'challenge', label: 'Challenge' },
-{ id: 'veiled', label: 'Veiled' }];
+{ id: 'all', key: 'rivens.state_all' },
+{ id: 'unveiled', key: 'rivens.state_unveiled' },
+{ id: 'challenge', key: 'rivens.state_challenge' },
+{ id: 'veiled', key: 'rivens.state_veiled' }]
 
 
 const SORT_CRITERIA = [
-{ id: 'name', label: 'Name' },
-{ id: 'plat', label: 'Plat' },
-{ id: 'grade', label: 'Grade' }];
+{ id: 'name', key: 'rivens.sort_name' },
+{ id: 'plat', key: 'rivens.sort_plat' },
+{ id: 'grade', key: 'rivens.sort_grade' }]
 
 
 const GRADE_ORDER = { S: 0, A: 1, B: 2, C: 3, D: 4, F: 5 };
@@ -218,13 +218,13 @@ export default function Rivens() {
         <div className="flex items-center gap-1.5 p-1 bg-black/20 rounded-xl border border-white/5 h-[42px] px-2">
           <Filter size={14} className="text-kronos-dim mx-1" />
           <div className="flex gap-1">
-            {STATE_TABS.map((t) =>
+            {STATE_TABS.map((tab) =>
           <button
-            key={t.id}
-            onClick={() => setActiveState(t.id)}
-            className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeState === t.id ? 'bg-kronos-accent text-kronos-bg shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' : 'text-kronos-dim hover:text-white hover:bg-white/5'}`}>
+            key={tab.id}
+            onClick={() => setActiveState(tab.id)}
+            className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${activeState === tab.id ? 'bg-kronos-accent text-kronos-bg shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' : 'text-kronos-dim hover:text-white hover:bg-white/5'}`}>
             
-                {t.label}
+                {t(tab.key)}
               </button>
           )}
           </div>
@@ -248,7 +248,7 @@ export default function Rivens() {
                 }}
                 className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${isActive ? 'bg-kronos-accent text-kronos-bg shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' : 'text-kronos-dim hover:text-white hover:bg-white/5'}`}>
                 
-                  {c.label}
+                  {t(c.key)}
                   {isActive && <ArrowUpDown size={10} className={sortDirection === 'desc' ? 'rotate-180' : ''} />}
                 </button>);
 
@@ -258,11 +258,11 @@ export default function Rivens() {
       </div>
 
       <div className="flex items-center gap-3">
-        <Tabs tabs={TYPE_TABS.map((t) => {
-        const iconMap = { rifle: 'Primary', pistol: 'Secondary' };
-        const iconName = iconMap[t.id] || t.label;
-        return { ...t, icon: iconsPath ? convertFileSrc(`${iconsPath}/Categories/${iconName}.png`) : null };
-      })} activeTab={activeType} onChange={setActiveType} className="flex-1" />
+        <Tabs tabs={TYPE_TABS.map((tab) => ({
+          ...tab,
+          label: t(tab.labelKey),
+          icon: iconsPath ? convertFileSrc(`${iconsPath}/Categories/${tab.icon}.png`) : null
+        }))} activeTab={activeType} onChange={setActiveType} className="flex-1" />
       </div>
     </div>;
 
@@ -270,7 +270,7 @@ export default function Rivens() {
   return (
     <PageLayout
       titleKey="screen.rivens"
-      subtitle={`${unveiledCount} unveiled · ${challengeCount} challenge · ${veiledCount} veiled · ${unveiledCount + challengeCount}/${capacity} capacity`}
+      subtitle={t('rivens.subtitle', { unveiled: unveiledCount, challenge: challengeCount, veiled: veiledCount, used: unveiledCount + challengeCount, capacity })}
       headerPanel={renderHeaderPanel()}>
       
       <div className="space-y-4 pt-2">

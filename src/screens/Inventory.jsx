@@ -145,7 +145,7 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
   useEffect(() => {setVisibleCount(24);}, [searchQuery, foundryFilters]);
 
   const formatFoundryTime = (seconds) => {
-    if (seconds <= 0) return 'READY';
+    if (seconds <= 0) return t('ui.inventory.ready_status');
     const d = Math.floor(seconds / (24 * 3600));
     const h = Math.floor(seconds % (24 * 3600) / 3600);
     const m = Math.floor(seconds % 3600 / 60);
@@ -332,8 +332,8 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
                                     <p className="text-xl font-black text-kronos-text uppercase whitespace-normal leading-tight">{item.baseName}</p>
                                     {(item.buildTime > 0 || item.buildPrice > 0) &&
                             <div className="flex gap-3 mt-1">
-                                        {item.buildPrice > 0 && <span className="text-[10px] font-black text-yellow-500/80 uppercase">{t('inventory.credit_cost')}{item.buildPrice.toLocaleString()}</span>}
-                                        {item.buildTime > 0 && <span className="text-[10px] font-black text-kronos-dim uppercase">{t('inventory.build_time')}{formatFoundryTime(item.buildTime)}</span>}
+                                        {item.buildPrice > 0 && <span className="text-[10px] font-black text-yellow-500/80 uppercase">{t('inventory.credit_cost')}{' '}{item.buildPrice.toLocaleString()}</span>}
+                                        {item.buildTime > 0 && <span className="text-[10px] font-black text-kronos-dim uppercase">{t('inventory.build_time')}{' '}{formatFoundryTime(item.buildTime)}</span>}
                                       </div>
                             }
                                   </div>
@@ -348,18 +348,18 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
                                   {/* Blueprint Status */}
                                   <div className={`flex items-center px-3 py-1.5 rounded-lg border transition-colors ${item.bpCount > 0 ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
                                     <div className={`${item.bpCount > 0 ? 'bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.5)]' : 'bg-red-400'}`} />
-                                    <span className="text-[10px] font-black uppercase tracking-wider">{t('inventory.blueprint')}{item.bpCount}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider">{t('inventory.blueprint')}{' '}{item.bpCount}</span>
                                   </div>
 
                                   {/* Crafted Status */}
                                   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${item.fullItemOwned ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' : 'bg-white/5 border-white/5 text-kronos-dim'}`}>
-                                    <span className="text-[10px] font-black uppercase tracking-wider">{t('inventory.crafted')}{item.ownedCount || 0}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider">{t('inventory.crafted')}{' '}{item.ownedCount || 0}</span>
                                   </div>
 
                                   {/* Mastery Status */}
                                   {item.hasMastery &&
                           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${item.isMastered ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/5 text-kronos-dim'}`}>
-                                      <span className="text-[10px] font-black uppercase tracking-wider">{item.isMastered ? 'Mastered' : 'Unmastered'}</span>
+                                      <span className="text-[10px] font-black uppercase tracking-wider">{item.isMastered ? t('ui.comp.mastered') : t('ui.inventory.badge_unmastered')}</span>
                                     </div>
                           }
                                 </div>
@@ -488,9 +488,8 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
                           <Button
                     variant="secondary"
                     onClick={() => setVisibleCount((prev) => prev + 24)}
-                    className="w-full py-4 text-[11px] font-black uppercase tracking-[0.2em] border border-white/5 bg-kronos-panel/10 hover:bg-kronos-panel/30 transition-all text-kronos-accent">{t('inventory.load_more_blueprints')}
-
-                    {filteredCraftable.length - visibleCount} remaining)
+                    className="w-full py-4 text-[11px] font-black uppercase tracking-[0.2em] border border-white/5 bg-kronos-panel/10 hover:bg-kronos-panel/30 transition-all text-kronos-accent">
+                {t('ui.inventory.load_more_blueprints')} {filteredCraftable.length - visibleCount} {t('ui.inventory.remaining')}
                           </Button>
                         </div>
                 }
@@ -542,7 +541,14 @@ export default function Inventory() {
     mastered: t('ui.inventory.filter_mastered'),
     subsumed: t('ui.inventory.filter_subsumed'),
     socketed: t('ui.inventory.filter_socketed'),
-    prime: t('ui.inventory.filter_prime')
+    prime: t('ui.inventory.filter_prime'),
+    primary: t('ui.inventory.filter_primary'),
+    secondary: t('ui.inventory.filter_secondary'),
+    melee: t('ui.inventory.filter_melee'),
+    incarnon: t('ui.inventory.filter_incarnon'),
+    archwing: t('ui.inventory.filter_archwing'),
+    kdrive: t('ui.inventory.filter_kdrive'),
+    necramech: t('ui.inventory.filter_necramech'),
   };
 
   const SORT_CONFIG = {
@@ -800,7 +806,7 @@ export default function Inventory() {
         <div className="relative flex-1 group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-kronos-dim group-focus-within:text-kronos-accent transition-colors" size={18} />
           <Input
-          placeholder={`Search ${tabLabel}...`}
+          placeholder={t('inventory.search_placeholder', { tab: tabLabel })}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-12 bg-black/20 border-white/5 focus:bg-black/40 h-[42px]" />
@@ -815,7 +821,7 @@ export default function Inventory() {
               {(FILTER_CONFIG[activeTab] ?? []).map((f) => {
             const state = currentFilters[f];
             const isTriple = TRIPLE_FILTERS.has(f);
-            const label = state === 'no' ? NEG_LABELS[f] ?? f.replace(/_/g, ' ') : f.replace(/_/g, ' ');
+            const label = state === 'no' ? NEG_LABELS[f] ?? t(`ui.inventory.filter_${f}`) : t(`ui.inventory.filter_${f}`);
             return (
               <button
                 key={f}
@@ -889,8 +895,8 @@ export default function Inventory() {
 
       {/* Category Tabs */}
       <Tabs tabs={INVENTORY_TABS.map((t) => {
-      const iconMap = { warframes: 'Warframe', weapons: 'Primary', companions: 'Companion', companion_weapons: 'Sentinels', archweapons: 'Archgun', prime_parts: 'PrimeParts', ayatan: 'Ayatan' };
-      const iconName = iconMap[t.id] || t.label;
+      const iconMap = { all: 'All', warframes: 'Warframe', weapons: 'Primary', companions: 'Companion', companion_weapons: 'Sentinels', archweapons: 'Archgun', vehicles: 'Vehicles', amps: 'Amps', resources: 'Resources', prime_parts: 'PrimeParts', ayatan: 'Ayatan' };
+      const iconName = iconMap[t.id] || t.id;
       return { ...t, icon: iconsPath ? convertFileSrc(`${iconsPath}/Categories/${iconName}.png`) : null };
     })} activeTab={activeTab} onChange={(id) => {setActiveTab(id);setCurrentFilters({});setSortCriteria('name');setSortDirection('asc');}} />
     </div>;
@@ -899,7 +905,7 @@ export default function Inventory() {
   return (
     <PageLayout
       titleKey="screen.inventory"
-      subtitle={`Displaying ${visibleItems.length} / ${filteredItems.length} items`}
+      subtitle={t('ui.inventory.subtitle_items', { visible: visibleItems.length, total: filteredItems.length })}
       extra={renderHeaderStats(inventoryData, iconsPath)}
       headerPanel={renderHeaderPanel()}>
       
@@ -975,12 +981,12 @@ export default function Inventory() {
                           <div className="flex flex-wrap gap-2 mt-4">
                             {/* Owned Status */}
                             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${isParentOwned ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' : 'bg-white/5 border-white/5 text-kronos-dim'}`}>
-                              <span className="text-[10px] font-black uppercase tracking-wider">{isParentOwned ? 'Owned' : 'Unowned'}</span>
+                              <span className="text-[10px] font-black uppercase tracking-wider">{set.owned ? t('ui.inventory.badge_owned') : t('ui.inventory.badge_unowned')}</span>
                             </div>
 
                             {/* Mastery Status */}
                             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${isParentMastered ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/5 text-kronos-dim'}`}>
-                              <span className="text-[10px] font-black uppercase tracking-wider">{isParentMastered ? 'Mastered' : 'Unmastered'}</span>
+                              <span className="text-[10px] font-black uppercase tracking-wider">{isParentMastered ? t('ui.comp.mastered') : t('ui.inventory.badge_unmastered')}</span>
                             </div>
                           </div>
                         </div>
@@ -1110,9 +1116,9 @@ export default function Inventory() {
                     </div>
                     <div className="flex flex-col justify-center gap-1 py-3 pr-4 min-w-0 flex-1">
                       <p className="text-sm font-black text-kronos-text uppercase leading-tight whitespace-normal">{item.name.replace('Ayatan ', '').replace(' Sculpture', '')}</p>
-                      <p className="text-base font-bold text-kronos-text leading-tight">{item.quantity > 0 ? `×${item.quantity}` : 'None owned'}</p>
+                      <p className="text-base font-bold text-kronos-text leading-tight">{item.quantity > 0 ? `×${item.quantity}` : t('inventory.none_owned')}</p>
                       <p className={`text-[11px] font-black ${item.sockets > 0 ? 'text-green-400' : 'text-kronos-dim'}`}>
-                        {item.sockets} filled · {(item.quantity * item.filledEndo).toLocaleString()}{t('inventory.endo')}
+                        {item.sockets} {t('inventory.filled')} · {(item.quantity * item.filledEndo).toLocaleString()}{t('inventory.endo')}
                   </p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         {Array.from({ length: item.amberSlots }).map((_, i) =>
@@ -1174,7 +1180,7 @@ export default function Inventory() {
                       {/* Top: category label + name */}
                       <div className="min-w-0">
                         <span className="text-[9px] font-black text-kronos-accent uppercase tracking-widest block whitespace-normal leading-none mb-1">
-                          {item.category === 'mods' ? item.rarity || 'Mod' : item.weapon_type || item.vehicle_type || (isPrimePart ? 'Prime Part' : item.category?.replace(/_/g, ' '))}
+                          {item.category === 'mods' ? (item.rarity ? t(`ui.inventory.mod_rarity_${item.rarity.toLowerCase()}`) : t('ui.inventory.badge_mod')) : item.weapon_type || item.vehicle_type ? t(`ui.inventory.filter_${(item.weapon_type || item.vehicle_type).toLowerCase()}`) : (isPrimePart ? t('ui.inventory.badge_prime_part') : t(`ui.inventory.cat_${item.category?.toLowerCase()}`))}
                         </span>
                         <h4 className="font-bold text-sm uppercase whitespace-normal text-kronos-text leading-tight mt-0.5">
                           {item.name}
@@ -1211,7 +1217,7 @@ export default function Inventory() {
                         {!isModOrResource && (
                     item.mastered ?
                     <span className="text-[10px] font-black uppercase text-blue-400 flex items-center gap-1"><Gem size={10} className="fill-current/20" />{t('ui.comp.mastered')}</span> :
-                    <span className={`text-[10px] font-black uppercase flex items-center gap-1 ${isUnowned ? 'text-kronos-dim/30' : 'text-kronos-dim'}`}><Gem size={10} />{item.owned ? 'Unmastered' : 'Unowned'}</span>)
+                    <span className={`text-[10px] font-black uppercase flex items-center gap-1 ${isUnowned ? 'text-kronos-dim/30' : 'text-kronos-dim'}`}><Gem size={10} />{item.owned ? t('ui.inventory.badge_unmastered') : t('ui.inventory.badge_unowned')}</span>)
                     }
 
                         {/* Subsumed (warframes) */}
@@ -1224,7 +1230,7 @@ export default function Inventory() {
                         {/* Stock count (mods, resources, arcanes, prime parts, veiled rivens) */}
                         {(isModOrResource || isPrimePart || item.veiled) && item.quantity !== undefined &&
                     <span className={`text-[10px] font-black uppercase ${item.quantity > 0 ? 'text-kronos-accent' : 'text-kronos-dim/30'}`}>
-                            {item.quantity > 0 ? `×${item.quantity}` : 'Unowned'}
+                            {item.quantity > 0 ? `×${item.quantity}` : t('ui.inventory.badge_unowned')}
                           </span>
                     }
 
@@ -1237,8 +1243,8 @@ export default function Inventory() {
                                 <p className="text-[10px] font-black uppercase text-orange-400">{t('ui.inventory.incarnon_evolution')}</p>
                                 <p className="text-[12px] font-bold text-kronos-text mt-0.5">
                                   {item.incarnon_evolution_level >= 0 ?
-                          `Rank ${item.incarnon_evolution_level}/4` :
-                          'Not evolved'}
+                          t('ui.inventory.incarnon_rank', { level: item.incarnon_evolution_level }) :
+                          t('ui.inventory.badge_not_evolved')}
                                 </p>
                               </div>
                       }>
@@ -1389,11 +1395,11 @@ function renderHeaderStats(inventoryData, iconsPath) {
 
   return (
     <div className="flex items-center gap-5 ml-auto pr-3">
-      <StatWidget icon={iconSrc('Credits')} label="Credits" value={credits.toLocaleString()} />
-      <StatWidget icon={iconSrc('Platinum')} label="Platinum" value={platinum.toLocaleString()} accent="text-kronos-accent" />
-      <StatWidget icon={iconSrc('EndoIconRenderLarge')} label="Endo" value={endo.toLocaleString()} accent="text-orange-400" />
+      <StatWidget icon={iconSrc('Credits')} label={t('ui.inventory.credits')} value={credits.toLocaleString()} />
+      <StatWidget icon={iconSrc('Platinum')} label={t('ui.inventory.platinum')} value={platinum.toLocaleString()} accent="text-kronos-accent" />
+      <StatWidget icon={iconSrc('EndoIconRenderLarge')} label={t('ui.inventory.endo')} value={endo.toLocaleString()} accent="text-orange-400" />
       <div className="h-8 w-px bg-white/10" />
-      <StatWidget icon={iconSrc('Forma')} label="Forma" value={forma + aura_forma + stance_forma + umbra_forma} accent="text-kronos-accent"
+      <StatWidget icon={iconSrc('Forma')} label={t('ui.inventory.forma')} value={forma + aura_forma + stance_forma + umbra_forma} accent="text-kronos-accent"
       tooltip={
       <div className="absolute top-full right-0 mt-2 p-3 bg-kronos-bg border border-white/10 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[110] min-w-[180px] glass-panel">
             <div className="space-y-3">
@@ -1408,8 +1414,8 @@ function renderHeaderStats(inventoryData, iconsPath) {
           </div>
       } />
       
-      <StatWidget icon={iconSrc('Reactor')} label="Reactors" value={orokin_reactor} accent="text-yellow-500" />
-      <StatWidget icon={iconSrc('Catalyst')} label="Catalysts" value={orokin_catalyst} accent="text-blue-400" />
+      <StatWidget icon={iconSrc('Reactor')} label={t('ui.inventory.reactors')} value={orokin_reactor} accent="text-yellow-500" />
+      <StatWidget icon={iconSrc('Catalyst')} label={t('ui.inventory.catalysts')} value={orokin_catalyst} accent="text-blue-400" />
     </div>);
 
 }

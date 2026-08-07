@@ -34,6 +34,19 @@ export function UiProvider({ children }) {
         ])
         if (cancelled) return
         const merged = { ...(enData?.ui || {}), ...(locData?.ui || {}) }
+        // Flatten all top-level sections (relics, rivens, mastery, etc.) into the
+        // flat dotted-key lookup so that t('rivens.state_all') and
+        // t('relics.sort_name') resolve correctly.
+        for (const section of ['relics', 'rivens', 'mastery', 'collectibles', 'settings', 'adversaries']) {
+          const enSection = enData?.[section]
+          const locSection = locData?.[section]
+          if (enSection && typeof enSection === 'object') {
+            for (const k of Object.keys(enSection)) merged[`${section}.${k}`] = enSection[k]
+          }
+          if (locSection && typeof locSection === 'object') {
+            for (const k of Object.keys(locSection)) merged[`${section}.${k}`] = locSection[k]
+          }
+        }
         setState({ ui: merged, locale, ready: true, i18nData: locData || enData })
       } catch {
         if (cancelled) return

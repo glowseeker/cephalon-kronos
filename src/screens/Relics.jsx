@@ -25,6 +25,13 @@ import { getRelicEV } from '../lib/relicParser';
 
 const ERA_ORDER = ['Lith', 'Meso', 'Neo', 'Axi', 'Requiem'];
 const QUALITY_ORDER = ['Intact', 'Exceptional', 'Flawless', 'Radiant'];
+const REFINEMENTS = ['Intact', 'Exceptional', 'Flawless', 'Radiant'];
+const REFINEMENT_LABELS = {
+  Intact: 'relics.refinement_intact',
+  Exceptional: 'relics.refinement_exceptional',
+  Flawless: 'relics.refinement_flawless',
+  Radiant: 'relics.refinement_radiant'
+};
 
 export default function Relics() {
   const { t } = useUi()
@@ -110,14 +117,14 @@ export default function Relics() {
       }, {});
     } else {
       const SORT_LABELS = {
-        ducat: 'Expected Ducats',
-        plat: 'Expected Platinum',
-        ducat_gain: 'Refinement Gain (Ducats)',
-        plat_gain: 'Refinement Gain (Platinum)'
+        ducat: t('relics.expected_ducat'),
+        plat: t('relics.expected_platinum'),
+        ducat_gain: t('relics.sort_ducat_gain'),
+        plat_gain: t('relics.sort_plat_gain')
       };
-      const sortLabel = SORT_LABELS[sortMode] || 'Name';
-      const orderLabel = sortOrder === 'desc' ? 'Descending' : 'Ascending';
-      return { [`Sorted by ${sortLabel} (${orderLabel})`]: enriched };
+      const sortLabel = SORT_LABELS[sortMode] || t('relics.sort_name');
+      const orderLabel = sortOrder === 'desc' ? t('relics.sort_desc') : t('relics.sort_asc');
+      return { [`${t('relics.sorting_by', { label: sortLabel, order: orderLabel })}`]: enriched };
     }
   }, [baseFiltered, sortMode, allPrices, squadSize, evRefinementOverride, activeQuality]);
 
@@ -130,11 +137,11 @@ export default function Relics() {
   filter((e) => e === 'All' || relics.some((r) => r.era === e)).
   map((e) => ({
     id: e,
-    label: e,
+    label: e === 'All' ? t('relics.all') : e === 'Other' ? t('relics.other') : e,
     icon: e !== 'All' && e !== 'Other' ? iconSrc(e) : null
   }));
 
-  const qualityTabs = ['All', ...QUALITY_ORDER].map((q) => ({ id: q, label: q }));
+  const qualityTabs = ['All', ...QUALITY_ORDER].map((q) => ({ id: q, label: q === 'All' ? t('relics.all') : t(REFINEMENT_LABELS[q]) }));
 
   const renderHeaderPanel = () =>
   <div className="flex flex-col gap-4">
@@ -181,7 +188,7 @@ export default function Relics() {
             key={q}
             onClick={() => setEvRefinementOverride(q)}
             className={`w-7 h-7 rounded-lg text-[10px] font-black uppercase transition-all ${evRefinementOverride === q ? 'bg-kronos-accent text-kronos-bg shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' : 'text-kronos-dim hover:text-white'}`}
-            title={q}>
+            title={t(REFINEMENT_LABELS[q])}>
             
                 {q.charAt(0)}
               </button>
@@ -208,12 +215,11 @@ export default function Relics() {
           <span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest px-1">{t('relics.sort')}</span>
           <div className="flex bg-black/20 rounded-xl p-1 border border-white/5 gap-1">
             {[
-          { id: 'name', label: 'Name', icon: null },
-          { id: 'ducat', label: 'Ducats', icon: iconSrc('Ducats') },
-          { id: 'plat', label: 'Plat', icon: iconSrc('Platinum') },
-          { id: 'ducat_gain', label: 'Refine (D)', icon: iconSrc('Ducats') },
-          { id: 'plat_gain', label: 'Refine (P)', icon: iconSrc('Platinum') }].
-          map((mode) => {
+            { id: 'name', label: t('relics.sort_name'), icon: null },
+            { id: 'ducat', label: t('relics.sort_ducat'), icon: iconSrc('Ducats') },
+            { id: 'plat', label: t('relics.sort_plat'), icon: iconSrc('Platinum') },
+            { id: 'ducat_gain', label: t('relics.sort_ducat_gain'), icon: iconSrc('Ducats') },
+            { id: 'plat_gain', label: t('relics.sort_plat_gain'), icon: iconSrc('Platinum') }].map((mode) => {
             const isActive = sortMode === mode.id;
             return (
               <button
@@ -257,7 +263,7 @@ export default function Relics() {
   return (
     <PageLayout
       titleKey="screen.relics"
-      subtitle={`Showing ${totalFilteredGroups} relic types · ${totalFilteredItems} total`}
+      subtitle={t('relics.subtitle', { groups: totalFilteredGroups, items: totalFilteredItems })}
       headerPanel={renderHeaderPanel()}>
       
       <div className="space-y-4 pt-2">
@@ -269,7 +275,7 @@ export default function Relics() {
         <Card glow>
             <div className="text-center py-12">
               <p className="text-kronos-dim">
-                {relics.length === 0 ? 'No relics found in inventory' : 'No relics match your search'}
+                {relics.length === 0 ? t('relics.no_relics_inventory') : t('relics.no_relics_search')}
               </p>
             </div>
           </Card> :
@@ -305,20 +311,20 @@ export default function Relics() {
               {Object.entries(grouped).sort(([a], [b]) => ERA_ORDER.indexOf(a) - ERA_ORDER.indexOf(b)).map(([era, eraRelics]) =>
             <div key={era} className="space-y-4">
                   <h3 className="font-black text-sm uppercase tracking-[0.2em] text-kronos-accent border-b border-kronos-accent/20 pb-1 ml-1">
-                    {era.startsWith('Sorted by') ? era : `${era} Era`}
+                    {ERA_ORDER.includes(era) ? t('relics.era_label', { era }) : era}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
                     {eraRelics.map((item, idx) => {
                   const refinements = item.refinements || {};
-                  const activeLevels = ['Intact', 'Exceptional', 'Flawless', 'Radiant'].filter((q) => (refinements[q] || 0) > 0);
+                  const activeLevels = REFINEMENTS.filter((q) => (refinements[q] || 0) > 0);
 
                   let countLabel = '';
                   if (activeLevels.length === 1) {
-                    countLabel = `${activeLevels[0]} ${refinements[activeLevels[0]]}`;
+                    countLabel = `${t(REFINEMENT_LABELS[activeLevels[0]])} ${refinements[activeLevels[0]]}`;
                   } else if (activeLevels.length === 2) {
-                    countLabel = `${activeLevels[0]} ${refinements[activeLevels[0]]} | ${activeLevels[1]} ${refinements[activeLevels[1]]}`;
+                    countLabel = `${t(REFINEMENT_LABELS[activeLevels[0]])} ${refinements[activeLevels[0]]} | ${t(REFINEMENT_LABELS[activeLevels[1]])} ${refinements[activeLevels[1]]}`;
                   } else {
-                    countLabel = ['Intact', 'Exceptional', 'Flawless', 'Radiant'].map((q) => refinements[q] || 0).join(' | ');
+                    countLabel = REFINEMENTS.map((q) => `${t(REFINEMENT_LABELS[q])} ${refinements[q] || 0}`).join(' | ');
                   }
 
                   const { sortedRewards, evPlat, evDucats, evRefinement, relicPlat } = item;
@@ -346,7 +352,7 @@ export default function Relics() {
                             </p>
                             {relicPlat > 0 &&
                         <p className="font-black text-[9px] text-kronos-accent mt-0.5 whitespace-nowrap">
-                                {relicPlat}P
+                                {t('relics.platinum', { plat: relicPlat })}
                               </p>
                         }
                           </div>
@@ -381,7 +387,7 @@ export default function Relics() {
                                       {plat > 0 &&
                                   <span className="flex items-center gap-0.5 text-[9px] font-black text-kronos-accent transition-colors tabular-nums">
                                           {iconSrc('Platinum') && <img src={iconSrc('Platinum')} className="w-3 h-3 object-contain" alt="" />}
-                                          {plat}P
+                                          {t('relics.platinum', { plat: plat })}
                                         </span>
                                   }
                                     </div>
@@ -394,16 +400,16 @@ export default function Relics() {
                             <div className="mt-2 pt-2 border-t border-white/5 flex flex-col gap-1.5">
                               <div className="flex items-center justify-between">
                                 {era !== 'Requiem' &&
-                            <div className="flex items-center gap-1.5" title={`Expected Ducats (${evRefinement}, Squad of ${squadSize})`}>
+                            <div className="flex items-center gap-1.5" title={t("relics.ev_title", { label: t("relics.exp_ducats"), refinement: evRefinement, size: squadSize })}>
                                     {iconSrc('Ducats') && <img src={iconSrc('Ducats')} className="w-3.5 h-3.5 object-contain" alt="" />}
                                     <span className="text-[12px] font-black text-kronos-dim uppercase tracking-tighter">{t('relics.exp_ducats')}</span>
                                     <span className="text-[12px] font-black text-blue-400">{Math.round(item.evDucats)}</span>
                                   </div>
                             }
-                                <div className="flex items-center gap-1.5" title={`Expected Platinum (${evRefinement}, Squad of ${squadSize})`}>
+                                <div className="flex items-center gap-1.5" title={t("relics.ev_title", { label: t("relics.exp_plat"), refinement: evRefinement, size: squadSize })}>
                                   {iconSrc('Platinum') && <img src={iconSrc('Platinum')} className="w-3.5 h-3.5 object-contain" alt="" />}
                                   <span className="text-[12px] font-black text-kronos-dim uppercase tracking-tighter">{t('relics.exp_plat')}</span>
-                                  <span className="text-[12px] font-black text-kronos-accent">{Math.round(item.evPlat)}P</span>
+                                  <span className="text-[12px] font-black text-kronos-accent">{t('relics.platinum', { plat: Math.round(item.evPlat) })}</span>
                                 </div>
                               </div>
 
@@ -417,7 +423,7 @@ export default function Relics() {
                                   <div className="flex items-center gap-1.5" title={t('relics.plat_gain')}>
                                     {iconSrc('Platinum') && <img src={iconSrc('Platinum')} className="w-3.5 h-3.5 object-contain" alt="" />}
                                     <span className="text-[12px] font-black text-kronos-accent/70 uppercase tracking-tighter">{t('relics.gain_plat')}</span>
-                                    <span className="text-[12px] font-black text-kronos-accent">+{Math.round(item.platGain)}P</span>
+                                    <span className="text-[12px] font-black text-kronos-accent">+{t('relics.platinum', { plat: Math.round(item.platGain) })}</span>
                                   </div>
                                 </div>
                           }

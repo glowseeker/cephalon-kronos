@@ -40,10 +40,25 @@ function extractModCategory(un) {
 export default function Mods() {
   const { t } = useUi()
   const CATEGORIES = [
-    t('mods.cat_all'), t('mods.cat_warframe'), t('mods.cat_primary'), t('mods.cat_secondary'), t('mods.cat_melee'),
-    t('mods.cat_sentinels'), t('mods.cat_beasts'), t('mods.cat_stance'), t('mods.cat_aura'), t('mods.cat_exilus'),
-    t('mods.cat_railjack'), t('mods.cat_archgun'), t('mods.cat_archmelee'), t('mods.cat_parazon'),
-    t('mods.cat_augment'), t('mods.cat_antique'), t('mods.cat_vehicles'), t('mods.cat_arcanes')];
+    { id: 'All', labelKey: 'mods.cat_all' },
+    { id: 'Primary', labelKey: 'mods.cat_primary' },
+    { id: 'Secondary', labelKey: 'mods.cat_secondary' },
+    { id: 'Melee', labelKey: 'mods.cat_melee' },
+    { id: 'Warframe', labelKey: 'mods.cat_warframe' },
+    { id: 'Sentinels', labelKey: 'mods.cat_sentinels' },
+    { id: 'Beasts', labelKey: 'mods.cat_beasts' },
+    { id: 'Stance', labelKey: 'mods.cat_stance' },
+    { id: 'Aura', labelKey: 'mods.cat_aura' },
+    { id: 'Exilus', labelKey: 'mods.cat_exilus' },
+    { id: 'Railjack', labelKey: 'mods.cat_railjack' },
+    { id: 'Archgun', labelKey: 'mods.cat_archgun' },
+    { id: 'Archmelee', labelKey: 'mods.cat_archmelee' },
+    { id: 'Parazon', labelKey: 'mods.cat_parazon' },
+    { id: 'Augment', labelKey: 'mods.cat_augment' },
+    { id: 'Antique', labelKey: 'mods.cat_antique' },
+    { id: 'Vehicles', labelKey: 'mods.cat_vehicles' },
+    { id: 'Arcanes', labelKey: 'mods.cat_arcanes' },
+  ];
 
   const SORT_OPTIONS = [
     { id: 'name', label: t('mods.sort_name') },
@@ -59,7 +74,7 @@ export default function Mods() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortCriteria, setSortCriteria] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState(CATEGORIES[0]);
   const [maxRankOnly, setMaxRankOnly] = useState(false);
   const [hideConclave, setHideConclave] = useState(false);
   const [visibleCount, setVisibleCount] = useState(60);
@@ -89,8 +104,8 @@ export default function Mods() {
         return q.every((w) => (m.name ?? '').toLowerCase().includes(w) || descText.toLowerCase().includes(w));
       });
     }
-    if (selectedCategory !== 'All') {
-      items = items.filter((m) => m.category === selectedCategory);
+    if (selectedCategory.id !== 'All') {
+      items = items.filter((m) => m.category === selectedCategory.id);
     }
     if (maxRankOnly) {
       items = items.filter((m) => m.rank >= m.max_rank);
@@ -182,22 +197,21 @@ export default function Mods() {
 
       <div className="flex items-center gap-3">
         <div className="flex flex-wrap gap-1 p-1 bg-black/20 rounded-xl border border-white/5">
-          {CATEGORIES.map((t) => {
+          {CATEGORIES.map((cat) => {
           const iconUrl = iconsPath ?
-          convertFileSrc(`${iconsPath}/Categories/${t}.png`) :
+          convertFileSrc(`${iconsPath}/Categories/${cat.id}.png`) :
           null;
           return (
             <button
-              key={t}
-              onClick={() => setSelectedCategory(t)}
-              className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap font-sans flex items-center gap-1.5 ${selectedCategory === t ?
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap font-sans flex items-center gap-1.5 ${selectedCategory.id === cat.id ?
               'bg-kronos-accent text-kronos-bg font-black shadow-[0_0_15px_rgba(var(--kronos-accent-rgb),0.4)] scale-[1.02]' :
-              'text-kronos-dim hover:text-white hover:bg-white/5'}`
-              }>
-              
-                {iconUrl && <img src={iconUrl} className="w-4 h-4 object-contain" alt="" />}
-                {t}
-              </button>);
+              'text-kronos-dim hover:text-white hover:bg-white/5'}`}>
+             
+              {iconUrl && <img src={iconUrl} className="w-4 h-4 object-contain" alt="" />}
+              {t(cat.labelKey)}
+            </button>);
 
         })}
         </div>
@@ -208,7 +222,7 @@ export default function Mods() {
   return (
     <PageLayout
       titleKey="screen.mods"
-      subtitle={`${filtered.length} total · ${uniqueMods} unique · ${dupCount} duplicate`}
+      subtitle={t('mods.subtitle', { total: filtered.length, unique: uniqueMods, duplicate: dupCount })}
       headerPanel={renderHeaderPanel()}>
       
       {inventoryData && (fixProgress.checking || fixProgress.phase && fixProgress.phase !== 'done') ?
@@ -218,10 +232,10 @@ export default function Mods() {
             <div className="w-full max-w-md">
               <div className="flex justify-between text-xs text-kronos-dim mb-1">
                 <span>
-                  {fixProgress.phase === 'extracting' ? 'Extracting mod images…' :
-              fixProgress.phase === 'fixing' ? 'Processing mod images…' :
-              fixProgress.phase === 'compositing' ? 'Compositing mod images…' :
-              'Preparing mod images…'}
+                  {fixProgress.phase === 'extracting' ? t('mods.fix_extracting') :
+                  fixProgress.phase === 'fixing' ? t('mods.fix_fixing') :
+                  fixProgress.phase === 'compositing' ? t('mods.fix_compositing') :
+                  t('mods.fix_preparing')}
                 </span>
                 <span>{fixProgress.current} / {fixProgress.total}</span>
               </div>

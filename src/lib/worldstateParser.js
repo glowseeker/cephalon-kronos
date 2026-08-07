@@ -178,9 +178,10 @@ function parseZarimanCycle(raw, bountyCycle) {
 }
 
 /** Duviri emotional state cycle.
- *  5 states (Sorrow, Fear, Joy, Anger, Envy), each 2 hours.  Rotates from Unix epoch 0. */
+ *  5 states (Sorrow, Fear, Joy, Anger, Envy), each 2 hours.  Rotates from Unix epoch 0.
+ *  State names are NOT in DE dicts — resolved via ui.dashboard.duviri_state.* i18n keys. */
 function parseDuviriCycle(_raw) {
-  const states = ['Sorrow', 'Fear', 'Joy', 'Anger', 'Envy']
+  const states = ['sorrow', 'fear', 'joy', 'anger', 'envy']
   const stateLenMs = 7200000 // 2 hours
   const idx = Math.floor(Date.now() / stateLenMs)
   return {
@@ -243,6 +244,48 @@ const CONQUEST_OVERRIDES = {
 
 // ─── Main Parser ───────────────────────────────────────────────────────────
 
+// Nightwave season-name extraction. The current season's cred reward label has
+// a per-locale shape: "{mix}:\r\n{season} {credword}" (en/de/tr/zh/ko/ja/tc put
+// the cred word AFTER the season name), "{mix}:\r\n{credword} {season}"
+// (fr/it/ru/pl/th put it BEFORE), es/pt omit it entirely, and uk/tc have no
+// colon at all (uk wraps the whole label in quotes, tc in 〈〉).
+const NW_CRED_WORDS = {
+  en: ['cred'], de: ['cred', 'creds'], fr: ['jeton'], es: ['respeto'],
+  it: ['cred'], pt: ['créditos'], tr: ['kredisi'], ru: ['доверие'],
+  uk: ['валюта'], pl: ['kredyt'], tc: ['幣'], zh: ['代币'],
+  ko: ['크레드'], ja: ['クレド'], th: ['เครด'],
+}
+
+/**
+ * Extract the localized Nightwave season name from the cred reward label,
+ * e.g. "Nora's Mix:\r\nDreams of the Dead Cred" → "Dreams of the Dead",
+ * "Mix de Nora:\r\nJeton Rêves des Morts" → "Rêves des Morts",
+ * "Валюта «Вибірки Нори „Сни мерців”»" → "Сни мерців".
+ */
+export function extractNightwaveSeason(credName, locale = 'en') {
+  if (!credName) return ''
+  let s = String(credName)
+  // Take the part after the last colon (all colon-using locales put the
+  // season name there); uk/tc have no colon and keep the whole label.
+  const ci = Math.max(s.lastIndexOf(':'), s.lastIndexOf('：'))
+  if (ci >= 0) s = s.slice(ci + 1)
+  s = s.trim()
+  // Strip the localized cred word from either end.
+  for (const w of NW_CRED_WORDS[locale] || []) {
+    const esc = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    s = s.replace(new RegExp(`^${esc}\\s*`, 'i'), '').replace(new RegExp(`\\s*${esc}$`, 'i'), '')
+  }
+  s = s.trim()
+  // Take the innermost quoted segment first (uk: «Вибірки Нори „Сни мерців”»
+  // → Сни мерців; ru: «Сны мёртвых» → Сны мёртвых), then strip any leftover
+  // wrapper quotes/brackets.
+  const inner = s.match(/[«〈„“"']([^«〈„“"']+)[»〉”"']/)
+  if (inner) s = inner[1].trim()
+  s = s.replace(/^[«〈„“"'\s]+|[»〉”"'\s]+$/g, '').trim()
+  return s
+}
+
+
 /**
  * Parse the live Warframe worldstate JSON into a clean UI-friendly object.
  * Called by MonitoringContext.jsx on each monitoring cycle.
@@ -264,7 +307,7 @@ const CONQUEST_OVERRIDES = {
  *   - archimedeaMap   Archimedea localized name map
  *   - descendiaDesc   Descendia description map (key → description text)
  */
-export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ExportImages, ExportUpgrades, archimedeaMap, descendiaDesc, locale = 'en' }) {
+export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ExportImages, ExportUpgrades, archimedeaMap, descendiaDesc, locale = 'en', i18nData = null }) {
 
   const nightwaveRewards = ENWRawRewards || []
   const imagesMap = ExportImages || {}
@@ -293,7 +336,7 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
         if (res) return clean(res)
       }
     }
-    return resolveNode(key, dict, ERg)
+    return resolveNode(key, dict, ERg, locale)
   }
 
 // Relic era names — proper nouns not always in the dict.
@@ -347,6 +390,9 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
     Miter: '/Lotus/Language/Items/TnoMiterName',
     Panthera: '/Lotus/Language/Items/PantheraName',
     Atomos: '/Lotus/Language/Items/GrnHeatGunName',
+    // DE short name "AckAndBrunt" would PascalSplit to "Ack And Brunt"; the
+    // game name uses an ampersand ("Ack & Brunt" in every locale).
+    AckAndBrunt: '/Lotus/Language/Items/RegorAxeShieldName',
     Nekros: '/Lotus/Language/Suits/NecroName',
     Valkyr: '/Lotus/Language/Suits/BerserkerName',
     Oberon: '/Lotus/Language/Suits/PaladinName',
@@ -375,6 +421,19 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
     if (loc && !loc.startsWith('/Lotus/')) return clean(loc)
     return resolveItemName(short, mergedDict, uniqueNameToName, locale)
   }
+
+  // Map /Lotus/Upgrades/Calendar/StatName leaf paths to rivenStats i18n keys.
+  // These calendar upgrade paths are not present in any DE dict export;
+  // the stat names are resolved at render time via t('rivenStats.*') in the Dashboard.
+  const CALENDAR_UPGRADE_STATS = {
+    GasChanceToPrimaryAndSecondary: 'Gas Chance to Primary and Secondary',
+    Armor: 'Armor',
+    AbilityStrength: 'Ability Strength',
+    CompanionsRadiationChance: 'Companions Radiation Chance',
+    ElectricDamagePerDistance: 'Electric Damage per Distance',
+    MeleeAttackSpeed: 'Melee Attack Speed',
+    ElectricStatusDamageAndChance: 'Electric Status Damage and Chance',
+  };
 
 
   return {
@@ -422,8 +481,8 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
       const completion = i.Count / i.Goal
       const pct = ((completion + 1) / 2) * 100
 
-      const attFaction = resolveNode(i.AttackerMissionInfo?.faction, dict, ERg)
-      const defFaction = resolveNode(i.DefenderMissionInfo?.faction, dict, ERg)
+      const attFaction = resolveNode(i.AttackerMissionInfo?.faction, dict, ERg, locale)
+      const defFaction = resolveNode(i.DefenderMissionInfo?.faction, dict, ERg, locale)
       const isInfested = attFaction === 'Infested' || defFaction === 'Infested'
 
       let attReward = i.AttackerReward
@@ -442,17 +501,17 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
       }
       return {
         id: i._id?.$oid || i._id,
-        node: resolveNode(i.Node, dict, ERg),
+        node: resolveNode(i.Node, dict, ERg, locale),
         completed: i.Completed,
         completion: pct,
         attacker: {
           reward: attReward,
-          rewardText: resolveRewardText(attReward, dict, ERg, uniqueNameToName),
+          rewardText: resolveRewardText(attReward, dict, ERg, uniqueNameToName, ", ", locale),
           faction: attFaction
         },
         defender: {
           reward: defReward,
-          rewardText: resolveRewardText(defReward, dict, ERg, uniqueNameToName),
+          rewardText: resolveRewardText(defReward, dict, ERg, uniqueNameToName, ", ", locale),
           faction: defFaction
         }
       }
@@ -463,8 +522,8 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
       const era = resolveRelicEra(f.Modifier?.replace('VoidT', ''), dict, locale)
       return {
         id: f._id?.$oid || f._id,
-        node: resolveNode(f.Node, dict, ERg),
-        missionType: resolveMissionType(f.MissionType, dict, ERg),
+        node: resolveNode(f.Node, dict, ERg, locale),
+        missionType: resolveMissionType(f.MissionType, dict, ERg, locale),
         missionTypeCode: f.MissionType, // raw MT_ code for locale-independent filtering
         tier: era,
         tierNum: parseInt(f.Modifier?.replace('VoidT', ''), 10) || 0,
@@ -479,17 +538,17 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
     voidStorms: (raw.VoidStorms || []).map(s => {
       const era = resolveRelicEra(s.ActiveMissionTier?.replace('VoidT', ''), dict, locale)
 
-      let mType = resolveMissionType(s.MissionType, dict, ERg)
+      let mType = resolveMissionType(s.MissionType, dict, ERg, locale)
       if (!mType || mType === 'Unknown Mission') {
         const nodeEntry = ERg[s.Node]
         if (nodeEntry && (nodeEntry.missionName || nodeEntry.missionType)) {
-          mType = resolveMissionType(nodeEntry.missionName || nodeEntry.missionType, dict, ERg)
+          mType = resolveMissionType(nodeEntry.missionName || nodeEntry.missionType, dict, ERg, locale)
         }
       }
 
       return {
         id: s._id?.$oid || s._id,
-        node: resolveNode(s.Node, dict, ERg),
+        node: resolveNode(s.Node, dict, ERg, locale),
         missionType: mType || 'Skirmish',
         tier: era,
         tierNum: parseInt(s.ActiveMissionTier?.replace('VoidT', ''), 10) || 0,
@@ -517,8 +576,18 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
             description = resolveChallengeDesc(ev.challenge || ev.Challenge, dict, EC, ERg);
             name = resolveItemName(ev.reward || ev.Reward, mergedDict, uniqueNameToName, locale);
           } else if (type === 'CET_UPGRADE') {
-            name = resolveItemName(ev.upgrade || ev.Upgrade, mergedDict, uniqueNameToName, locale);
-            description = resolveChallengeDesc(ev.upgrade || ev.Upgrade, dict, EC, ERg);
+            // Calendar upgrade paths like /Lotus/Upgrades/Calendar/MeleeAttackSpeed
+            // are not in DE dict exports. Map leaf name to a rivenStats i18n key
+            // and resolve through the locale's rivenStats table for proper localization.
+            const upgradePath = ev.upgrade || ev.Upgrade;
+            const leafName = upgradePath ? upgradePath.replace(/^.*\//, '') : '';
+            const statI18nKey = CALENDAR_UPGRADE_STATS[leafName];
+            if (statI18nKey) {
+              name = i18nData?.rivenStats?.[statI18nKey] || statI18nKey;
+            } else {
+              name = resolveItemName(upgradePath, mergedDict, uniqueNameToName, locale);
+            }
+            description = resolveChallengeDesc(upgradePath, dict, EC, ERg);
           } else if (type === 'CET_BIRTHDAY') {
             name = ev.name || ev.Name || 'Unknown';
           }
@@ -541,7 +610,7 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
 
         // Fallback for legacy structure if any
         let legacyChallenge = d.Challenge ? resolveChallenge(d.Challenge, dict, EC) : (d.challenge ? resolveChallenge(d.challenge, dict, EC) : null);
-        let legacyReward = d.Reward ? resolveRewardText(d.Reward, dict, ERg, uniqueNameToName) : (d.reward ? resolveRewardText(d.reward, dict, ERg, uniqueNameToName) : null);
+        let legacyReward = d.Reward ? resolveRewardText(d.Reward, dict, ERg, uniqueNameToName, ", ", locale) : (d.reward ? resolveRewardText(d.reward, dict, ERg, uniqueNameToName, ", ", locale) : null);
 
         return {
           day: d.day,
@@ -563,18 +632,49 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         const levelName = (c.Level || '').split('/').at(-1)?.replace(/\.level$/i, '') || ''
         const rawType = c.Type
         const rawPenance = c.Challenge
-        const resolvedType = resolveMissionType(rawType, dict, ERg)
-        const resolvedPenance = resolveNode(rawPenance, dict, ERg)
+        const resolvedType = resolveMissionType(rawType, dict, ERg, locale)
+        const resolvedPenance = resolveNode(rawPenance, dict, ERg, locale)
+
+        // When the DE dict doesn't have a translation for the penance type,
+        // expose the raw key as an i18n lookup key so Dashboard.jsx can resolve
+        // it per-locale via t('ui.dashboard.descendia_penance_*').
+        // Handles PascalCase (BasicLootCreatures), SCREAMING_SNAKE_CASE (DT_ALCHEMY),
+        // and mixed alphanumeric (99TankP1).
+        const toSnake = (s) => {
+          const cleaned = s.replace(/^NC_/i, '');
+          // If already SCREAMING_SNAKE_CASE, just lowercase
+          if (/^[A-Z][A-Z_]+$/.test(cleaned)) return cleaned.toLowerCase();
+          return cleaned.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/([A-Z])([A-Z][a-z])/g, '$1_$2').replace(/^_/, '').replace(/_+/g, '_').toLowerCase();
+        };
+        // Only skip the i18n key when the dict genuinely resolved the value
+        // (i.e. it is not a PascalCase/fallback reconstruction).  resolveNode
+        // and resolveMissionType fall back to English word-splitting, so a
+        // "resolved" value that differs from the raw key does NOT mean the
+        // dict had it — check the dict directly.
+        const dictHasPenance = !!(dict?.[rawPenance] || dict?.['/' + rawPenance])
+        const dictHasType = !!(dict?.[rawType] || dict?.['/' + rawType])
+        const penanceI18nKey = dictHasPenance
+          ? null
+          : `descendia_penance_${toSnake(rawPenance)}`
+
+        const missionTypeI18nKey = dictHasType
+          ? null
+          : `descendia_mission_type_${toSnake(rawType)}`
+
         return {
           index: c.Index,
           missionType: (resolvedType !== rawType) ? resolvedType : (DESCENDIA_MISSION_TYPES[rawType] || rawType),
           missionTypeRaw: rawType,
+          missionTypeI18nKey: missionTypeI18nKey,
           missionTypeDesc: (descendiaDesc || {})[rawType] || '',
+          missionTypeDescI18nKey: `descendia_mission_type_desc_${toSnake(rawType)}`,
           penance: (resolvedPenance !== rawPenance) ? resolvedPenance : (DESCENDIA_PENANCES[rawPenance] || rawPenance),
           penanceRaw: rawPenance,
+          penanceI18nKey: penanceI18nKey,
           penanceDesc: (descendiaDesc || {})[rawPenance] || '',
+          penanceDescI18nKey: `descendia_penance_desc_${toSnake(rawPenance)}`,
           arena: levelName,
-          level: resolveNode(c.Level, dict, ERg),
+          level: resolveNode(c.Level, dict, ERg, locale),
           specs: c.Specs || [],
           auras: c.Auras || [],
           isCheckpoint: c.Index === 7 || c.Index === 14 || c.Index === 21,
@@ -594,11 +694,12 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         if (typeof e === 'object' && e?.$date?.$numberLong) return new Date(parseInt(e.$date.$numberLong, 10))
         return new Date(e)
       })(),
-      boss: resolveNode(raw.Sorties[0].Boss, dict, ERg),
+      boss: resolveNode(raw.Sorties[0].Boss, dict, ERg, locale),
+      bossKey: raw.Sorties[0].Boss, // raw key for icon path construction
       variants: (raw.Sorties[0].Variants || []).map(v => ({
-        missionType: resolveMissionType(v.missionType, dict, ERg),
-        modifier: resolveNode(v.modifierType, dict, ERg),
-        node: resolveNode(v.node, dict, ERg)
+        missionType: resolveMissionType(v.missionType, dict, ERg, locale),
+        modifier: resolveNode(v.modifierType, dict, ERg, locale),
+        node: resolveNode(v.node, dict, ERg, locale)
       }))
     } : null,
 
@@ -611,10 +712,11 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         if (typeof e === 'object' && e?.$date?.$numberLong) return new Date(parseInt(e.$date.$numberLong, 10))
         return new Date(e)
       })(),
-      boss: resolveNode(raw.LiteSorties[0].Boss, dict, ERg),
+      boss: resolveNode(raw.LiteSorties[0].Boss, dict, ERg, locale),
+      bossKey: raw.LiteSorties[0].Boss, // raw key for icon path construction
       missions: (raw.LiteSorties[0].Missions || []).map(m => ({
-        type: resolveMissionType(m.missionType, dict, ERg),
-        node: resolveNode(m.node, dict, ERg)
+        type: resolveMissionType(m.missionType, dict, ERg, locale),
+        node: resolveNode(m.node, dict, ERg, locale)
       }))
     } : null,
 
@@ -639,12 +741,15 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         const credReward = nightwaveRewards.find(r => r.name?.includes('Nora') && r.name?.includes('Cred'))
         if (credReward) {
           const credName = dict[credReward.name] || credReward.name || ''
-          const match = credName.match(/:\s*(.+?)\s*Cred$/m)
-          if (match) return match[1].trim()
+          const season = extractNightwaveSeason(credName, locale)
+          if (season) return season
         }
-        return ES?.[raw.SeasonInfo.AffiliationTag]?.name ? (dict[ES[raw.SeasonInfo.AffiliationTag].name] || 'Nightwave') : 'Nightwave'
+        // Fall back to the localized Nightwave title itself (RadioLegion =
+        // Nightwave syndicate; e.g. "Ondes Nocturnes" in French).
+        const legionKey = '/Lotus/Language/Syndicates/RadioLegionTitle'
+        return dict?.[legionKey] || dict?.[legionKey.replace(/^\//, '')] || 'Nightwave'
       })(),
-      rewards: nightwaveRewards.slice(0, 30).map((r, idx) => {
+      rewards: nightwaveRewards.slice(0, 90).map((r, idx) => {
         const iconPath = r.icon || null
         const eiImage = EI[r.uniqueName] || null
         const exportImageEntry = imagesMap[iconPath] || {}
@@ -660,7 +765,7 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
           if (u.includes('galvanized')) return 'Galvanized'
           if (u.includes('amalgam')) return 'Amalgam'
           if (u.includes('peculiar')) return 'Peculiar'
-          if (u.includes('/immortal/antivirus')) return 'Antivirus'
+          if (u.includes('/immortal/antivirus') || u.includes('gainantivirus')) return 'Antivirus'
           if (u.includes('/immortal/')) return 'Requiem'
           if (u.includes('archon')) return 'Archon'
           if (u.includes('grimoire') || u.includes('tome')) return 'Tome'
@@ -673,11 +778,16 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         })() : null
         return {
           name: r.name ? (dict[r.name] || dict['/' + r.name] || r.name) : 'Reward',
+          rankName: dict[`/Lotus/Language/Syndicates/RadioLegionTitle${idx + 1}`] || null,
           uniqueName: r.uniqueName,
           itemCount: r.itemCount,
           image: highQualityUrl || eiImage || browseWfUrl || null,
           iconPath: iconPath,
-          modFrame
+          modFrame,
+          // Pass mod entry data so ModCard can render descriptions and stats
+          description: modEntry?.description ? (dict[modEntry.description] || dict['/' + modEntry.description] || null) : null,
+          levelStats: modEntry?.levelStats || null,
+          baseDrain: modEntry?.baseDrain || null,
         }
       }),
       challenges: (raw.SeasonInfo.ActiveChallenges || []).map(c => {
@@ -720,8 +830,8 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         const devRawDesc = devLookup ? (archMap[devLookup + '_desc'] || archMap[devLookup + '_description'] || archMap[devLookup] || null) : null
         const devDescription = devRawDesc && !devRawDesc.includes('|val|') ? devRawDesc : null
         return {
-          missionType: resolveMissionType(m.missionType, dict, ERg),
-          faction: resolveNode(m.faction, dict, ERg),
+          missionType: resolveMissionType(m.missionType, dict, ERg, locale),
+          faction: resolveNode(m.faction, dict, ERg, locale),
           deviation: diff?.deviation ? {
             name: archMap[devLookup] ?? resolvePriority(diff.deviation),
             description: devDescription
@@ -787,12 +897,12 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
     // Alerts
     alerts: (raw.Alerts || []).map(a => ({
       id: a._id?.$oid || a._id,
-      node: resolveNode(a.MissionInfo?.location, dict, ERg),
-      missionType: resolveMissionType(a.MissionInfo?.missionType, dict, ERg),
-      faction: resolveNode(a.MissionInfo?.faction, dict, ERg),
+      node: resolveNode(a.MissionInfo?.location, dict, ERg, locale),
+      missionType: resolveMissionType(a.MissionInfo?.missionType, dict, ERg, locale),
+      faction: resolveNode(a.MissionInfo?.faction, dict, ERg, locale),
       minLevel: a.MissionInfo?.minEnemyLevel,
       maxLevel: a.MissionInfo?.maxEnemyLevel,
-      rewardText: resolveRewardText(a.MissionInfo?.missionReward, dict, ERg, uniqueNameToName),
+      rewardText: resolveRewardText(a.MissionInfo?.missionReward, dict, ERg, uniqueNameToName, ", ", locale),
       expiry: a.Expiry,
       activation: a.Activation
     })),
@@ -814,14 +924,14 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         id: g._id?.$oid || g._id,
         name,
         description: g.ToolTip ? resolvePriority(g.ToolTip) : '',
-        factions: (g.Factions || []).map(f => resolveNode(f, dict, ERg)),
-        node: g.Node ? resolveNode(g.Node, dict, ERg) : '',
+        factions: (g.Factions || []).map(f => resolveNode(f, dict, ERg, locale)),
+        node: g.Node ? resolveNode(g.Node, dict, ERg, locale) : '',
         scoreVar: g.ScoreVarName,
         targetScore: g.VictoryThreshold,
         currentScore: g.Count,
         percent: Math.min(100, Math.max(0, (g.Count / g.VictoryThreshold) * 100)),
-        rewards: (g.RewardTierItems || []).map(rt => resolveRewardText(rt, dict, ERg, uniqueNameToName)),
-        mainReward: resolveRewardText(g.Reward, dict, ERg, uniqueNameToName),
+        rewards: (g.RewardTierItems || []).map(rt => resolveRewardText(rt, dict, ERg, uniqueNameToName, ", ", locale)),
+        mainReward: resolveRewardText(g.Reward, dict, ERg, uniqueNameToName, ", ", locale),
         expiry: g.Expiry,
         activation: g.Activation
       }
@@ -830,15 +940,17 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
     // Global Boosters (from GlobalUpgrades)
     globalBoosters: (raw.GlobalUpgrades || []).map(u => {
       const typeMap = {
-        'GAMEPLAY_KILL_XP_AMOUNT': 'Affinity Booster',
-        'GAMEPLAY_MONEY_REWARD_AMOUNT': 'Credit Booster',
-        'GAMEPLAY_PICKUP_AMOUNT': 'Resource Booster'
+        'GAMEPLAY_KILL_XP_AMOUNT': 'booster_affinity',
+        'GAMEPLAY_MONEY_REWARD_AMOUNT': 'booster_credit',
+        'GAMEPLAY_PICKUP_AMOUNT': 'booster_resource'
       }
       const locTag = u.LocalizeTag || ''
-      if (locTag.includes('DoubleCredits')) return { name: 'Double Credits', expiry: u.ExpiryDate, activation: u.Activation }
-      if (locTag.includes('DoubleAffinity')) return { name: 'Double Affinity', expiry: u.ExpiryDate, activation: u.Activation }
+      if (locTag.includes('DoubleCredits')) return { name: 'Double Credits', nameI18nKey: 'ui.dashboard.booster_double_credits', expiry: u.ExpiryDate, activation: u.Activation }
+      if (locTag.includes('DoubleAffinity')) return { name: 'Double Affinity', nameI18nKey: 'ui.dashboard.booster_double_affinity', expiry: u.ExpiryDate, activation: u.Activation }
+      const typeKey = typeMap[u.UpgradeType]
       return {
-        name: typeMap[u.UpgradeType] || splitPascal(u.UpgradeType.replace('GAMEPLAY_', '')),
+        name: typeKey ? typeKey : splitPascal(u.UpgradeType.replace('GAMEPLAY_', '')),
+        nameI18nKey: typeKey ? `ui.dashboard.${typeKey}` : null,
         expiry: u.ExpiryDate || u.Expiry,
         activation: u.Activation
       }
@@ -855,7 +967,7 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         ? parseInt(t.Expiry.$date.$numberLong, 10)
         : (t.Expiry ? new Date(t.Expiry).getTime() : 0)
       return {
-        node: resolveNode(t.Node, dict, ERg),
+        node: resolveNode(t.Node, dict, ERg, locale),
         activation: t.Activation,
         activationMs: actMs,
         expiry: t.Expiry,

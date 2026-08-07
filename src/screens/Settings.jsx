@@ -15,9 +15,10 @@ import { PageLayout, Card, Button, Toggle } from '../components/UI';
 import NotificationManager from '../components/NotificationManager';
 import LanguagePicker from '../components/LanguagePicker';
 
-function HotkeyRecorder({ value, onChange, placeholder = 'None' }) {
+function HotkeyRecorder({ value, onChange, placeholder }) {
   const [recording, setRecording] = useState(false);
   const buttonRef = useRef(null);
+  const { t } = useUi();
 
   useEffect(() => {
     if (!recording) return;
@@ -73,7 +74,7 @@ function HotkeyRecorder({ value, onChange, placeholder = 'None' }) {
       'border-white/10 bg-black/20 text-kronos-dim hover:border-white/20'}`
       }>
       
-      {recording ? 'Recording...' : value || placeholder}
+      {recording ? t('settings.recording') : value || t('settings.none')}
     </button>);
 
 }
@@ -116,8 +117,8 @@ export default function SettingsScreen() {
   };
 
   const HOTKEY_ACTIONS = [
-  { id: 'manual_ocr', label: 'Manual Relic Recognition (OCR)' },
-  { id: 'toggle_sidebar', label: 'Toggle Ingame Menu' }];
+  { id: 'manual_ocr', label: t('settings.action_manual_ocr') },
+  { id: 'toggle_sidebar', label: t('settings.action_toggle_sidebar') }]
 
 
   const [version, setVersion] = useState('');
@@ -454,8 +455,8 @@ export default function SettingsScreen() {
   const handleTestNotification = (position, delay = 0) => {
     setTimeout(() => {
       invoke('show_notification', {
-        title: 'Foundry Complete',
-        message: 'Harrow Chassis has finished crafting and is ready to claim.',
+        title: t('settings.test_foundry_complete'),
+        message: t('settings.test_foundry_msg'),
         position
       }).catch(console.error);
     }, delay);
@@ -609,7 +610,7 @@ export default function SettingsScreen() {
                     {pos === 'top-left' && <AlignStartVertical size={14} />}
                     {pos === 'top-center' && <AlignVerticalJustifyStart size={14} />}
                     {pos === 'top-right' && <AlignEndVertical size={14} />}
-                    {pos.replace('top-', '').replace('-', ' ')}
+                    {pos === 'top-left' ? t('settings.top_left') : pos === 'top-center' ? t('settings.top_center') : t('settings.top_right')}
                   </button>
                 )}
               </div>
@@ -618,22 +619,21 @@ export default function SettingsScreen() {
               <p className="text-sm font-black uppercase tracking-widest text-kronos-dim mb-3">{t('settings.notification_sound')}</p>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                { label: 'None', value: 'none', icon: VolumeX },
-                { label: 'Sound 1', value: 'notification1.wav', icon: Play },
-                { label: 'Sound 2', value: 'notification2.wav', icon: Play }].
-                map((s) =>
+                { label: t('settings.none'), value: 'none', icon: VolumeX },
+                { label: t('settings.sound_1'), value: 'notification1.wav', icon: Play },
+                { label: t('settings.sound_2'), value: 'notification2.wav', icon: Play }].map((s) => (
                 <button
                   key={s.value}
                   onClick={() => handleSetSound(s.value)}
                   className={`py-2 px-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${notifSound === s.value ?
                   'bg-kronos-accent/20 border-kronos-accent text-kronos-accent' :
-                  'bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20'}`
-                  }>
+                  'bg-kronos-panel/20 border-white/5 text-kronos-dim hover:border-white/20'}`}
+                  >
                   
                     <s.icon size={14} />
                     {s.label}
                   </button>
-                )}
+                ))}
               </div>
             </div>
           </div>
@@ -682,14 +682,14 @@ export default function SettingsScreen() {
                         const ms = Math.max(0, (nextRetryAt || (lastUpdate ? parseInt(lastUpdate) + 180000 : 0)) - Date.now());
                         const m = Math.floor(ms / 60000);
                         const s = Math.floor(ms % 60000 / 1000);
-                        return ms > 0 ? t('sync.next_update', { time: m > 0 ? `${m}m ${s}s` : `${s}s` }) : '';
+                        return ms > 0 ? ' ' + t('sync.next_update', { time: m > 0 ? `${m}m ${s}s` : `${s}s` }) : '';
                       })() :
                       monitorResult === 'cached' ?
                       t('sync.waiting') + (nextRetryAt ? (() => {
                         const ms = Math.max(0, nextRetryAt - Date.now());
                         const m = Math.floor(ms / 60000);
                         const s = Math.floor(ms % 60000 / 1000);
-                        return t('sync.next_attempt', { time: m > 0 ? `${m}m ${s}s` : `${s}s` });
+                        return ' ' + t('sync.next_attempt', { time: m > 0 ? `${m}m ${s}s` : `${s}s` });
                       })() : '') :
                       monitorResult === 'error' ?
                       t('sync.error') :
@@ -728,10 +728,10 @@ export default function SettingsScreen() {
                     scannerStatus === 'stale_offset' ? 'text-red-400' :
                     'text-zinc-600'}`
                     }>
-                      {scannerStatus === 'active' ? 'Hooked into Warframe - scanner running' :
-                      scannerStatus === 'waiting' ? 'Waiting for Warframe to launch…' :
-                      scannerStatus === 'stale_offset' ? 'Scanner offset out of date - auto-retrying' :
-                      'Scanner offline'}
+                      {scannerStatus === 'active' ? t('settings.scanner.active') :
+                      scannerStatus === 'waiting' ? t('settings.scanner.waiting') :
+                      scannerStatus === 'stale_offset' ? t('settings.scanner.stale') :
+                      t('settings.scanner.offline')}
                     </span>
                   </div>
                   <Toggle checked={fissureOverlayEnabled} onChange={handleSetFissureEnabled} />
@@ -844,7 +844,7 @@ export default function SettingsScreen() {
                     
                     {availableMonitors.map((mon) =>
                     <option key={mon.index} value={mon.index}>
-                        {mon.name} ({mon.width}x{mon.height}){mon.is_primary ? ' [Primary]' : ''}
+                        {mon.name} ({mon.width}x{mon.height}){mon.is_primary ? ` ${t('settings.primary_monitor')}` : ''}
                       </option>
                     )}
                   </select>
@@ -915,7 +915,7 @@ export default function SettingsScreen() {
                   }>
                   
                     {s === 'left' ? <PanelLeft size={16} /> : <PanelRight size={16} />}
-                    {s === 'left' ? 'Left Side' : 'Right Side'}
+                    {s === 'left' ? t('settings.sidebar_left') : t('settings.sidebar_right')}
                   </button>
                 )}
               </div>
@@ -924,7 +924,7 @@ export default function SettingsScreen() {
               <Toggle
                 checked={sidebarHideOnFocusLoss}
                 onChange={handleSetSidebarHideOnFocusLoss}
-                label="Hide sidebar when alt-tabbing" />
+                label={t('settings.hide_sidebar')} />
               
             </div>
           </div>
@@ -1015,13 +1015,11 @@ export default function SettingsScreen() {
 
               <div className="bg-kronos-panel/30 rounded-xl p-4 border border-white/5 space-y-3">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-kronos-dim">{t('settings.version')}
-                    {version}
-                  </p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-kronos-dim">{t('settings.version')} {version}</p>
                   <Toggle
                     checked={updateOnStartup}
                     onChange={handleSetUpdateOnStartup}
-                    label="Check on startup" />
+                    label={t('settings.check_on_startup')} />
                   
                 </div>
 
@@ -1039,7 +1037,7 @@ export default function SettingsScreen() {
                     {updateState.manifest.version}
                     </p>
                     <p className="text-[10px] text-kronos-dim font-mono leading-relaxed max-h-20 overflow-y-auto">
-                      {updateState.manifest.body || 'No release notes available.'}
+                      {updateState.manifest.body || t('settings.no_release_notes')}
                     </p>
                     <p className="text-[10px] text-zinc-600 font-mono">{t('settings.released')}
                     {new Date(updateState.manifest.date).toLocaleDateString()}
@@ -1047,7 +1045,7 @@ export default function SettingsScreen() {
                   </div>
                 }
                 {updateState.status === 'up-to-date' &&
-                <p className="text-xs text-green-400 font-mono">{t('settings.up_to_date')}</p>
+                <p className="text-xs text-green-400 font-mono mt-1">{t('settings.up_to_date')}</p>
                 }
                 {updateState.status === 'installing' &&
                 <p className="text-xs text-kronos-accent font-mono flex items-center gap-2">
@@ -1077,7 +1075,7 @@ export default function SettingsScreen() {
                     'bg-kronos-accent/20 border-kronos-accent/40 text-kronos-accent hover:bg-kronos-accent/30'}`
                     }>
                     
-                    {updateState.status === 'checking' ? 'Checking...' : 'Check for Updates'}
+                    {updateState.status === 'checking' ? t('settings.checking') : t('settings.check_for_updates')}
                   </button>
                   {updateState.status === 'available' &&
                   <button
@@ -1121,7 +1119,7 @@ export default function SettingsScreen() {
                     'bg-kronos-panel/20 border-white/5 text-kronos-dim cursor-not-allowed'}`
                     }>
                     
-                    {isPriceLoading ? 'Fetching...' : 'Refresh Prices'}
+                    {isPriceLoading ? t('settings.refreshing') : t('settings.refresh_prices')}
                   </button>
                   {priceFetchProgress &&
                   <span className="text-[10px] font-mono text-kronos-accent/60">{priceFetchProgress.current} / {priceFetchProgress.total}</span>
