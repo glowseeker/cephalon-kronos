@@ -33,7 +33,14 @@
     "Finisher Damage": "Finisher Damage",
     "Projectile Speed": "Projectile Speed",
     "Beam Length": "Beam Length",
-    "Slide Crit Chance": "Slide Crit Chance"
+    "Slide Crit Chance": "Slide Crit Chance",
+    "English": {},
+    "Melee Attack Speed": "Melee Attack Speed",
+    "Companions Radiation Chance": "Companions Radiation Chance",
+    "Electric Damage per Distance": "Electric Damage per Distance",
+    "Gas Chance to Primary and Secondary": "Gas Chance to Primary and Secondary",
+    "Armor": "Armor",
+    "Ability Strength": "Ability Strength"
   },
   "eras": {
     "Lith": "Lith",
@@ -1201,7 +1208,18 @@
     "settings.test_foundry_msg": "Test foundry notification",
     "settings.top_center": "Top Center",
     "settings.top_left": "Top Left",
-    "settings.top_right": "Top Right"
+    "settings.top_right": "Top Right",
+    "about.credit_browse_wf": "Warframe data browser session-token cache (calamity-inc fork)",
+    "about.credit_relics_run": "Relic price aggregation valuation engine",
+    "about.credit_session_token": "Warframe session-token acquisition helper",
+    "about.credit_wfcd_items": "Warframe public item manifest export pipeline",
+    "about.credit_warframetools": "Public Warframe task-list and star-chart tooling",
+    "about.credit_wiki": "Comprehensive Warframe documentation",
+    "about.credit_riven_pricer": "Riven price reference model",
+    "adversaries.rank": "Rank {rank}",
+    "adversaries.no_data": "No nemesis data.",
+    "ui.riven_card.riven_suffix": "Riven",
+    "rivens.type_unknown": "Unknown"
   },
   "inventory": {
     "filled": "Filled",

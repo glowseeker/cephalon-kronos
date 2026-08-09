@@ -187,6 +187,24 @@ function splitPascal(str) {
     .trim();
 }
 
+/**
+ * Compose a localized "Veiled <Type> Riven" display name for veiled rivens.
+ * Warframe never exports a "Veiled" or "Riven" loc string in the public dict,
+ * so the words are pulled from the per-locale i18n ui tables:
+ *   - ui.riven_card.veiled   ("Veiled")
+ *   - riven.type_<weaponType> ("Melee", "Rifles", ...)
+ *   - ui.riven_card.riven_suffix ("Riven")
+ * When the weapon-type label is unavailable, the raw normalized type is used.
+ */
+function composeVeiledRivenName(weaponType, i18nData) {
+  const ui = i18nData?.ui || {}
+  const veiled = ui['ui.riven_card.veiled'] || 'Veiled'
+  const typeLabel = i18nData?.ui?.['rivens.type_' + weaponType] || splitPascal(weaponType)
+  const suffix = ui['ui.riven_card.riven_suffix'] || 'Riven'
+  return `${veiled} ${typeLabel} ${suffix}`
+}
+
+
 const FOLDER_OVERRIDES = {
   Harlequin: 'Mirage', Pirate: 'Hydroid', Tengu: 'Zephyr',
   Paladin: 'Oberon', Berserker: 'Valkyr', Priest: 'Trinity',
@@ -1885,7 +1903,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
   const rivens = [
     ...(raw.RawUpgrades ?? []).filter(u => u.ItemType?.includes('Randomized') || u.ItemType?.includes('RandomMod')).map(u => ({
       unique_name: u.ItemType, image: null, category: 'rivens', weapon_type: rivenWeaponType(u.ItemType),
-      name: `Veiled ${splitPascal(rivenWeaponType(u.ItemType)).replace(/^\w/, c => c.toUpperCase())} Riven`, veiled: true, owned: true, quantity: u.ItemCount ?? 1
+      name: composeVeiledRivenName(rivenWeaponType(u.ItemType), i18nData), veiled: true, owned: true, quantity: u.ItemCount ?? 1
     })),
     ...(raw.Upgrades ?? []).filter(u => u.ItemType?.includes('Randomized')).map(u => {
       const fp = parseFP(u.UpgradeFingerprint);
@@ -1997,7 +2015,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
         if (statLoc) {
           tagName = cleanStatLabel(dict[statLoc] || dict[statLoc.replace(/^\//, '')]);
         }
-        if (!tagName) tagName = i18nData?.rivenStats?.[statKey] || statKey;
+        if (!tagName) tagName = i18nData?.rivenStats?.[statKey] ?? null;
 
         const isMultiplier = SPECIAL_FACTOR.has(tag) && !pos;
         let valueStr = (displayVal * finalSign).toFixed(isMultiplier ? 2 : 1);

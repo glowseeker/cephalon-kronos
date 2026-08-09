@@ -273,7 +273,7 @@ const formatTimeLeft = (ms) => {
   return `${minutes}m`;
 };
 
-const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextResetTime, t }) => {
+const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextResetTime, t, locale }) => {
   const resetLabels = { daily: t('checklist.daily'), weekly: t('checklist.weekly'), biweekly: t('checklist.biweekly'), other: t('checklist.other_8h'), baro: resolveGameTerm('/Lotus/Language/G1Quests/VoidTraderName', locale) };
   const getIntervalMs = (resetType) => {
     if (resetType === 'daily') return 24 * 60 * 60 * 1000;
@@ -896,7 +896,7 @@ export default function Checklist() {
               onHide={() => toggleHidden(task.id)}
               timeLeft={task.timeLeft}
               nextResetTime={task.nextResetTime}
-              t={t} />
+              t={t} locale={locale} />
 
             )}
           </div>

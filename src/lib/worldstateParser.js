@@ -583,7 +583,7 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
             const leafName = upgradePath ? upgradePath.replace(/^.*\//, '') : '';
             const statI18nKey = CALENDAR_UPGRADE_STATS[leafName];
             if (statI18nKey) {
-              name = i18nData?.rivenStats?.[statI18nKey] || statI18nKey;
+              name = i18nData?.rivenStats?.[statI18nKey] ?? null;
             } else {
               name = resolveItemName(upgradePath, mergedDict, uniqueNameToName, locale);
             }

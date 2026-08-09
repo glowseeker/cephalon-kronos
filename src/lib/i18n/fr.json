@@ -33,7 +33,13 @@
     "Finisher Damage": "Dégâts de finisseur",
     "Projectile Speed": "Vitesse de projectile",
     "Beam Length": "Longueur du faisceau",
-    "Slide Crit Chance": "Chance de critique glissade"
+    "Slide Crit Chance": "Chance de critique glissade",
+    "Melee Attack Speed": "Vitesse d’attaque mêlée",
+    "Companions Radiation Chance": "Chance de rayonnement des compagnons",
+    "Electric Damage per Distance": "Dégâts électriques par distance",
+    "Gas Chance to Primary and Secondary": "Chance de gaz sur les armes primaires et secondaires",
+    "Armor": "Armure",
+    "Ability Strength": "Force des capacités"
   },
   "eras": {
     "Lith": "Lith",
@@ -1072,7 +1078,7 @@
     "rivens.type_rifle": "Fusils",
     "rivens.type_pistol": "Pistolets",
     "rivens.type_shotgun": "Fusils à pompe",
-    "rivens.type_sniper": "Snipers",
+    "rivens.type_sniper": "Tueurs",
     "rivens.type_melee": "Mêlée",
     "rivens.type_kitgun": "Kitguns",
     "rivens.type_zaw": "Zaws",
@@ -1201,7 +1207,18 @@
     "settings.test_foundry_msg": "Notification de fonderie de test",
     "settings.top_center": "Haut centre",
     "settings.top_left": "Haut gauche",
-    "settings.top_right": "Haut droite"
+    "settings.top_right": "Haut droite",
+    "ui.riven_card.riven_suffix": "Riven",
+    "rivens.type_unknown": "Inconnu",
+    "about.credit_browse_wf": "Cache de jetons de session pour le navigateur Warframe (fourchette calamity-inc)",
+    "about.credit_relics_run": "Moteur d’agrégation des prix des reliques",
+    "about.credit_session_token": "Assistant d’acquisition de jetons de session Warframe",
+    "about.credit_wfcd_items": "Pipeline d’exportation des objets publics Warframe",
+    "about.credit_warframetools": "Outils publics de liste de tâches et de carte stellaire",
+    "about.credit_wiki": "Documentation complète de Warframe",
+    "about.credit_riven_pricer": "Modèle de référence des prix des rivens",
+    "adversaries.rank": "Rang {rank}",
+    "adversaries.no_data": "Aucune donnée de némésis."
   },
   "inventory": {
     "filled": "Plein",

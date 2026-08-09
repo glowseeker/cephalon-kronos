@@ -506,7 +506,7 @@ function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFound
 
 }
 export default function Inventory() {
-  const { t } = useUi()
+  const { t, locale } = useUi()
   const INVENTORY_TABS = [
   { id: 'all', label: t('ui.inventory.tab_all') },
   { id: 'warframes', label: t('ui.inventory.tab_warframes') },
