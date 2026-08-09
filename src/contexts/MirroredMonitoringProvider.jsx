@@ -4,6 +4,7 @@ import { parseInventory } from '../lib/inventoryParser'
 import { loadLocale } from '../lib/i18n'
 import { buildDropIndex } from '../lib/dropsParser'
 import { parseWorldstate, buildArchimedeaMap } from '../lib/worldstateParser'
+import { registerGameDict } from '../lib/gameTerm'
 import { getAllRelicRewards } from '../lib/relicParser'
 import { listen } from '@tauri-apps/api/event'
 import { MonitoringContext } from './MonitoringContext'
@@ -468,6 +469,8 @@ export default function MirroredMonitoringProvider({ children }) {
 
   // ── Memoized fields (mirrors MonitoringContext) ──
   const dict = useMemo(() => exportData?.dict ?? exportData?.['dict.en'] ?? {}, [exportData])
+  // Register dict for resolveGameTerm() (runtime game-term resolution)
+  useEffect(() => { registerGameDict(dict, localeRef.current) }, [dict, localeRef.current])
   const suppDict = useMemo(() => exportData?.['supp-dict'] ?? exportData?.['supp-dict-en'] ?? {}, [exportData])
   const archimedeaMap = useMemo(() => buildArchimedeaMap(dict, suppDict), [dict, suppDict])
   const EC = useMemo(() => toMap(exportData?.ExportChallenges, 'ExportChallenges'), [exportData])

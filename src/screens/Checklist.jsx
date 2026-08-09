@@ -20,6 +20,7 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { useUi } from '../contexts/UiContext'
+import { resolveGameTerm } from '../lib/gameTerm'
 import { Check, Circle, Eye, EyeOff } from 'lucide-react';
 import { PageLayout } from '../components/UI';
 import { useMonitoring } from '../contexts/MonitoringContext';
@@ -273,7 +274,7 @@ const formatTimeLeft = (ms) => {
 };
 
 const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextResetTime, t }) => {
-  const resetLabels = { daily: t('checklist.daily'), weekly: t('checklist.weekly'), biweekly: t('checklist.biweekly'), other: t('checklist.other_8h'), baro: t('checklist.trader') };
+  const resetLabels = { daily: t('checklist.daily'), weekly: t('checklist.weekly'), biweekly: t('checklist.biweekly'), other: t('checklist.other_8h'), baro: resolveGameTerm('/Lotus/Language/G1Quests/VoidTraderName', locale) };
   const getIntervalMs = (resetType) => {
     if (resetType === 'daily') return 24 * 60 * 60 * 1000;
     if (resetType === 'weekly') return 7 * 24 * 60 * 60 * 1000;
@@ -382,7 +383,7 @@ const FACTION_TAGS = new Set(['steel', 'perrin', 'arbiters', 'suda', 'veil', 'ne
 
 const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap, iconUrl, localIconUrl, supportedSyndicate, syndicateConfig, hoveredTag, onHover, dict }) => {
   const rank = affiliation?.Title ?? 0;
-  const { t } = useUi();
+  const { t, locale } = useUi();
   const tagKey = standing.tag || standing.color;
   const config = syndicateConfig[tagKey] || { bg: '#1a1a2e', accent: '#a0a0a0' };
   const isNegative = rank < 0;
@@ -479,7 +480,7 @@ const StandingCard = ({ standing, affiliation, earnedStanding, rankCap, dailyCap
 };
 
 export default function Checklist() {
-  const { t } = useUi()
+  const { t, locale } = useUi()
   const { inventoryData, ExportTextIcons, worldState, ES, dict } = useMonitoring();
   const supportedSyndicate = inventoryData?.SupportedSyndicate || null;
   const SYNDICATE_CONFIG = useMemo(() => buildSyndicateConfig(ES), [ES]);

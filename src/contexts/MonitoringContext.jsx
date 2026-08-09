@@ -8,6 +8,7 @@ import { getRelicRewards, getAllRelicRewards, getRewardInventoryContext, parseRe
 import { listen } from '@tauri-apps/api/event'
 import { getPrice, getPricesBatch } from '../lib/marketEngine'
 import { resolveNode, resolveMissionType, resolveChallenge } from '../lib/warframeUtils'
+import { registerGameDict } from '../lib/gameTerm'
 import { evaluateNotifications } from '../lib/notificationManager'
 import { loadWarframeItemsMaps } from '../lib/wfcdLoader'
 import { loadSettings, getSetting, setSetting } from '../lib/settings'
@@ -197,6 +198,8 @@ export function MonitoringProvider({ children }) {
 
   // ── Derived lookup maps ──────────────────────────────────────────────────────
   const dict = useMemo(() => exportData?.dict ?? exportData?.['dict.en'] ?? {}, [exportData])
+  // Register dict for resolveGameTerm() (runtime game-term resolution)
+  useEffect(() => { registerGameDict(dict, localeRef.current) }, [dict, localeRef.current])
   const suppDict = useMemo(() => exportData?.['supp-dict'] ?? exportData?.['supp-dict-en'] ?? {}, [exportData])
   const archimedeaMap = useMemo(() => buildArchimedeaMap(dict, suppDict), [dict, suppDict])
   const EC = useMemo(() => toMap(exportData?.ExportChallenges, 'ExportChallenges'), [exportData])

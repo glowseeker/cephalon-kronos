@@ -46,103 +46,103 @@
   "peely": {
     "/Lotus/Upgrades/Stickers/DropSpecialItemChanceOnWeakpointKillSticker": {
       "name": "Argon Combo #2",
-      "description": "On Weakpoint kill: chance to drop Health Orbs, Energy Orbs, Ammo, Pheroglands, or SporeX Charges increased by 20%"
+      "description": "Lors d'un coup critique: +20% de chances de déposer des Orbes de Santé, des Orbes d'Énergie, des Munitions, des Phorétoiles ou des Charges SporeX."
     },
     "/Lotus/Upgrades/Stickers/ToxinGasResistanceOnHealthOrbSticker": {
       "name": "Breathless",
-      "description": "Gain 100% resistance to Gas and Toxin for 30s. Collected Health Orbs add 20s."
+      "description": "Gagne 100% de résistance au Gaz et au Toxine pendant 30s. Les Orbes de Santé ramassés ajoutent 20s."
     },
     "/Lotus/Upgrades/Stickers/DropHealingBurgerChanceSticker": {
       "name": "Burgerfest",
-      "description": "Enemies have a 15% chance of dropping Argon Burger Boxes that can heal nearby allies by 10% and defense targets by 100."
+      "description": "Les ennemis ont 15% de chances de déposer des Boîtes Argon Burger qui peuvent soigner les alliés proches de 10% et les cibles de défense de 100%."
     },
     "/Lotus/Upgrades/Stickers/StickerSporePrimer": {
       "name": "Catscratch Fever",
-      "description": "Every 20s, an enemy within 30m is affected by Saryn's Spores."
+      "description": "Toutes les 20s, un ennemi dans un rayon de 30m est affecté par les Spores de Saryn."
     },
     "/Lotus/Upgrades/Stickers/CreateShieldOnHeavySlamSticker": {
       "name": "Crushing Chills",
-      "description": "Heavy Slam with 6x combo creates up to 3 Snow Globes on a 10s cooldown."
+      "description": "Le lourd Slam avec combo x6 crée jusqu'à 3 Boules de Neige avec un cooldown de 10s."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyShotgun": {
       "name": "Doktor's Orders",
-      "description": "Equip an EFV-8 Mars with +450% damage as a secondary weapon."
+      "description": "Équipe un EFV-8 Mars avec +450% de dégâts comme arme secondaire."
     },
     "/Lotus/Upgrades/Stickers/DropEfervonGrenadeChanceSticker": {
       "name": "Fly, Fly!",
-      "description": "Enemies have a 15% chance to drop grenades that clear Hell-Scrubber contamination."
+      "description": "Les ennemis ont 15% de chances de déposer des grenades qui éliminent la contamination Hell-Scrubber."
     },
     "/Lotus/Upgrades/Stickers/AvatarKnockdownResistanceSticker": {
       "name": "Going Steady",
-      "description": "100% chance to resist Knockdown."
+      "description": "100% de chances de résister au Knockdown."
     },
     "/Lotus/Upgrades/Stickers/DeathPreventionOnKillsSticker": {
       "name": "Hi-Score",
-      "description": "Gain 20 points per kill, 100 per Weakpoint Kill. Bonus revives at 1000, 2500, 5000 points."
+      "description": "Gagne 20 points par kill, 100 par Weakpoint Kill. Bonus de revives à 1000, 2500, 5000 points."
     },
     "/Lotus/Upgrades/Stickers/CreateChasingAntiMatterDropSticker": {
       "name": "It Sees You",
-      "description": "An Anti-Matter drop appears 25m away and gives chase every 20s. Gain 1 Pix Chip on success."
+      "description": "Une goutte Anti-Matière apparaît à 25m et poursuit toutes les 20s. Gagne 1 Pix Chip au succès."
     },
     "/Lotus/Upgrades/Stickers/ToxinProcOnDamageSticker": {
       "name": "Old Pizza",
-      "description": "On Damaged: 6% chance to receive Toxin status. Cooldown: 5s. Gain 1 Pix Chip on success."
+      "description": "Lors d'un dommage: 6% de chances de recevoir le statut Toxine. Cooldown: 5s. Gagne 1 Pix Chip au succès."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyMelee": {
       "name": "Only Knives",
-      "description": "Equip Scaldra Dual Viciss with +450% damage as melee weapons."
+      "description": "Équipe les Scaldra Dual Viciss avec +450% de dégâts comme armes de mêlée."
     },
     "/Lotus/Upgrades/Stickers/FreezePlayerOverTimeSticker": {
       "name": "Optimism",
-      "description": "Build Cold stacks every 8s. Freezing at 10 stacks for 3s. Roll or Void Sling to thaw 3 stacks."
+      "description": "Accumule des cumulonbrils de Froid toutes les 8s. Gel à 10 cumulonbrils pendant 3s. Roul ou Void Sling pour réchauffer 3 cumulonbrils."
     },
     "/Lotus/Upgrades/Stickers/NPCReviveSticker": {
       "name": "Panic Call",
-      "description": "Minerva or Velimir will attempt to revive you. 30s cooldown."
+      "description": "Minerva ou Velimir tenteront de vous relever. Cooldown: 30s."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyRifle": {
       "name": "Resolutions",
-      "description": "Equip a Purgator 1 with +450% damage as a primary weapon."
+      "description": "Équipe un Purgator 1 avec +450% de dégâts comme arme principale."
     },
     "/Lotus/Upgrades/Stickers/RemoveStatusesOnHeavyAttackSticker": {
       "name": "Reverse-O",
-      "description": "On Heavy Attack Hit: transfer negative status effects onto enemies within 10m."
+      "description": "Lors d'un coup lourd: transfère les effets de statut négatifs sur les ennemis dans les 10m."
     },
     "/Lotus/Upgrades/Stickers/EjectButtonSticker": {
       "name": "Slippery Customer",
-      "description": "First time downed: teleport to safety, revive with 50% HP/Shields, invulnerable for 9s."
+      "description": "La première fois que vous tombez: téléporte en sécurité, revient avec 50% HP/Boucliers, invulnérable pendant 9s."
     },
     "/Lotus/Upgrades/Stickers/NullStarOnWeakpointKillSticker": {
       "name": "Spinnin' Around",
-      "description": "Weakpoint kills generate 1 Null Star (max 18). Null Stars reduce damage by 5%."
+      "description": "Les coups faibles génèrent 1 Étoile Nulle (max 18). Les Étoiles Nulles réduisent les dégâts de 5%."
     },
     "/Lotus/Upgrades/Stickers/ElementalAmmoChanceOnEximusKillSticker": {
       "name": "Super Scavenger",
-      "description": "On Eximus Kill: 45% chance to drop an Elemental Ammo Pack."
+      "description": "Lors d'un kill d'Eximus: 45% de chances de déposer un Paquet de Munitions Élémentaires."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemySmg": {
       "name": "Through My Heart",
-      "description": "Equip an EFV-5 Jupiter with +450% damage as a primary weapon."
+      "description": "Équipe un EFV-5 Jupiter avec +450% de dégâts comme arme principale."
     },
     "/Lotus/Upgrades/Stickers/DecoyOnDamagedSticker": {
       "name": "Too Hot",
-      "description": "Taking damage below 70% HP creates a Molt clone every 10s."
+      "description": "Subir des dégâts sous 70% HP crée un clone Molt toutes les 10s."
     },
     "/Lotus/Upgrades/Stickers/AllowNecramechSummonSticker": {
       "name": "Vintage Tech",
-      "description": "Summon a Necramech. 60s cooldown after destroyed."
+      "description": "Invoque un Nécramech. Cooldown de 60s après destruction."
     },
     "/Lotus/Upgrades/Stickers/AllowThermianRpgSummonSticker": {
       "name": "Wakeup Call",
-      "description": "A loaded Thermian RPG can be deployed from the Gear Wheel. 60s cooldown."
+      "description": "Un Thermian RPG chargé peut être déployé depuis la roue du matériel. Cooldown: 60s."
     },
     "/Lotus/Upgrades/Stickers/SuperGlideParkourSticker": {
       "name": "Walking on Air",
-      "description": "Increase Aim Glide and Wall Latch duration +100%. Lowers gravity by 100%."
+      "description": "Augmente la durée du lissage visuel et de l'attrapage mural +100%. Diminue la gravité de 100%."
     },
     "/Lotus/Upgrades/Stickers/WeaponColdDamageSticker": {
       "name": "XL Frosty",
-      "description": "Adds +30% Cold Damage to primary and secondary weapons."
+      "description": "Ajoute +30% de dégâts de Froid aux armes principales et secondaires."
     }
   },
   "ui": {
@@ -222,7 +222,7 @@
     "maps.to": "Vers :",
     "maps.zoom_to_marker": "Zoom sur le marqueur",
     "mastery.advance_to": "Passer à {title}",
-    "mastery.cat_amp": "Amp",
+    "mastery.cat_amp": "Amplificateur",
     "mastery.cat_archgun": "ArchGun",
     "mastery.cat_archmelee": "ArchArme de mêlée",
     "mastery.cat_archwing": "Archwing",
@@ -390,7 +390,7 @@
     "settings.notification_monitor_desc": "Les overlays en jeu suivent toujours le moniteur de Warframe. Ce paramètre ne contrôle que les pop-ups de notification.",
     "settings.notification_sound": "Son de notification",
     "settings.notification_triggers": "Déclencheurs de notification",
-    "settings.notifications": "Notifications & Overlays",
+    "settings.notifications": "Notifications et superpositions",
     "settings.price_cache": "Cache des prix",
     "settings.price_cache_desc": "Les valeurs plat des mods et des pièces Prime sont mises en cache localement avec un TTL de 24 heures.",
     "settings.refresh_monitors": "Actualiser la liste des moniteurs",
@@ -455,7 +455,7 @@
     "ui.dashboard.ends_in": "Se termine dans",
     "ui.dashboard.events": "Événements",
     "ui.dashboard.hex": "Hex",
-    "ui.dashboard.invasions": "Invasions",
+    "ui.dashboard.invasions": "Invasion",
     "ui.dashboard.latest_news": "Actualités",
     "ui.dashboard.loading_bounties": "Chargement des récompenses…",
     "ui.dashboard.loading_data": "Chargement des données…",
@@ -592,7 +592,7 @@
     "cat_companion_weapons": "Armes de compagnon",
     "cat_archweapons": "Armes d'arch",
     "cat_vehicles": "Véhicules",
-    "cat_amps": "Amps",
+    "cat_amps": "Ampérage",
     "cat_resources": "Ressources",
     "cat_prime_parts": "Parts Prime",
     "cat_ayatan": "Ayatan",
@@ -656,7 +656,7 @@
     "ui.inventory.cat_companion_weapons": "Armes de compagnon",
     "ui.inventory.cat_archweapons": "Armes d'arch",
     "ui.inventory.cat_vehicles": "Véhicules",
-    "ui.inventory.cat_amps": "Amps",
+    "ui.inventory.cat_amps": "Ampérage",
     "ui.inventory.cat_resources": "Ressources",
     "ui.inventory.cat_prime_parts": "Parts Prime",
     "ui.inventory.cat_ayatan": "Ayatan",
@@ -852,7 +852,7 @@
     "ui.dashboard.card_daily_deals": "Offres du jour",
     "ui.dashboard.card_events": "Événements",
     "ui.dashboard.card_fissures": "Fissures",
-    "ui.dashboard.card_invasions": "Invasions",
+    "ui.dashboard.card_invasions": "Invasion",
     "ui.dashboard.card_market_sales": "Ventes du marché",
     "ui.dashboard.card_news": "Actualités",
     "ui.dashboard.card_nightwave": "Nightwave",
@@ -962,7 +962,7 @@
     "ui.dashboard.descendia_mission_type_dt_sabotage_defense": "Défense",
     "ui.dashboard.descendia_mission_type_dt_defense": "Défense d'un Protoframe",
     "ui.dashboard.descendia_mission_type_dt_excavation": "Excavation",
-    "ui.dashboard.descendia_mission_type_dt_presure_gauge": "Volatile",
+    "ui.dashboard.descendia_mission_type_dt_presure_gauge": "Volatil",
     "ui.dashboard.descendia_mission_type_dt_unique": "Unique",
     "ui.dashboard.descendia_mission_type_dt_loot": "Butin",
     "ui.dashboard.descendia_mission_type_dt_race": "Course",
@@ -1029,7 +1029,7 @@
     "ui.notif_mgr.col_difficulty": "Difficulté",
     "ui.notif_mgr.col_tiers": "Paliers",
     "ui.notif_mgr.col_mission_types": "Types de mission",
-    "ui.notif_mgr.col_grade": "Grade",
+    "ui.notif_mgr.col_grade": "Note",
     "ui.notif_mgr.col_advance": "Avancement",
     "ui.notif_mgr.col_alert_before": "Alerter avant (min)",
     "ui.notif_mgr.col_cooldown": "Rechargement (min)",
@@ -1082,7 +1082,7 @@
     "rivens.state_veiled": "Voilés",
     "rivens.sort_name": "Nom",
     "rivens.sort_plat": "Platinum",
-    "rivens.sort_grade": "Grade",
+    "rivens.sort_grade": "Note",
     "rivens.type_all": "Tous",
     "ui.dashboard.descendia_penance_desc_very_toxic": "Les ennemis émettent une aura lumineuse nocive qui inflige des dégâts aux Tenno et alliés qui s'en approchent.",
     "ui.dashboard.descendia_penance_desc_darkness": "Les lumières ont été éteintes, plongeant l'arène dans l'obscurité.",
@@ -1166,7 +1166,42 @@
     "ui.dashboard.duviri_state.joy": "Joie",
     "ui.dashboard.duviri_state.anger": "Colère",
     "ui.dashboard.duviri_state.envy": "Envie",
-    "ui.dashboard.rank": "Rang"
+    "ui.dashboard.rank": "Rang",
+    "relics.expected_ducat": "Gain de Ducats attendu",
+    "relics.expected_platinum": "Gain de Platine attendu",
+    "relics.no_relics_inventory": "Aucune Relique dans votre inventaire",
+    "relics.no_relics_search": "Aucune Relique ne correspond à votre recherche",
+    "relics.sort_asc": "Croissant",
+    "relics.sort_desc": "Décroissant",
+    "relics.sort_ducat": "Ducats",
+    "relics.sort_ducat_gain": "Gain de Ducats",
+    "relics.sort_name": "Nom",
+    "relics.sort_plat": "Platine",
+    "relics.sort_plat_gain": "Gain de Platine",
+    "settings.action_manual_ocr": "Analyse OCR manuelle",
+    "settings.action_toggle_sidebar": "Afficher/masquer la barre latérale",
+    "settings.check_for_updates": "Rechercher des mises à jour",
+    "settings.check_on_startup": "Vérifier au démarrage",
+    "settings.hide_sidebar": "Masquer la barre latérale",
+    "settings.none": "Aucun",
+    "settings.no_release_notes": "Aucune note de version disponible.",
+    "settings.primary_monitor": "Moniteur principal",
+    "settings.recording": "Enregistrement...",
+    "settings.refreshing": "Actualisation...",
+    "settings.refresh_prices": "Actualiser les prix",
+    "settings.scanner.active": "Actif",
+    "settings.scanner.offline": "Hors ligne",
+    "settings.scanner.stale": "Périmé",
+    "settings.scanner.waiting": "En attente",
+    "settings.sidebar_left": "Gauche",
+    "settings.sidebar_right": "Droite",
+    "settings.sound_1": "Son 1",
+    "settings.sound_2": "Son 2",
+    "settings.test_foundry_complete": "Tester la fin de fabrication",
+    "settings.test_foundry_msg": "Notification de fonderie de test",
+    "settings.top_center": "Haut centre",
+    "settings.top_left": "Haut gauche",
+    "settings.top_right": "Haut droite"
   },
   "inventory": {
     "filled": "Plein",

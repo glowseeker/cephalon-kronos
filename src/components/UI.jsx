@@ -3,6 +3,7 @@ import { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, AlertCircle, RefreshCw } from 'lucide-react';
 import { useUi } from '../contexts/UiContext';
+import { resolveGameTerm } from '../lib/gameTerm';
 
 // Portal tooltip that follows trigger during scroll/resize
 export function TooltipPortal({ children, triggerRef, visible, position = 'right' }) {
@@ -90,7 +91,7 @@ export function Tooltip({ children, content, position = 'right' }) {
 // Monitor State Prompt
 // Unified "No inventory data found" component.
 export function MonitorState({ className = "", isLoading = false }) {
-  const { t } = useUi();
+  const { t, locale } = useUi();
   const goToSettings = () => {
     const btn = document.getElementById('nav-settings') ??
     document.querySelector('[data-nav="settings"]');
@@ -447,7 +448,7 @@ export function ItemCard({ item }) {
 
         {item.forma_count > 0 &&
         <div className="flex justify-between">
-            <span className="text-kronos-dim">{t('ui.comp.forma')}</span>
+            <span className="text-kronos-dim">{resolveGameTerm('/Lotus/Language/Items/Forma', locale)}</span>
             <span>{item.forma_count}</span>
           </div>
         }

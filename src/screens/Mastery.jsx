@@ -19,6 +19,7 @@
  */
 import { useState, useEffect } from 'react';
 import { useUi } from '../contexts/UiContext'
+import { resolveGameTerm } from '../lib/gameTerm'
 import { PageLayout, Card, MonitorState } from '../components/UI';
 import { Trophy, X, Check, Circle } from 'lucide-react';
 import { useMonitoring } from '../contexts/MonitoringContext';
@@ -76,7 +77,7 @@ function getXPNeededFor(rank) {
 }
 
 export default function Mastery() {
-  const { t } = useUi()
+  const { t, locale } = useUi()
   const { inventoryData, isInventoryLoading, masteryProgress } = useMonitoring();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [iconsPath, setIconsPath] = useState('');
@@ -166,19 +167,19 @@ export default function Mastery() {
   { label: t('mastery.cat_warframe'), ...getStats('warframes') },
   { label: t('mastery.cat_primary'), ...getStats('primary') },
   { label: t('mastery.cat_secondary'), ...getStats('secondary') },
-  { label: t('mastery.cat_melee'), ...getStats('melee') },
+  { label: resolveGameTerm('/Lotus/Language/Items/MeleeCategoryName', locale), ...getStats('melee') },
   { label: t('mastery.cat_kitgun'), ...getStats('kitguns') },
   { label: t('mastery.cat_zaw'), ...getStats('zaws') },
-  { label: t('mastery.cat_amp'), ...getStats('amps') },
+  { label: resolveGameTerm('/Lotus/Language/Items/OperatorVoidBeam', locale), ...getStats('amps') },
   { label: t('mastery.cat_sentinel'), ...getStats('sentinels') },
   { label: t('mastery.cat_sentinel_weapon'), ...getStats('companion_weapons') },
   { label: t('mastery.cat_companions'), ...getStats('companions') },
   // 'Robotic' summary row removed - Companions is now the canonical merged row.
   { label: t('mastery.cat_archwing'), ...getStats('archwings') },
-  { label: t('mastery.cat_archgun'), ...getStats('archgun') },
-  { label: t('mastery.cat_archmelee'), ...getStats('archmelee') },
+  { label: resolveGameTerm('/Lotus/Language/Items/ArchwingGun', locale), ...getStats('archgun') },
+  { label: resolveGameTerm('/Lotus/Language/Items/ArchwingMelee', locale), ...getStats('archmelee') },
   { label: t('mastery.cat_necramech'), ...getStats('necramechs') },
-  { label: t('mastery.cat_kdrive'), ...getStats('kdrives') }];
+  { label: resolveGameTerm('/Lotus/Language/Game/CrpHoverboardName', locale), ...getStats('kdrives') }];
 
 
   const rjIntrinsics = (intrinsics ?? []).filter((i) => i.name.startsWith('Railjack'));

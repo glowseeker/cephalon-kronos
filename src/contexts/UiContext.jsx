@@ -27,22 +27,15 @@ export function UiProvider({ children }) {
         await loadSettings()
         if (cancelled) return
         const locale = getSetting('uiLocale') || getSetting('gameLocale') || 'en'
-        // Load English as the base so missing keys degrade gracefully.
-        const [enData, locData] = await Promise.all([
-          loadLocale('en'),
-          locale === 'en' ? Promise.resolve(null) : loadLocale(locale),
-        ])
+        const locData = locale === 'en' ? null : await loadLocale(locale)
+        const enData = locale === 'en' ? locData : null
         if (cancelled) return
-        const merged = { ...(enData?.ui || {}), ...(locData?.ui || {}) }
-        // Flatten all top-level sections (relics, rivens, mastery, etc.) into the
-        // flat dotted-key lookup so that t('rivens.state_all') and
-        // t('relics.sort_name') resolve correctly.
-        for (const section of ['relics', 'rivens', 'mastery', 'collectibles', 'settings', 'adversaries']) {
-          const enSection = enData?.[section]
+        // No EN base merge — only use locale data. Game-sourced terms
+        // are resolved at runtime from the DE manifest dict files.
+        const merged = { ...(locData?.ui || {}) }
+        // Flatten top-level sections into flat dotted-key lookup
+        for (const section of ['relics', 'rivens', 'mastery', 'collectibles', 'settings', 'adversaries', 'eras']) {
           const locSection = locData?.[section]
-          if (enSection && typeof enSection === 'object') {
-            for (const k of Object.keys(enSection)) merged[`${section}.${k}`] = enSection[k]
-          }
           if (locSection && typeof locSection === 'object') {
             for (const k of Object.keys(locSection)) merged[`${section}.${k}`] = locSection[k]
           }

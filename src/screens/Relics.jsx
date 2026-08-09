@@ -17,6 +17,7 @@
  */
 import { useState, useMemo, useEffect } from 'react';
 import { useUi } from '../contexts/UiContext'
+import { resolveGameTerm } from '../lib/gameTerm'
 import { Search, AlertCircle, Users, Zap, TrendingUp, Coins, ArrowUpDown } from 'lucide-react';
 import { PageLayout, Input, Card, Tabs, MonitorState, Select } from '../components/UI';
 import { useMonitoring } from '../contexts/MonitoringContext';
@@ -34,7 +35,7 @@ const REFINEMENT_LABELS = {
 };
 
 export default function Relics() {
-  const { t } = useUi()
+  const { t, locale } = useUi()
   const { inventoryData, isInventoryLoading, allPrices, isPriceLoading, priceFetchProgress } = useMonitoring();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEra, setActiveEra] = useState('All');
@@ -137,7 +138,7 @@ export default function Relics() {
   filter((e) => e === 'All' || relics.some((r) => r.era === e)).
   map((e) => ({
     id: e,
-    label: e === 'All' ? t('relics.all') : e === 'Other' ? t('relics.other') : e,
+    label: e === 'All' ? t('relics.all') : e === 'Other' ? t('relics.other') : t('eras.' + e),
     icon: e !== 'All' && e !== 'Other' ? iconSrc(e) : null
   }));
 
@@ -248,7 +249,7 @@ export default function Relics() {
       <div className="ml-auto flex items-center gap-3 bg-black/20 px-3 py-1 rounded-xl border border-white/5 h-[34px]">
             {uiPath && <img src={convertFileSrc(`${uiPath}/VoidTraces.png`)} alt="" className="w-7 h-7 object-contain" />}
             <div className="flex flex-col items-end">
-              <span className="text-[9px] font-black text-kronos-accent uppercase tracking-widest leading-none mb-0.5">{t('relics.void_traces')}</span>
+              <span className="text-[9px] font-black text-kronos-accent uppercase tracking-widest leading-none mb-0.5">{resolveGameTerm('/Lotus/Language/Items/VoidTearDrop', locale)}</span>
               <span className="text-sm font-black text-kronos-text leading-none">
                 {inventoryData.account.void_traces}
                 <span className="text-kronos-dim text-[10px] ml-1">/ {inventoryData.account.void_traces_max}</span>

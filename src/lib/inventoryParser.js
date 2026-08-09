@@ -362,6 +362,22 @@ function _resolveNameInternal(un, dict, locale = 'en', depth, ...tables) {
   const boosterName = resolveBoosterName(un.split('/').pop(), dict);
   if (boosterName) return boosterName;
 
+  // Cosmetics dict fallback: for market-items / StoreItem cosmetics that
+  // weren't found in export tables, try a direct dict lookup on the UN path
+  if (un.includes('/StoreItems/') || un.includes('/CosmeticEnhancers/')) {
+    // Try dict lookup with the full path
+    if (dict[un]) return cleanName(dict[un]);
+    // Try dict lookup with /StoreItems/ stripped
+    const strippedStore = un.replace('/StoreItems/', '/');
+    if (dict[strippedStore]) return cleanName(dict[strippedStore]);
+    // Try dict lookup with just the leaf name
+    const leaf = un.split('/').pop();
+    if (dict[leaf]) return cleanName(dict[leaf]);
+    // Try common language path pattern for store items
+    const langKey = '/Lotus/Language/StoreItems/' + leaf;
+    if (dict[langKey]) return cleanName(dict[langKey]);
+  }
+
   return cleanName(nameFromPath(un));
 }
 
@@ -1629,7 +1645,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
         mod.icon = exports.PeelyPixMap[un];
       }
       if (exports.PeelyPixNames?.[un]) {
-        const ppn = exports.PeelyPixNames[un];
+        const ppn = i18nData?.peely?.[un] ?? exports.PeelyPixNames[un];
         mod.name = ppn.name;
         mod.description = ppn.description;
         mod._isSticker = true;

@@ -7,6 +7,7 @@
  */
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useUi } from '../contexts/UiContext'
+import { resolveGameTerm } from '../lib/gameTerm'
 import { Search, Filter, ArrowUpDown, Check, Box, Zap, Gem, X, Layers } from 'lucide-react';
 import { PageLayout, Card, Input, Button, Tabs, MonitorState, Tooltip } from '../components/UI';
 import { useMonitoring } from '../contexts/MonitoringContext';
@@ -75,7 +76,7 @@ const modFrameBotMap = {
 
 function FoundryPanel({ isOpen, onClose, inventoryData, foundryFilters, setFoundryFilters }) {
   const { isInventoryLoading, ExportImages, dropIndex } = useMonitoring();
-  const { t } = useUi();
+  const { t, locale } = useUi();
   const [width, setWidth] = useState(600);
   const [isResizing, setIsResizing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -544,10 +545,10 @@ export default function Inventory() {
     prime: t('ui.inventory.filter_prime'),
     primary: t('ui.inventory.filter_primary'),
     secondary: t('ui.inventory.filter_secondary'),
-    melee: t('ui.inventory.filter_melee'),
+    melee: resolveGameTerm('/Lotus/Language/Items/MeleeCategoryName', locale),
     incarnon: t('ui.inventory.filter_incarnon'),
     archwing: t('ui.inventory.filter_archwing'),
-    kdrive: t('ui.inventory.filter_kdrive'),
+    kdrive: resolveGameTerm('/Lotus/Language/Game/CrpHoverboardName', locale),
     necramech: t('ui.inventory.filter_necramech'),
   };
 
@@ -1187,7 +1188,12 @@ export default function Inventory() {
                         </h4>
                         {item.description &&
                     <p className="text-[10px] text-kronos-dim/70 mt-0.5 line-clamp-2 leading-relaxed">
-                            {item.description}
+                            {item.description.split(/\r\n/).map((line, i, arr) => (
+                              <React.Fragment key={i}>
+                                {line}
+                                {i < arr.length - 1 && <br />}
+                              </React.Fragment>
+                            ))}
                           </p>
                     }
                       </div>
@@ -1381,7 +1387,7 @@ export default function Inventory() {
 function renderHeaderStats(inventoryData, iconsPath) {
   if (!inventoryData?.account) return null;
   const { credits, platinum, forma, aura_forma, stance_forma, umbra_forma, orokin_reactor, orokin_catalyst, endo } = inventoryData.account;
-  const { t } = useUi();
+  const { t, locale } = useUi();
   const iconSrc = (name) => iconsPath ? convertFileSrc(`${iconsPath}/${name}.png`) : null;
   const StatWidget = ({ icon, label, value, accent = 'text-kronos-dim', tooltip = null }) =>
   <div className="flex items-stretch gap-1.5 min-w-[50px] relative group">
@@ -1399,7 +1405,7 @@ function renderHeaderStats(inventoryData, iconsPath) {
       <StatWidget icon={iconSrc('Platinum')} label={t('ui.inventory.platinum')} value={platinum.toLocaleString()} accent="text-kronos-accent" />
       <StatWidget icon={iconSrc('EndoIconRenderLarge')} label={t('ui.inventory.endo')} value={endo.toLocaleString()} accent="text-orange-400" />
       <div className="h-8 w-px bg-white/10" />
-      <StatWidget icon={iconSrc('Forma')} label={t('ui.inventory.forma')} value={forma + aura_forma + stance_forma + umbra_forma} accent="text-kronos-accent"
+      <StatWidget icon={iconSrc('Forma')} label={resolveGameTerm('/Lotus/Language/Items/Forma', locale)} value={forma + aura_forma + stance_forma + umbra_forma} accent="text-kronos-accent"
       tooltip={
       <div className="absolute top-full right-0 mt-2 p-3 bg-kronos-bg border border-white/10 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[110] min-w-[180px] glass-panel">
             <div className="space-y-3">
@@ -1409,7 +1415,7 @@ function renderHeaderStats(inventoryData, iconsPath) {
               </div>
               {aura_forma > 0 && <div className="flex justify-between items-center gap-3"><span className="flex items-center gap-2 text-[15px] text-blue-300 uppercase font-bold whitespace-nowrap">{iconSrc('FormaUmbra') && <img src={iconSrc('FormaUmbra')} className="w-8 h-8 object-contain flex-shrink-0" alt="" />}{t('ui.inventory.forma_aura')}</span><span className="text-[15px] font-bold text-kronos-text tabular-nums">{aura_forma}</span></div>}
               {stance_forma > 0 && <div className="flex justify-between items-center gap-3"><span className="flex items-center gap-2 text-[15px] text-green-300 uppercase font-bold whitespace-nowrap">{iconSrc('FormaStance') && <img src={iconSrc('FormaStance')} className="w-8 h-8 object-contain flex-shrink-0" alt="" />}{t('ui.inventory.forma_stance')}</span><span className="text-[15px] font-bold text-kronos-text tabular-nums">{stance_forma}</span></div>}
-              {umbra_forma > 0 && <div className="flex justify-between items-center gap-3"><span className="flex items-center gap-2 text-[15px] text-purple-400 uppercase font-bold whitespace-nowrap">{iconSrc('OmegaForma') && <img src={iconSrc('OmegaForma')} className="w-8 h-8 object-contain flex-shrink-0" alt="" />}{t('ui.inventory.forma_umbra')}</span><span className="text-[15px] font-bold text-kronos-text tabular-nums">{umbra_forma}</span></div>}
+              {umbra_forma > 0 && <div className="flex justify-between items-center gap-3"><span className="flex items-center gap-2 text-[15px] text-purple-400 uppercase font-bold whitespace-nowrap">{iconSrc('OmegaForma') && <img src={iconSrc('OmegaForma')} className="w-8 h-8 object-contain flex-shrink-0" alt="" />}{resolveGameTerm('/Lotus/Language/Sacrifice/UmbraAvatarName', locale)}</span><span className="text-[15px] font-bold text-kronos-text tabular-nums">{umbra_forma}</span></div>}
             </div>
           </div>
       } />

@@ -24,6 +24,7 @@
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useUi } from '../contexts/UiContext'
+import { resolveGameTerm } from '../lib/gameTerm'
 import { PageLayout, Card, Button, CardHeader, Tabs, Modal, Tooltip } from '../components/UI';
 import ModCard from '../components/ModCard';
 import {
@@ -283,20 +284,20 @@ export default function Dashboard() {
     Joy: t('ui.dashboard.timer_joy'),
     Anger: t('ui.dashboard.timer_anger'),
     Envy: t('ui.dashboard.timer_envy'),
-    Corpus: t('ui.dashboard.timer_corpus'),
-    Grineer: t('ui.dashboard.timer_grineer'),
+    Corpus: resolveGameTerm('/Lotus/Language/Game/Faction_CorpusUC', locale),
+    Grineer: resolveGameTerm('/Lotus/Language/Game/Faction_GrineerUC', locale),
     Reset: t('ui.dashboard.timer_reset'),
   }
   const localizeTimerState = (raw) => timerStates[raw] ?? raw
   const timers = [
-  { label: t('ui.dashboard.timers_cetus'), data: worldstate?.cetusCycle, getState: (d) => localizeTimerState(d.state) },
-  { label: t('ui.dashboard.timers_orb_vallis'), data: worldstate?.vallisCycle, getState: (d) => localizeTimerState(d.state) },
+  { label: resolveGameTerm('/Lotus/Language/Locations/CetusHub', locale), data: worldstate?.cetusCycle, getState: (d) => localizeTimerState(d.state) },
+  { label: resolveGameTerm('/Lotus/Language/Locations/VenusLandscape', locale), data: worldstate?.vallisCycle, getState: (d) => localizeTimerState(d.state) },
   {
-    label: t('ui.dashboard.timers_cambion_drift'), data: worldstate?.cambionCycle, getState: (d) =>
+    label: resolveGameTerm('/Lotus/Language/InfestedMicroplanet/SolarMapDeimosLandscapeName', locale), data: worldstate?.cambionCycle, getState: (d) =>
     typeof d.active === 'boolean' ? (d.active ? localizeTimerState('Fass') : localizeTimerState('Vome')) : localizeTimerState(d.active || d.state || '?')
   },
-  { label: t('ui.dashboard.timers_zariman'), data: worldstate?.zarimanCycle, getState: (d) => localizeTimerState(d.state) },
-  { label: t('ui.dashboard.timers_duviri'), data: worldstate?.duviriCycle, getState: (d) => localizeTimerState(d.state) },
+  { label: resolveGameTerm('/Lotus/Language/Zariman/ZarimanRegionName', locale), data: worldstate?.zarimanCycle, getState: (d) => localizeTimerState(d.state) },
+  { label: resolveGameTerm('/Lotus/Language/Duviri/Duviri', locale), data: worldstate?.duviriCycle, getState: (d) => localizeTimerState(d.state) },
   { label: t('ui.dashboard.timers_daily_reset'), data: { expiry: new Date(new Date().setUTCHours(24, 0, 0, 0)) }, getState: () => localizeTimerState('Reset') }].
   filter((t) => t.data);
 
@@ -1034,7 +1035,7 @@ export default function Dashboard() {
                 <div key={s.index} className="p-2 rounded bg-kronos-accent/15 border border-kronos-accent/25 flex items-center gap-2">
                   <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold text-kronos-accent uppercase">{t('ui.dashboard.roathe_oblivion')}</p>
+                    <p className="text-[10px] font-bold text-kronos-accent uppercase">{resolveGameTerm('/Lotus/Language/CircleOfHell/CoHProtoframeDevil', locale)}</p>
                     <Tooltip content={penanceDesc(s)} position="top">
                       <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
                     </Tooltip>
@@ -1099,7 +1100,7 @@ export default function Dashboard() {
                   <div key={s.index} className={`p-2 rounded flex justify-between items-center gap-2 ${s.isCheckpoint ? 'bg-kronos-accent/10 border border-kronos-accent/20' : 'bg-black/20'}`}>
                         <div className="min-w-0">
                           <Tooltip content={missionTypeDesc(s)} position="top">
-                            <p className="text-[10px] font-bold text-kronos-text uppercase truncate">{s.missionTypeI18nKey ? t(`ui.dashboard.${s.missionTypeI18nKey}`) : s.missionType}{s.isBoss ? ` - ${t('ui.dashboard.roathe_oblivion')}` : ''}</p>
+                            <p className="text-[10px] font-bold text-kronos-text uppercase truncate">{s.missionTypeI18nKey ? t(`ui.dashboard.${s.missionTypeI18nKey}`) : s.missionType}{s.isBoss ? ` - ${resolveGameTerm('/Lotus/Language/CircleOfHell/CoHProtoframeDevil', locale)}` : ''}</p>
                           </Tooltip>
                           <Tooltip content={penanceDesc(s)} position="bottom">
                             <p className="text-[9px] text-kronos-dim truncate uppercase">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
@@ -1162,7 +1163,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             {baroIcon ? <img src={baroIcon} className="w-5 h-5 object-contain" alt="" /> : <ShoppingBag size={16} className="text-kronos-accent flex-shrink-0" />}
-            <p className="font-bold text-sm uppercase">{t('ui.dashboard.baro_kiteer')}</p>
+            <p className="font-bold text-sm uppercase">{resolveGameTerm('/Lotus/Language/G1Quests/VoidTraderName', locale)}</p>
           </div>
           {vt.active && vt.inventory?.length > 0 ?
           <button
@@ -1734,7 +1735,7 @@ export default function Dashboard() {
           {/* Duviri Circuit */}
           {isVisible('circuit') &&
           <Card glow className="p-3">
-              <CardHeader imageSrc={iconSrc('DuviriMiniMapThrax')} title={t('ui.dashboard.the_circuit')} />
+              <CardHeader imageSrc={iconSrc('DuviriMiniMapThrax')} title={resolveGameTerm('/Lotus/Language/Duviri/MapNodeEndless', locale)} />
               {renderCircuit()}
             </Card>
           }
