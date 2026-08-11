@@ -179,7 +179,7 @@ function parseZarimanCycle(raw, bountyCycle) {
 
 /** Duviri emotional state cycle.
  *  5 states (Sorrow, Fear, Joy, Anger, Envy), each 2 hours.  Rotates from Unix epoch 0.
- *  State names are NOT in DE dicts — resolved via ui.dashboard.duviri_state.* i18n keys. */
+ *  State names are NOT in DE dicts  -  resolved via ui.dashboard.duviri_state.* i18n keys. */
 /**
  * Generic leaf fallback for circuit reward shorts. The EndlessXpSchedule
  * sends bare names ("Dread", "Sibear") that rarely match dict keys directly.
@@ -371,7 +371,7 @@ export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage,
     return resolveNode(key, dict, ERg, locale)
   }
 
-// Relic era names — proper nouns not always in the dict.
+// Relic era names  -  proper nouns not always in the dict.
 // Try dict lookup first (e.g. /Lotus/Language/Locations/Lith), then fall back to a
 // manual translation table keyed by the English era name.
 const ERA_TRANSLATIONS = {
@@ -695,7 +695,7 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         // (i.e. it is not a PascalCase/fallback reconstruction).  resolveNode
         // and resolveMissionType fall back to English word-splitting, so a
         // "resolved" value that differs from the raw key does NOT mean the
-        // dict had it — check the dict directly.
+        // dict had it  -  check the dict directly.
         const dictHasPenance = !!(dict?.[rawPenance] || dict?.['/' + rawPenance])
         const dictHasType = !!(dict?.[rawType] || dict?.['/' + rawType])
         const penanceI18nKey = dictHasPenance

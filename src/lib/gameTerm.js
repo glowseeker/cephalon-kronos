@@ -1,5 +1,5 @@
 /**
- * gameTerm.js — runtime resolution of game-sourced strings from the DE
+ * gameTerm.js  -  runtime resolution of game-sourced strings from the DE
  * manifest dict files (dict.{locale}.json).
  *
  * The dict is downloaded by main.rs (check_exports) and loaded by the

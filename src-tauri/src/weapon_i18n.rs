@@ -74,7 +74,7 @@ fn wfcd_vocab_weapons(app: &tauri::AppHandle) -> HashMap<String, String> {
         }
     }
 
-    // Kitgun chamber names (proper nouns — same in every locale).
+    // Kitgun chamber names (proper nouns  -  same in every locale).
     let Some(misc) = wfcd.get("Misc").and_then(|v| v.as_array()) else {
         return map;
     };

@@ -135,7 +135,7 @@ export default function RelicRewardOverlay() {
   }, []);
 
   // Safety net: if the window somehow ends up shown without data (e.g. focus
-  // watcher re-shows after timer expiry), hide it. Idempotent — no-op when
+  // watcher re-shows after timer expiry), hide it. Idempotent  -  no-op when
   // already hidden.
   useEffect(() => {
     if (!data) {
@@ -143,7 +143,7 @@ export default function RelicRewardOverlay() {
     }
   }, [data]);
 
-  // Timer & Auto-close logic — uses real elapsed time so it stays accurate
+  // Timer & Auto-close logic  -  uses real elapsed time so it stays accurate
   // even when the WebView is hidden and JS timers are throttled.
   useEffect(() => {
     if (!data) return;
@@ -183,7 +183,7 @@ export default function RelicRewardOverlay() {
     };
   }, [data]);
 
-  // Window Resize logic — re-measure whenever layout/content changes.
+  // Window Resize logic  -  re-measure whenever layout/content changes.
   // Skips resize if dimensions haven't changed to avoid the backing-store
   // invalidation flash (1x1 restore cycle) in resize_overlay_window.
   useEffect(() => {

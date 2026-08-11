@@ -3,7 +3,7 @@
  * manifest (api.warframestat.us /sortie?language=<locale>).
  *
  * These keys (SORTIE_BOSS_*, SORTIE_MODIFIER_*) do NOT appear in the
- * dict.{locale}.json language files — the game ships them in a separate
+ * dict.{locale}.json language files  -  the game ships them in a separate
  * internal localization bundle.  Rather than regex-stripping the English
  * GeneralOverrides fallback at runtime, we do a data lookup against the
  * authoritative per-locale table, matching the warframestat.us API.
@@ -13,7 +13,7 @@
  * Fetched 2026-08-05 (30 modifiers + 20 bosses).
  */
 
-// 30 modifier types — complete list from warframestat.us
+// 30 modifier types  -  complete list from warframestat.us
 const SORTIE_MODIFIERS = {
   en: {
     SORTIE_MODIFIER_LOW_ENERGY: 'Energy Reduction',
@@ -497,7 +497,7 @@ const SORTIE_MODIFIERS = {
   },
 };
 
-// 20 Sortie Bosses — complete list from warframestat.us
+// 20 Sortie Bosses  -  complete list from warframestat.us
 const SORTIE_BOSSES = {
   en: {
     SORTIE_BOSS_VOR: 'Captain Vor',

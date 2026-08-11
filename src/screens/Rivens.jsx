@@ -159,7 +159,7 @@ export default function Rivens() {
     if (toFetch.length === 0) return;
 
     const inputs = toFetch.map((r) => {
-      // Pricer model keys are English — localized stat names / weapon names
+      // Pricer model keys are English  -  localized stat names / weapon names
       // (RU "Урон ближнего боя", "Скиайати") would never match.
       const statKey = (s) => STAT_TO_PRICER[s.statKey || s.tag] || (s.statKey || s.tag).toLowerCase().replace(/\s+/g, '_');
       const pos = (r.stats || []).filter((s) => s.positive).map(statKey);

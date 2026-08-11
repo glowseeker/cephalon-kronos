@@ -59,7 +59,7 @@ export default function Wiki() {
   useEffect(() => {
     const currentLabel = getCurrentWindow().label;
 
-    // Seed tabs from Rust on mount — re-show the previously active tab if one exists.
+    // Seed tabs from Rust on mount  -  re-show the previously active tab if one exists.
     invoke('list_wiki_tabs').then((list) => {
       if (list.length === 0) {
         showTab('wiki-0');
@@ -73,13 +73,13 @@ export default function Wiki() {
       }
     });
 
-    // Shared tab list changes — broadcast app-wide, no source_window filter.
+    // Shared tab list changes  -  broadcast app-wide, no source_window filter.
     const unlistenTabsChanged = listen('wiki-tabs-changed', (e) => {
       const newTabs = e.payload;
       setTabs(newTabs);
 
       if (newTabs.length === 0) {
-        // All tabs closed — create a fresh initial tab.
+        // All tabs closed  -  create a fresh initial tab.
         setActiveTab(null);
         showTab('wiki-0');
         return;
@@ -131,7 +131,7 @@ export default function Wiki() {
       unlistenTitle.then((f) => f());
       unlistenSidebar.then((f) => f());
       // Hide the active tab's webview so it doesn't float over other screens.
-      // Do NOT close the tab — the persisted list survives unmount.
+      // Do NOT close the tab  -  the persisted list survives unmount.
       if (activeTabRef.current) {
         lastActiveId = activeTabRef.current;
         invoke('hide_wiki_tab', { label: activeTabRef.current }).catch(() => {});

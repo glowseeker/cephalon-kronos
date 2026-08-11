@@ -380,7 +380,7 @@ fn ee_log_score(buf: &[u8]) -> usize {
 /// or None if no region scores above the threshold.
 ///
 /// `buffer_size` is set to the full discovered region size (capped at 1MB
-/// as a safety ceiling — real ring buffer allocations are typically
+/// as a safety ceiling  -  real ring buffer allocations are typically
 /// 128 KB - 512 KB).  This matters because the delta-diff cycle reads
 /// exactly `buffer_size` bytes every poll; if the read window is smaller
 /// than the actual ring buffer, log lines written outside the window are

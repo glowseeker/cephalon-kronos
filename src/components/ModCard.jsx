@@ -265,7 +265,7 @@ const ModCard = memo(function ModCard({ mod, framesPath, iconsPath, cardImagesPa
   const mf = mod.modFrame || 'Normal Common';
   const custom = CUSTOM.has(mf);
   // Tektolyst (antique) cards: image files, text colors and pip groups are
-  // keyed by the mod's ENGLISH name (e.g. "Ulashta-Shol") — the localized
+  // keyed by the mod's ENGLISH name (e.g. "Ulashta-Shol")  -  the localized
   // name would 404/miss. englishName is stamped at parse time from the EN
   // dict; fall back to the localized name only when unavailable.
   const tektolystKey = mod.englishName || mod.name;

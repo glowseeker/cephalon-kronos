@@ -1,5 +1,5 @@
 // Onboarding language picker: 15 game-locale flags with native labels.
-// Uses country-flag-icons (ISO 3x2 SVG React components, bundled offline — no CDN,
+// Uses country-flag-icons (ISO 3x2 SVG React components, bundled offline  -  no CDN,
 // no Windows regional-indicator emoji regression). Replaces hand-rolled inline SVGs.
 import React from 'react'
 import { GB, DE, FR, ES, IT, PT, RU, PL, CN, KR, JP, TW, TH, TR, UA } from 'country-flag-icons/react/3x2'

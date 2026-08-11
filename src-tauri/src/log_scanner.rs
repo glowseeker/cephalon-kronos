@@ -234,7 +234,7 @@ impl LogScanner {
             return;
         }
 
-        // === Relic Picker Close (MapRedux re-subscription — in-mission) ===
+        // === Relic Picker Close (MapRedux re-subscription  -  in-mission) ===
         if self.relic_picker_open && s.contains("Subscribing for /Lotus/Interface/MapRedux.swf") {
             self.relic_picker_open = false;
             crate::logger::log_to_disk(app, &format!("[LOG SCANNER] RELIC PICKER CLOSED (MapRedux) (LogTS: {}s)", ts));
@@ -242,7 +242,7 @@ impl LogScanner {
             return;
         }
 
-        // === Relic Picker Close (TennoShipInputFilter — orbiter relic menu) ===
+        // === Relic Picker Close (TennoShipInputFilter  -  orbiter relic menu) ===
         // TennoShipInputFilter fires both when the picker opens (during init)
         // and when it closes, so debounce against the open timestamp.
         const RELIC_PICKER_DEBOUNCE_S: f64 = 0.5;
@@ -575,7 +575,7 @@ fn line_hash(s: &str) -> u64 {
 /// Cached PID of a previously-discovered Warframe process.
 /// On subsequent calls we verify the cache via a cheap existence check
 /// instead of re-scanning the entire process table.  When no PID is
-/// cached (or the cached PID is dead), we always do a full scan —
+/// cached (or the cached PID is dead), we always do a full scan  - 
 /// `/proc` readdir + comm/cmdline reads is microseconds of work and
 /// happens at most every 2 s (the wait-loop sleep), so there is no
 /// meaningful CPU cost to skip the cache on a cache-miss.
@@ -969,7 +969,7 @@ pub fn spawn_memory_watcher(app: AppHandle) -> Result<LogScannerHandle, String> 
             // ── Parse lines with hash dedup ────────────────────────────────
             // The ring buffer is circular: new lines overwrite old content at
             // a different position than where they're written.  Byte-level
-            // delta-diff (extract_new) alone is unreliable for this — the
+            // delta-diff (extract_new) alone is unreliable for this  -  the
             // divergence point may be at the overwritten region, not the new
             // content.  Instead, re-parse lines and skip by hash.
             let text = String::from_utf8_lossy(&raw);
@@ -1009,7 +1009,7 @@ pub fn spawn_memory_watcher(app: AppHandle) -> Result<LogScannerHandle, String> 
             }
 
             if prev.len() != raw.len() {
-                // First cycle done — mark hooked and save baseline.
+                // First cycle done  -  mark hooked and save baseline.
                 if !ever_hooked {
                     ever_hooked = true;
                     SCANNER_STATUS.store(2, Ordering::SeqCst);
@@ -1039,7 +1039,7 @@ pub fn spawn_memory_watcher(app: AppHandle) -> Result<LogScannerHandle, String> 
 
         // Only clear IS_SCANNING if we're still the current generation.
         // If a newer thread was spawned (generation was bumped), it manages
-        // the flag — clearing it here would orphan the new thread.
+        // the flag  -  clearing it here would orphan the new thread.
         if SCANNER_GENERATION.load(Ordering::SeqCst) == my_gen {
             IS_SCANNING.store(false, Ordering::SeqCst);
         }

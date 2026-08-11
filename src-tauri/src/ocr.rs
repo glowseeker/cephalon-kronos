@@ -365,7 +365,7 @@ pub fn get_target_monitor(app: &AppHandle) -> Option<Monitor> {
         return None;
     }
 
-    // Prefer the monitor that contains Warframe's window centre — the
+    // Prefer the monitor that contains Warframe's window centre  -  the
     // xcap-index-crossover bug means a stored index from Tauri's enumeration
     // may point to the wrong display when used with xcap's ordering.
     if let Some(wf_rect) = warframe_window_rect_sync() {

@@ -3,7 +3,7 @@ import { loadSettings, getSetting, onSettingsChanged } from '../lib/settings'
 import { loadLocale } from '../lib/i18n'
 
 /**
- * UiContext — UI chrome (interface) translation.
+ * UiContext  -  UI chrome (interface) translation.
  *
  * The `ui` section of src/lib/i18n/{locale}.json holds app-interface strings
  * (nav labels, sync states, settings chrome).  The UI locale defaults to the
@@ -27,14 +27,14 @@ export function UiProvider({ children }) {
         await loadSettings()
         if (cancelled) return
         const locale = getSetting('uiLocale') || getSetting('gameLocale') || 'en'
-        // English UI chrome still comes from en.json — the "no fallback" rule only
+        // English UI chrome still comes from en.json  -  the "no fallback" rule only
         // governs game-sourced terms (resolved from the DE manifest dict), not the
         // ui/settings/eras/etc. strings in this file. Returning null for English
         // wipes the entire ui object and makes every t() fall back to the raw key.
         const locData = await loadLocale(locale)
         const enData = null
         if (cancelled) return
-        // No EN base merge — only use locale data. Game-sourced terms
+        // No EN base merge  -  only use locale data. Game-sourced terms
         // are resolved at runtime from the DE manifest dict files.
         const merged = { ...(locData?.ui || {}) }
         // Flatten top-level sections into flat dotted-key lookup.

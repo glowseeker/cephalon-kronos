@@ -786,7 +786,7 @@ export default function Inventory() {
     if (!framesPath) return '';
     if (mf === 'Tektolyst') {
       // Antique mod frame files are named by the mod's ENGLISH name (e.g.
-      // "Ulashta-Shol.png") — the localized name would 404. englishName is
+      // "Ulashta-Shol.png")  -  the localized name would 404. englishName is
       // stamped at parse time from the EN dict; fall back to the name.
       const modName = item?.englishName || item?.name;
       if (modName) {

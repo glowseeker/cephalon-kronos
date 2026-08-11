@@ -285,8 +285,8 @@ async fn check_exports(locale: String, force: Option<bool>) -> Result<String, St
     }
 
     // Clean up old locale-specific filenames if they exist
-    // (dict.en.json is now a real asset — the English reference dict used to
-    //  resolve English item names for image lookups — so it is kept.)
+    // dict.en.json is now a real asset (the English reference dict for image lookups)
+    // so it is kept.
     for old in &["supp-dict-en.json"] {
         let old_path = export_dir.join(old);
         let _ = fs::remove_file(&old_path);
@@ -1751,7 +1751,7 @@ pub(crate) fn load_settings_sync() -> serde_json::Value {
 
 #[tauri::command]
 async fn sidebar_load_data(app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    // Load whatever exports are already on disk — don't block on check_exports.
+    // Load whatever exports are already on disk  -  don't block on check_exports.
     // The main window's MonitoringProvider runs check_exports in parallel;
     // if it hasn't finished yet, we just use stale/cached data.
     let exports = load_all_exports_inner(&app_handle).unwrap_or_default();
@@ -2711,7 +2711,7 @@ pub(crate) fn ensure_gtk_overlay_wrapper(window: &tauri::WebviewWindow) -> Resul
 // ── Wiki (embedded child webview via GTK overlay on Linux) ──────────────
 // Tauri's set_position/set_size is broken on the GTK backend (child
 // webviews off-origin get mis-positioned by webkit2gtk).  The fix: use
-// the raw GTK widget tree directly — reparent both the main and child
+// the raw GTK widget tree directly  -  reparent both the main and child
 // webview into a GtkOverlay, then position the child via
 // set_margin_start/set_margin_top/set_size_request, bypassing Tauri's
 // buggy coordinate-conversion path entirely.
@@ -2788,7 +2788,7 @@ fn linux_reparent_and_position(
 }
 
 /// Ensure a child webview is in the GtkOverlay without changing its position/size.
-/// Unlike `linux_reparent_and_position`, this does NOT reset margins or size_request —
+/// Unlike `linux_reparent_and_position`, this does NOT reset margins or size_request  - 
 /// GTK widget attributes persist across hide/show, so the old correct position is preserved.
 #[cfg(target_os = "linux")]
 fn linux_ensure_overlay(main_webview: &tauri::Webview, child_webview: &tauri::Webview) -> Result<(), String> {
@@ -2866,7 +2866,7 @@ fn show_wiki_tab(webview: tauri::Webview, label: String, url: Option<String>) ->
     let actual = wiki_actual(&window_label, &label);
     let canonical_id = label.clone();
 
-    // Track active wiki tab per-window — hide previous if different.
+    // Track active wiki tab per-window  -  hide previous if different.
     if let Some(state) = app.try_state::<AppState>() {
         let mut active = state.active_wiki_tab.lock();
         if let Some(prev) = active.get(&window_label) {

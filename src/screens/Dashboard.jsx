@@ -415,7 +415,7 @@ export default function Dashboard() {
           key={`${it.name}-${idx}`}
           className="relative rounded-lg border border-transparent hover:border-kronos-accent/30 transition-all group overflow-hidden min-h-[140px]">
           
-            {/* Bounty art — character portrait sits on the right; the left ~40% is transparent whitespace */}
+            {/* Bounty art  -  character portrait sits on the right; the left ~40% is transparent whitespace */}
             {it.img && iconsPath &&
           <img
             src={convertFileSrc(`${iconsPath}/${it.img}.png`)}
@@ -691,7 +691,7 @@ export default function Dashboard() {
       // 1. Try resolveAnyImage (checks EI by uniqueName + nameToImage by lowered uniqueName from warframe-items)
       const byUnique = resolveAnyImage(ch.uniqueName, EI, nameToImage);
       if (byUnique) return byUnique;
-      // 2. Try by display name (locale-dependent fallback — both nameToImage and ch.name are in same locale)
+      // 2. Try by display name (locale-dependent fallback  -  both nameToImage and ch.name are in same locale)
       const byName = nameToImage[ch.name.toLowerCase()];
       if (byName) return byName;
       const normalize = (s) => s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]/g, '');

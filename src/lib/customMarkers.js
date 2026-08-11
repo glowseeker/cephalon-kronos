@@ -1,8 +1,8 @@
 /**
- * Custom Markers (LocTags) — in-game player-placed markers imported from inventory.json
+ * Custom Markers (LocTags)  -  in-game player-placed markers imported from inventory.json
  *
  * Coordinate mapping: in-game world (x, z) → 2D map pixel (u, v).
- * Map bounds and reference points are approximate — tune MAP_BOUNDS per map as needed.
+ * Map bounds and reference points are approximate  -  tune MAP_BOUNDS per map as needed.
  *
  * World coordinate system:
  *   x = east-west  (positive = east)
@@ -47,8 +47,8 @@ const MAP_BOUNDS = {
 // (col 0 row 0 = top-left, col 9 row 9 = bottom-right)
 const ZONE_GRID = {
   poe:   { numRows: 10 },  // 10×10 grid (confirmed: zone 9=bottom-left, 99=bottom-right)
-  venus: { numRows: 10 },  // guess — needs verification
-  deimos:{ numRows: 10 },  // guess — needs verification
+  venus: { numRows: 10 },  // guess  -  needs verification
+  deimos:{ numRows: 10 },  // guess  -  needs verification
 }
 
 /**

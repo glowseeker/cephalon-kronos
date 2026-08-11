@@ -34,7 +34,7 @@ export default function RivenOverlay() {
   const [knownWeapons, setKnownWeapons] = useState([]);
   const { t } = useUi();
   // Riven cards are rendered by the game in the *game* locale, not the UI
-  // locale — so the OCR stat aliases, garbage words, and parse locale must all
+  // locale  -  so the OCR stat aliases, garbage words, and parse locale must all
   // follow `gameLocale` (weapon names below already do).
   const [gameLocale, setGameLocale] = useState('en');
   const [gameI18n, setGameI18n] = useState(null);
@@ -138,13 +138,13 @@ export default function RivenOverlay() {
     if (direct) return direct;
 
     // Try with leading number+hyphen stripped (mod drain "18-" prefix)
-    const noPrefix = lower.replace(/^\d+\s*[-–—]\s*/, '');
+    const noPrefix = lower.replace(/^\d+\s*[-– - ]\s*/, '');
     if (noPrefix !== lower) {
       const unprefixed = tryMatch(noPrefix);
       if (unprefixed) return unprefixed;
       // Also try each known weapon without its number prefix
       for (let i = 0; i < known.length; i++) {
-        const wNoPrefix = knownLower[i].replace(/^\d+\s*[-–—]\s*/, '');
+        const wNoPrefix = knownLower[i].replace(/^\d+\s*[-– - ]\s*/, '');
         if (wNoPrefix !== knownLower[i] && noPrefix === wNoPrefix) return known[i];
       }
     }
@@ -157,14 +157,14 @@ export default function RivenOverlay() {
       const matched = tryMatch(trial);
       if (matched) return matched;
       // Also try no-prefix variant
-      const trialNoPrefix = trial.replace(/^\d+\s*[-–—]\s*/, '');
+      const trialNoPrefix = trial.replace(/^\d+\s*[-– - ]\s*/, '');
       if (trialNoPrefix !== trial) {
         const matched2 = tryMatch(trialNoPrefix);
         if (matched2) return matched2;
       }
     }
     // 5. last resort: return first word only (with number prefix stripped)
-    return cleaned.trim().split(/\s+/)[0].replace(/^\d+\s*[-–—]\s*/, '') || cleaned;
+    return cleaned.trim().split(/\s+/)[0].replace(/^\d+\s*[-– - ]\s*/, '') || cleaned;
   }
 
   const doPricing = useCallback((p) => {
@@ -365,7 +365,7 @@ export default function RivenOverlay() {
                 </div>
             }
 
-              {/* Pricing info — always shown */}
+              {/* Pricing info  -  always shown */}
               <div className="grid grid-cols-3 gap-[1px] rounded-lg overflow-hidden mt-0.5">
                 <div className="bg-white/[0.04] px-2 py-2 text-center">
                   <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block">{t('ui.riven_overlay.avg_value')}</span>

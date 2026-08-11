@@ -25,7 +25,7 @@ for (const [el, frames] of Object.entries(PROGENITOR)) {
 }
 
 // Map for resolving progenitor faction (Warframe) names through the DE dict.
-// Keys: /Lotus/Language/Suits/{xxx}Name — sourced from ExportWarframes.json
+// Keys: /Lotus/Language/Suits/{xxx}Name  -  sourced from ExportWarframes.json
 const PROGENITOR_DICT_KEYS = {
   Ash: '/Lotus/Language/Suits/AshName',
   Atlas: '/Lotus/Language/Suits/AtlasName',
@@ -187,7 +187,7 @@ export default function Adversaries() {
                   }
                     <span className="text-white/80 min-w-[100px]">{n.wfName}</span>
                     <span className="text-white/40 min-w-[60px]">
-                      {n.element ? <span style={{ color: ELEMENT_COLORS[n.element] }}>{t(`ui.elements.${n.element.toLowerCase()}`)}</span> : '—'}
+                      {n.element ? <span style={{ color: ELEMENT_COLORS[n.element] }}>{t(`ui.elements.${n.element.toLowerCase()}`)}</span> : ' - '}
                     </span>
                     <span className="text-white/40 min-w-[30px]">{t('adversaries.rank', { rank: n.Rank ?? '?' })}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${

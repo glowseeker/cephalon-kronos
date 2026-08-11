@@ -19,7 +19,7 @@ static CACHED_OVERLAY_WINDOWS: LazyLock<Mutex<HashMap<String, WebviewWindow>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn get_or_create_overlay_window(app_handle: &AppHandle, label: &str) -> Result<WebviewWindow, String> {
-    // Check cache first — bypasses Tauri's corrupted registry.
+    // Check cache first  -  bypasses Tauri's corrupted registry.
     {
         let cache = CACHED_OVERLAY_WINDOWS.lock().unwrap();
         if let Some(w) = cache.get(label) {
@@ -44,9 +44,9 @@ fn find_overlay_window(app_handle: &AppHandle, label: &str) -> Option<WebviewWin
             return Some(w.clone());
         }
     }
-    // Tauri's own lookup — will be None after add_child corruption.
+    // Tauri's own lookup  -  will be None after add_child corruption.
     let w = app_handle.get_webview_window(label)?;
-    // Found via Tauri — populate cache for next time.
+    // Found via Tauri  -  populate cache for next time.
     CACHED_OVERLAY_WINDOWS.lock().unwrap().insert(label.to_string(), w.clone());
     Some(w)
 }
@@ -661,7 +661,7 @@ pub fn show_window_internal(app_handle: &AppHandle, label: &str) -> Result<(), S
     // last known size (or the static default if never resized). WebKit
     // discards its rendering surface on geometry change, which clears any
     // stale content ghosts from prior hide/show cycles.
-    // Notification overlays are skipped — their height is dynamically managed
+    // Notification overlays are skipped  -  their height is dynamically managed
     // by the frontend ResizeObserver and clobbering it would collapse the window.
     if !matches!(label, "overlay-tl" | "overlay-tr" | "overlay-tc") {
         let (restore_w, restore_h) = get_last_overlay_size(label).unwrap_or((w, h));
@@ -849,7 +849,7 @@ pub fn resize_overlay_window(
         }
 
         // Only force backing-store invalidation (1x1 resize) when the window
-        // was hidden — incremental resizes on a visible window don't need it
+        // was hidden  -  incremental resizes on a visible window don't need it
         // and the 1x1 flash is visually jarring.
         if !window.is_visible().unwrap_or(false) {
             let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: 1, height: 1 }));
@@ -1023,7 +1023,7 @@ fn update_warframe_cache() {
 
 /// Resolve Warframe's monitor by containment matching against Tauri's own
 /// monitor list (same approach as `get_focused_monitor`).  Avoids the
-/// xcap-index-crossover bug — xcap and GDK/Tauri don't guarantee the same
+/// xcap-index-crossover bug  -  xcap and GDK/Tauri don't guarantee the same
 /// enumeration order, so storing an index from one and using it against
 /// the other can land on the wrong display.
 fn warframe_monitor(app_handle: &AppHandle) -> Option<tauri::Monitor> {
@@ -1076,7 +1076,7 @@ pub fn spawn_focus_watcher(app_handle: &AppHandle) {
             if focused_now && !was_focused {
                 for label in had_visible.drain(..).collect::<Vec<_>>() {
                     // Skip overlays that have been voluntarily closed (e.g. relic
-                    // reward timer expired while hidden) — they were removed from
+                    // reward timer expired while hidden)  -  they were removed from
                     // SHOWN_OVERLAYS by clear_shown_overlay and should not re-appear.
                     let still_expected = SHOWN_OVERLAYS.lock().unwrap().contains(&label);
                     if !still_expected { continue; }
@@ -1084,7 +1084,7 @@ pub fn spawn_focus_watcher(app_handle: &AppHandle) {
                 }
             } else if !focused_now && was_focused {
                 // Don't hide overlays if focus moved to one of our own overlay
-                // windows (e.g. user clicked the sidebar) — that would trigger a
+                // windows (e.g. user clicked the sidebar)  -  that would trigger a
                 // hide-then-re-show loop when focus falls through to Warframe.
                 let our_pid = std::process::id() as u64;
                 let on_our_overlay = active_win_pos_rs::get_active_window()

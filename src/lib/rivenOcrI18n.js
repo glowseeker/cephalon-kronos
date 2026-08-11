@@ -1,9 +1,9 @@
 // Localized riven-card OCR support: stat-name aliases + card-header garbage words.
 //
 // Stat names are matched three ways (see foldVariants):
-//   1. folded  — Unicode NFD-stripped, ß→s   ("Größe" → "grose")
-//   2. expanded — umlauts→ae/oe/ue, ß→ss     ("Größe" → "groesse")
-//   3. tight   — folded with all non-alnum removed ("Krit. Chance" → "kritchance")
+//   1. folded   -  Unicode NFD-stripped, ß→s   ("Größe" → "grose")
+//   2. expanded  -  umlauts→ae/oe/ue, ß→ss     ("Größe" → "groesse")
+//   3. tight    -  folded with all non-alnum removed ("Krit. Chance" → "kritchance")
 // Aliases come from two sources: the i18n `rivenStats` table (all 15 locales,
 // inverted English-key → localized-name) and GAME_STAT_ALIASES (in-game terms
 // extracted from the DE public-manifest ExportUpgrades_{locale}.json levelStats,
@@ -67,7 +67,7 @@ export function foldVariants(str) {
 // (DE public manifest, all 15 locales). The i18n `rivenStats` table drifts from
 // the game in places ("Schlitz" vs game "Schnitt"; "Durchdringung" used for
 // both Puncture and Punch Through; th Puncture "ทฤษฎีบังคับ" is a typo), so
-// these supplement — never replace — the table. Key: locale → term → English.
+// these supplement  -  never replace  -  the table. Key: locale → term → English.
 const GAME_STAT_ALIASES = {
   de: {
     'Krit. Chance': 'Critical Chance',
@@ -886,7 +886,7 @@ export function parseRivenOcr(text, garbageRe, locale = 'en') {
       i++; continue
     }
     // Value-first stat ("+165% Schaden") or name-first stat (Thai cards:
-    // "โอกาสคริติคอล +165%" — name then value) both end the header section.
+    // "โอกาสคริติคอล +165%"  -  name then value) both end the header section.
     if (/^[+\-xX]\s*[\d.,]+[x%]?/.test(p) || /[+\-xX]\s*[\d.,]+[x%]?$/.test(p)) break
     const gm = p.match(GARBAGE_TOKEN_RE)
     if (gm) {
@@ -906,7 +906,7 @@ export function parseRivenOcr(text, garbageRe, locale = 'en') {
   // Clean any remaining garbage from the weapon name (e.g. "MOD DRAIN" as one part)
   weaponName = weaponName
     // Strip leading mod-drain number (e.g. "18-Aksomati" → "Aksomati")
-    .replace(/^\d+\s*[-–—]\s*/, '')
+    .replace(/^\d+\s*[-– - ]\s*/, '')
     .replace(garbageSuffixReForLocale(locale), '')
     .replace(/\s*\(.*?\)\s*/g, '')
     .trim()
@@ -944,7 +944,7 @@ export function parseRivenOcr(text, garbageRe, locale = 'en') {
       continue
     }
 
-    // Name-first stat (Thai cards: "โอกาสคริติคอล +165%" — name then value).
+    // Name-first stat (Thai cards: "โอกาสคริติคอล +165%"  -  name then value).
     // Guards: value must be at the very end, and the name part must be non-empty.
     const nameFirst = p.match(/^(.+?)\s*([+\-xX]\s*[\d.,]+[x%]?)$/)
     if (nameFirst && nameFirst[1] && nameFirst[1].trim().length > 1 && !GC_GARBAGE.test(p)) {

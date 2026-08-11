@@ -44,7 +44,7 @@ export const GeneralOverrides = {
   'EleanorAllyAgent': 'Eleanor',
   'LettieAllyAgent': 'Lettie',
   'AmirAllyAgent': 'Amir',
-  // Factions — use DE dict paths for proper locale resolution
+  // Factions  -  use DE dict paths for proper locale resolution
   'FC_CORPUS': '/Lotus/Language/Game/Faction_CorpusUC',
   'FC_GRINEER': '/Lotus/Language/Game/Faction_GrineerUC',
   'FC_INFESTATION': '/Lotus/Language/Game/Faction_InfestationUC',
@@ -223,7 +223,7 @@ export function resolveNode(node, dict, ERg, locale = 'en') {
   if (dict['/' + node]) return clean(dict['/' + node])
 
   // Sortie boss / modifier keys (SORTIE_BOSS_*, SORTIE_MODIFIER_*) are not in
-  // the language dicts — resolve from the per-locale DE manifest table.
+  // the language dicts  -  resolve from the per-locale DE manifest table.
   const leaf = node.split('/').at(-1);
   if (leaf.startsWith('SORTIE_')) {
     const translated = resolveSortieKey(leaf, locale);
@@ -295,7 +295,7 @@ export function resolveMissionType(raw, dict, ERg, locale = 'en') {
   const code = raw.replace('MT_', '')
   const pascalKey = `/Lotus/Language/Missions/MissionName_${pascal(code)}`
   if (dict[pascalKey]) return clean(dict[pascalKey])
-  // Some mirrors store ALLCAPS keys — try the raw code form too.
+  // Some mirrors store ALLCAPS keys  -  try the raw code form too.
   const rawKey = `/Lotus/Language/Missions/MissionName_${code}`
   if (dict[rawKey]) return clean(dict[rawKey])
   // Fallback to MAPPING_TYPES (hardcoded English) then try to resolve via MISSION_NAME_KEYS
@@ -370,7 +370,7 @@ export function cleanBountyName(path) {
   // Deduplicate consecutive identical words (e.g. "Spy Spy" → "Spy")
   const deduped = sig.filter((w, i) => i === 0 || w !== sig[i - 1])
   if (deduped.length > 0) return deduped.join(' ')
-  // All words are filler — fall back to first meaningful looking chunk
+  // All words are filler  -  fall back to first meaningful looking chunk
   return words.filter(w => w.length > 1).join(' ') || words[0] || 'Bounty'
 }
 
@@ -583,7 +583,7 @@ const FOLDER_OVERRIDES = {
   Fairy: 'Wisp', Jade: 'Nyx',
 };
 
-// NAME_OVERRIDES is no longer needed — all previously-overridden items are
+// NAME_OVERRIDES is no longer needed  -  all previously-overridden items are
 // either hidden (MuseumDogTag, TestPartItem) or resolved by the game dict.
 
 // Riven stat name translations moved to src/lib/i18n/{locale}.json (rivenStats).
@@ -619,7 +619,7 @@ export function blueprintName(name, locale = 'en') {
 }
 
 // Legacy suffix-only map kept for inventoryParser (which appends suffixes).
-// New code should use blueprintName() — the game uses PREFIX forms for
+// New code should use blueprintName()  -  the game uses PREFIX forms for
 // fr/es/it/pt/ru/uk/pl/th ("Schéma de X", "Plano de X"…), not suffixes.
 const BLUEPRINT_SUFFIX = {
   en: ' Blueprint',
@@ -679,7 +679,7 @@ function nameFromPath(path = '', locale = 'en') {
   const parts = path.split('/').filter(Boolean);
   const leaf = parts.at(-1) ?? path;
   const folder = parts.at(-2) ?? '';
-  // NAME_OVERRIDES was removed — all items it covered are hidden or dict-resolved
+  // NAME_OVERRIDES was removed  -  all items it covered are hidden or dict-resolved
 
   if (FOLDER_OVERRIDES[folder]) {
     const suffix = leaf.match(/(Prime|Vandal|Wraith|Prisma|Kuva|Tenet|Umbra)$/i)?.[0] ?? '';
@@ -690,7 +690,7 @@ function nameFromPath(path = '', locale = 'en') {
   const stripped = leaf
     .replace(/(BaseSuit|PowerSuit|PrimeName|OperatorAmp|HoverboardSuit|MotorcyclePowerSuit|MoaPetPowerSuit|Blueprint)$/, '')
     // AvatarImage store items (e.g. AvatarImageDogDaysErraGlyph) are plain
-    // glyphs — drop the internal "AvatarImage" prefix so the display name is
+    // glyphs  -  drop the internal "AvatarImage" prefix so the display name is
     // "Dog Days Erra Glyph", not "Avatar Image Dog Days Erra Glyph".
     .replace(/^AvatarImage/, '');
   const name = splitPascal(stripped).trim() || leaf;
@@ -709,11 +709,11 @@ function nameFromPath(path = '', locale = 'en') {
 // Leaf name mismatches between the export uniqueName and the language dict key.
 // e.g. /Lotus/Language/Items/InfestedAladNavCodeName exists in the dict but the
 // export uniqueName leaf is "InfestedAladNavCoordinate" (DE abbreviates Coordinate
-// to "Code" inside the loc key) — step-4 leaf-match misses it. Map the leaf to
+// to "Code" inside the loc key)  -  step-4 leaf-match misses it. Map the leaf to
 // the real dict key so resolveItemName localizes the item without an EN fallback.
 const ITEM_LEAF_ALIAS = {
   InfestedAladNavCoordinate: '/Lotus/Language/Items/InfestedAladNavCodeName',
-  // DE's official worldState API sends "InfestedAladCoordinate" (no "Nav") —
+  // DE's official worldState API sends "InfestedAladCoordinate" (no "Nav")  - 
   // same item, same dict key.
   InfestedAladCoordinate: '/Lotus/Language/Items/InfestedAladNavCodeName',
 };
@@ -760,7 +760,7 @@ export function resolveItemName(path, dict, uniqueNameToName, locale = 'en') {
   // 3b. Weapon-part blueprints: /Lotus/Types/Recipes/Weapons/WeaponParts/XxxBarrel
   //     → /Lotus/Language/Menu/CraftingComponent_XxxBarrel (localized part name,
   //     e.g. fr "Snipetron Vandal - Canon" for SnipetronVandalBarrel). This is
-  //     already the game's complete localized name — return it as-is, no
+  //     already the game's complete localized name  -  return it as-is, no
   //     blueprint template on top.
   if (!resolved && isWeaponPart) {
     const leaf = path.split('/').pop().replace(/StoreItem$/i, '');
@@ -827,7 +827,7 @@ export function resolveItemName(path, dict, uniqueNameToName, locale = 'en') {
   // Localized blueprint rendering. The game uses per-locale patterns:
   // prefix ("Schéma de X" fr, "Plano de X" es, "Чертёж X" ru) or suffix
   // ("X Blueprint" en, "X Blaupause" de, "X 設計図" ja…). Weapon parts resolve
-  // to already-localized full names (CraftingComponent_ keys) — skip the
+  // to already-localized full names (CraftingComponent_ keys)  -  skip the
   // template unless the resolved name is still the raw English blueprint form.
   if (isBlueprint) {
     const tpl = BLUEPRINT_TEMPLATE[locale] || BLUEPRINT_TEMPLATE.en;

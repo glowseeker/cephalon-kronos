@@ -545,7 +545,7 @@ export function MonitoringProvider({ children }) {
           } catch { }
         }
 
-        // Set exports immediately (no wfcd blocking) — defer the wfcd load to
+        // Set exports immediately (no wfcd blocking)  -  defer the wfcd load to
         // the background so the shell UI renders without a 15s hitch.
         setExportData(exports)
         exportDataRef.current = exports
@@ -1092,7 +1092,7 @@ export function MonitoringProvider({ children }) {
         setCardImagesPath(p)
       } catch (err) {
         // Extraction failure (e.g. stale cache path) must not leave the UI
-        // stuck on "extracting" forever — fall back to regular card images.
+        // stuck on "extracting" forever  -  fall back to regular card images.
         console.error('retryCardImages: ensure_card_images failed:', err)
         setFixProgress({ phase: 'done', current: 1, total: 1, current_file: '' })
       }
@@ -1119,7 +1119,7 @@ export function MonitoringProvider({ children }) {
 
       const savedPath = getSetting('warframe_cache_path', '')
       const cachePath = savedPath || await invoke('detect_warframe_cache').catch(() => null)
-      // Already extracted+fixed in a previous session? Skip the pipeline —
+      // Already extracted+fixed in a previous session? Skip the pipeline  - 
       // locale switches remount this effect and used to re-run the full
       // extraction, hanging on "extracting" when the cache path went stale.
       const knownRoot = localStorage.getItem('kronos_card_images_path') || ''

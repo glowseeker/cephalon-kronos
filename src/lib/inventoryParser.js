@@ -27,7 +27,7 @@ import { BLUEPRINT_SUFFIX } from './warframeUtils'
 //
 // Per-riven-type stat bases, affix syllables, and localized label keys are
 // derived at parse time from ExportUpgrades' /Lotus/Upgrades/Mods/Randomized/
-// entries (see buildRivenTagInfo in parseInventory) — DE's own data, verified
+// entries (see buildRivenTagInfo in parseInventory)  -  DE's own data, verified
 // byte-identical to the riven_tags.json tables this replaces. The export's
 // upgradeValues[0].value, prefixTag/suffixTag, and locTag drive the stat
 // formula, the constructed riven name, and the dict-resolved localized label.
@@ -226,7 +226,7 @@ const FOLDER_OVERRIDES = {
 
 // Resources whose ExportResources entry has an empty name and whose parentType
 // is absent from all export tables. DE does not provide a locKey for these
-// internal research/dev items — map the uppercase leaf to the canonical name
+// internal research/dev items  -  map the uppercase leaf to the canonical name
 // the game displays (source: Warframe in-game UI / public manifest).
 const RESOURCE_LEAF_NAME = {
   GENERICDOJOCOLORPIGMENT: 'Color Pigment',
@@ -290,7 +290,7 @@ function resolveBoosterName(leaf, dict) {
 
 // Prime part paths end with the weapon name + part word (always English even in
 // localized builds), e.g. .../WeaponParts/AfurisPrimeBarrel.  Used to separate
-// prime parts from resources and to build prime-set component lists — matching
+// prime parts from resources and to build prime-set component lists  -  matching
 // the localized display name instead (e.g. "Afuris Prime: Lauf") would miss them.
 const PRIME_PART_PATH_RE = /Prime.*?(Barrel|Receiver|Stock|Blade|Handle|Link|Gauntlet|Head|Disc|Grip|Boot|Chain|String|UpperLimb|LowerLimb|Carapace|Cerebrum|Systems|Chassis|Neuroptics|Guard|Hilt|Ornament|Stars|Holster|Pouch|Band|Blueprint)$/i;
 
@@ -351,7 +351,7 @@ function _resolveNameInternal(un, dict, locale = 'en', depth, ...tables) {
       }
       if (!locKey.startsWith('/Lotus/')) {
         // A wfcd pre-resolved literal is not authoritative when the entry also
-        // carries a parentName (name delegation) — let the parentName/alias
+        // carries a parentName (name delegation)  -  let the parentName/alias
         // branch below decide (e.g. GenericDojoColorPigment → "Color Pigment").
         if (!entry.parentName) {
           const cleaned = cleanName(locKey);
@@ -450,7 +450,7 @@ function _resolveNameInternal(un, dict, locale = 'en', depth, ...tables) {
           }
         } else if (entry?.parentName) {
           // Empty name (e.g. /Lotus/Types/Items/Research/DojoColors/GenericDojoColorPigment
-          // has name:"") — the game delegates the display name to the parentType.
+          // has name:"")  -  the game delegates the display name to the parentType.
           const fromParent = _resolveNameInternal(entry.parentName, dict, locale, depth + 1, ...tables);
           if (fromParent) return fromParent;
         }
@@ -650,8 +650,8 @@ function extractModCategory(exportType, un, entry) {
     if (un.includes('Killswitch')) return 'Peculiar'
     // Beast stance mods - path-based before STANCE fallback
     if (un.includes('/Pets/BeastWeapons/')) return 'Beasts'
-    // Melee stance mods live under /Weapons/Tenno/Melee/MeleeTrees/ — not the
-    // /Mods/ tree — so path-detect them explicitly. Needed because some
+    // Melee stance mods live under /Weapons/Tenno/Melee/MeleeTrees/  -  not the
+    // /Mods/ tree  -  so path-detect them explicitly. Needed because some
     // MeleeTree entries are absent from the export, leaving exportType empty
     // and the /Mods/ regex unmatched (category would be null → only in "All").
     if (un.includes('/MeleeTrees/') || un.includes('/Pets/') && un.includes('Stance')) return 'Stance'
@@ -890,7 +890,7 @@ function detectArcaneCategory(un, name) {
 export function parseInventory(raw, exports, dict, locale = 'en', i18nData = null) {
   if (!raw || typeof raw !== 'object' || !exports) return { all: [] };
   // Prefer the per-locale dict (exports.dict = dict.{locale}.json). The
-  // dict.en fallback exists only for English runs — when the localed dict is
+  // dict.en fallback exists only for English runs  -  when the localed dict is
   // present it MUST win, otherwise an empty dict param (first render before
   // exports land) silently degrades the whole inventory to English.
   dict = (dict && Object.keys(dict).length > 0) ? dict : (exports?.dict || exports?.['dict.en'] || {})
@@ -920,7 +920,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
   // Per-riven-type stat bases, affix syllables, and dict lockeys, rebuilt from
   // ExportUpgrades' /Lotus/Upgrades/Mods/Randomized/<type> entries on every
   // parse (cheap: ~10ms). The old hardcoded riven_tags.json blob and
-  // per-locale rivenStats tables are gone — DE's own data and dict strings
+  // per-locale rivenStats tables are gone  -  DE's own data and dict strings
   // now drive the riven stat formula, constructed name, and labels.
   const buildRivenTagInfo = () => {
     const info = {};
@@ -979,7 +979,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
       const origMap = toMap(exports[origKey], origKey);
       for (const [un, origEntry] of Object.entries(origMap)) {
         if (map[un]) {
-          // Copy the entry before mutating — map is a shallow spread of the WI
+          // Copy the entry before mutating  -  map is a shallow spread of the WI
           // map, so entries are shared references; writing into them in place
           // would poison exports.WI_* with loctags for later readers (riven
           // weapon_name_en must stay English for the price model).
@@ -1765,7 +1765,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
       mod.icon = entry?.icon ?? null;
       // English reference name for mod-frame image lookups. The Tektolyst
       // (antique) frame backgrounds are named by the mod's English name
-      // (e.g. "Ulashta-Shol.png") — the localized name would 404. Resolve via
+      // (e.g. "Ulashta-Shol.png")  -  the localized name would 404. Resolve via
       // the EN dict (exports['dict.en']) when available.
       if (mod.modFrame === 'Tektolyst') {
         const enDict = exports?.['dict.en'] || exports?.dictEn || null;
@@ -1776,7 +1776,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
         }
         // ExportUpgradesLocalized (DE public manifest, keyed by main.rs) can
         // overwrite EM[un].name with a LITERAL localized string ("Яр Дал"),
-        // which is not a locKey — enDict[literal] misses. It also poisons
+        // which is not a locKey  -  enDict[literal] misses. It also poisons
         // exports.ExportUpgrades (EM === the export object in the non-WI
         // path), so recover the original locKey by reverse-locating the
         // localized name in the uk/active dict, then resolve that key in the
@@ -1942,15 +1942,15 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
   for (const item of (raw.MiscItems ?? [])) {
     const un = item.ItemType ?? '';
     if (un.includes('/Projections/') || un.includes('/Upgrades/Relic/') || un.includes('OroFusexOrnament')) continue;
-    // Hidden resource — user requested it be excluded (Tethra Data Fragments)
+    // Hidden resource  -  user requested it be excluded (Tethra Data Fragments)
     if (un === '/Lotus/Types/Items/SyndicateDogTags/MuseumDogTag') continue;
-    // Hidden internal test item — user requested it be excluded from resources
+    // Hidden internal test item  -  user requested it be excluded from resources
     if (un === '/Lotus/Types/Items/MiscItems/TestPartItem'
         || un === '/Lotus/Types/Gameplay/InfestedMicroplanet/EncounterObjects/TestPartItem'
         || un.endsWith('/TestPartItem')) continue;
     const name = resolveName(un, dict, locale, ER, ERel, EW, ES);
     // Prime parts are shown in the prime-sets tab, not as resources. Match the
-    // ItemType path (always English) — localized names like "Afuris Prime: Lauf"
+    // ItemType path (always English)  -  localized names like "Afuris Prime: Lauf"
     // don't contain the English component words.
     const isPrimePart = PRIME_PART_PATH_RE.test(un.split('/').pop());
     if (!isPrimePart) {
@@ -2147,7 +2147,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
         } else {
           displayVal = val * 100; // standard percentage
         }
-        // English statKey first — the price model matches on English keys only.
+        // English statKey first  -  the price model matches on English keys only.
         // Display label resolves from the game dict (DE's own strings) via the
         // export's stat locTag; falls back to the per-locale i18n rivenStats
         // table, then the English key.
@@ -2589,7 +2589,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
         // XP is keyed by resultType (item path), not blueprint path (bpKey)
         const xp = xpMap[recipe.resultType] ?? 0;
         const isMastered = (masteredEntry?.mastered ?? false) || (xp > 0);
-// Skip items that don't grant mastery — gear, resources, mods, arcanes, prime parts, etc.
+// Skip items that don't grant mastery  -  gear, resources, mods, arcanes, prime parts, etc.
         const NO_MASTERY_CATEGORIES = new Set(['resources', 'mods', 'arcanes', 'prime_parts', 'gear', 'consumables', 'keys', 'misc', 'resources_enemy']);
         let hasMastery = masteredEntry ? !NO_MASTERY_CATEGORIES.has(masteredEntry.category) : (xp > 0);
 
