@@ -27,17 +27,28 @@ export function UiProvider({ children }) {
         await loadSettings()
         if (cancelled) return
         const locale = getSetting('uiLocale') || getSetting('gameLocale') || 'en'
-        const locData = locale === 'en' ? null : await loadLocale(locale)
-        const enData = locale === 'en' ? locData : null
+        // English UI chrome still comes from en.json — the "no fallback" rule only
+        // governs game-sourced terms (resolved from the DE manifest dict), not the
+        // ui/settings/eras/etc. strings in this file. Returning null for English
+        // wipes the entire ui object and makes every t() fall back to the raw key.
+        const locData = await loadLocale(locale)
+        const enData = null
         if (cancelled) return
         // No EN base merge — only use locale data. Game-sourced terms
         // are resolved at runtime from the DE manifest dict files.
         const merged = { ...(locData?.ui || {}) }
-        // Flatten top-level sections into flat dotted-key lookup
+        // Flatten top-level sections into flat dotted-key lookup.
+        // Flat ui.<section>.<key> entries (the canonical, translated form) win
+        // over legacy nested section objects; nested values only fill keys that
+        // have no flat counterpart (e.g. eras.Lith/Meso/... which exist only
+        // nested).
         for (const section of ['relics', 'rivens', 'mastery', 'collectibles', 'settings', 'adversaries', 'eras']) {
           const locSection = locData?.[section]
           if (locSection && typeof locSection === 'object') {
-            for (const k of Object.keys(locSection)) merged[`${section}.${k}`] = locSection[k]
+            for (const k of Object.keys(locSection)) {
+              const flatKey = `${section}.${k}`
+              if (!(flatKey in merged)) merged[flatKey] = locSection[k]
+            }
           }
         }
         setState({ ui: merged, locale, ready: true, i18nData: locData || enData })

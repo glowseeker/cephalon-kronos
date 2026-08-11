@@ -1219,7 +1219,19 @@
     "adversaries.rank": "Rank {rank}",
     "adversaries.no_data": "No nemesis data.",
     "ui.riven_card.riven_suffix": "Riven",
-    "rivens.type_unknown": "Unknown"
+    "rivens.type_unknown": "Unknown",
+    "ui.dashboard.time_now": "Just now",
+    "ui.dashboard.time_ago_min": "{n}m ago",
+    "ui.dashboard.time_ago_hour": "{n}h ago",
+    "ui.dashboard.time_ago_day": "{n}d ago",
+    "settings.cursorStyle_system": "System",
+    "settings.cursorStyle_default": "Default",
+    "settings.cursorStyle_retro": "Retro",
+    "maps.name_poe": "Plains of Eidolon",
+    "maps.name_vallis": "Orb Vallis",
+    "maps.name_deimos": "Cambion Drift",
+    "maps.name_duviri": "Duviri",
+    "ui.dashboard.time_expired": "Expired"
   },
   "inventory": {
     "filled": "Filled",

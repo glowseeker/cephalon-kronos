@@ -52,103 +52,103 @@
   },
   "peely": {
     "/Lotus/Upgrades/Stickers/DropSpecialItemChanceOnWeakpointKillSticker": {
-      "name": "Argon Combo #2",
+      "name": "Аргон-комбо #2",
       "description": "Привід слабкого мурахового: +20% шансу випадіння Сфери Здоров'я, Сфери Енергії, Боєприпасів, Фороландів або Зарядів SporeX."
     },
     "/Lotus/Upgrades/Stickers/ToxinGasResistanceOnHealthOrbSticker": {
-      "name": "Breathless",
+      "name": "Без дихання",
       "description": "Отримуєте 100% опору Газу та Токсину на 30 секунд. Зібрані Сфери Здоров'я додають 20 секунд."
     },
     "/Lotus/Upgrades/Stickers/DropHealingBurgerChanceSticker": {
-      "name": "Burgerfest",
+      "name": "Бургерфест",
       "description": "Вороги мають 15% шанс випустити Ящики Argon Burger, які можуть лікувати ближайших союзників на 10% і оборонні целі на 100%."
     },
     "/Lotus/Upgrades/Stickers/StickerSporePrimer": {
-      "name": "Catscratch Fever",
+      "name": "Котяча лихоманка",
       "description": "Кожні 20с, ворог у радіусі 30м поражається Spore Saryn."
     },
     "/Lotus/Upgrades/Stickers/CreateShieldOnHeavySlamSticker": {
-      "name": "Crushing Chills",
+      "name": "Крижаний натиск",
       "description": "Важкий Розбив з 6-кратним комбо створює до 3 Сніжних куль з перезарядкою 10с."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyShotgun": {
-      "name": "Doktor's Orders",
+      "name": "Накази Доктора",
       "description": "Екіпувати EFV-8 Mars з +450% урону як другорядну зброю."
     },
     "/Lotus/Upgrades/Stickers/DropEfervonGrenadeChanceSticker": {
-      "name": "Fly, Fly!",
+      "name": "Лети, лети!",
       "description": "Вороги мають 15% шанс випустити Гранати, що очищують забруднення Hell-Scrubber."
     },
     "/Lotus/Upgrades/Stickers/AvatarKnockdownResistanceSticker": {
-      "name": "Going Steady",
+      "name": "На ногах",
       "description": "100% шанс опиратися на Knockdown."
     },
     "/Lotus/Upgrades/Stickers/DeathPreventionOnKillsSticker": {
-      "name": "Hi-Score",
+      "name": "Рекорд",
       "description": "Отримуєте 20 очок за вбивство, 100 за вбивство в уязвиму точку. Бонусне вроження при 1000, 2500, 5000 очках."
     },
     "/Lotus/Upgrades/Stickers/CreateChasingAntiMatterDropSticker": {
-      "name": "It Sees You",
+      "name": "Воно бачить тебе",
       "description": "Крапля Антиматерії з'являється на 25м і полюче кожні 20с. Виграш 1 Pix Chip за успіх."
     },
     "/Lotus/Upgrades/Stickers/ToxinProcOnDamageSticker": {
-      "name": "Old Pizza",
+      "name": "Стара піца",
       "description": "При отриманні урону: 6% шанс отримати стан Токсину. Перезарядка: 5с. Виграш 1 Pix Chip за успіх."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyMelee": {
-      "name": "Only Knives",
+      "name": "Тільки ножі",
       "description": "Екіпувати Scaldra Dual Viciss з +450% урону як ближнє озброєння."
     },
     "/Lotus/Upgrades/Stickers/FreezePlayerOverTimeSticker": {
-      "name": "Optimism",
+      "name": "Оптимізм",
       "description": "Накопичуйте Cold stacks кожні 8с. Замерзання на 10 стаків на 3 секунди. Катання або Void Sling для розтоплення 3 стаків."
     },
     "/Lotus/Upgrades/Stickers/NPCReviveSticker": {
-      "name": "Panic Call",
+      "name": "Панічний виклик",
       "description": "Мінерва або Велімір спробують ожить. Перезарядка: 30с."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyRifle": {
-      "name": "Resolutions",
+      "name": "Рішення",
       "description": "Екіпувати Purgator 1 з +450% урону як основну зброю."
     },
     "/Lotus/Upgrades/Stickers/RemoveStatusesOnHeavyAttackSticker": {
-      "name": "Reverse-O",
+      "name": "Реверс-О",
       "description": "При важкій атаці: перенести від'ємні ефекти стану на ворогів у радіусі 10м."
     },
     "/Lotus/Upgrades/Stickers/EjectButtonSticker": {
-      "name": "Slippery Customer",
+      "name": "Спритний тип",
       "description": "В перший раз, коли ти падаєш: телепортуватися в безпечне місце, ожить з 50% Здоров'я/Щити, незлячний на 9с."
     },
     "/Lotus/Upgrades/Stickers/NullStarOnWeakpointKillSticker": {
-      "name": "Spinnin' Around",
+      "name": "Кружляння",
       "description": "Вбивство в уязвиму точку створює 1 Null Star (max 18). Null Stars знижують урон на 5%."
     },
     "/Lotus/Upgrades/Stickers/ElementalAmmoChanceOnEximusKillSticker": {
-      "name": "Super Scavenger",
+      "name": "Суперзбирач",
       "description": "При вбивстві Eximus: 45% шанс випустити Елементальний Боєприпасний Пакет."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemySmg": {
-      "name": "Through My Heart",
+      "name": "Наскрізь у серце",
       "description": "Екіпувати EFV-5 Jupiter з +450% урону як основну зброю."
     },
     "/Lotus/Upgrades/Stickers/DecoyOnDamagedSticker": {
-      "name": "Too Hot",
+      "name": "Занадто гаряче",
       "description": "Отримання урону нижче 70% Здоров'я створює клон Молт кожні 10с."
     },
     "/Lotus/Upgrades/Stickers/AllowNecramechSummonSticker": {
-      "name": "Vintage Tech",
+      "name": "Вінтажна техніка",
       "description": "Викликати Necramech. Перезарядка 60с після знищення."
     },
     "/Lotus/Upgrades/Stickers/AllowThermianRpgSummonSticker": {
-      "name": "Wakeup Call",
+      "name": "Побудка",
       "description": "Заряжений Thermian RPG може бути розгорнутий зі шкали екіпіровки. Перезарядка: 60с."
     },
     "/Lotus/Upgrades/Stickers/SuperGlideParkourSticker": {
-      "name": "Walking on Air",
+      "name": "Ходіння по повітрю",
       "description": "Збільшує тривалість Aim Glide і Wall Latch на +100%. Знижує гравітацію на 100%."
     },
     "/Lotus/Upgrades/Stickers/WeaponColdDamageSticker": {
-      "name": "XL Frosty",
+      "name": "XL Мороз",
       "description": "Додає +30% урону Холод до основної та другорядної зброї."
     }
   },
@@ -290,7 +290,7 @@
     "mods.cat_sentinels": "Сентинели",
     "mods.cat_stance": "Позиція",
     "mods.cat_vehicles": "Транспорт",
-    "mods.cat_warframe": "Warframe",
+    "mods.cat_warframe": "Варфрейм",
     "mods.hide_conclave": "Сховати Конклав",
     "mods.load_more": "Завантажити більше ({remaining} залишилось)",
     "mods.max_rank": "Максимальний ранг",
@@ -697,7 +697,7 @@
     "ui.dashboard.descendia_normal": "Звичайний",
     "ui.dashboard.descendia_steel_path": "Сталевий Шлях",
     "ui.inventory.incarnon_rank": "Ранг Incarnon {рівень}",
-    "ui.elements.impact": "Impact",
+    "ui.elements.impact": "Удар",
     "ui.elements.puncture": "Пункція",
     "ui.elements.slash": "Слеш",
     "ui.elements.heat": "Тепло",
@@ -705,8 +705,8 @@
     "ui.elements.toxin": "Токсин",
     "ui.elements.electricity": "Електрика",
     "ui.elements.magnetic": "Магнітний",
-    "ui.elements.viral": "Viral",
-    "ui.elements.radiation": "Radiation",
+    "ui.elements.viral": "Вірусний",
+    "ui.elements.radiation": "Радіація",
     "ui.elements.gas": "газ",
     "ui.elements.blast": "Вибух",
     "ui.elements.corrosive": "Корозійний",
@@ -730,7 +730,7 @@
     "checklist.task_pulses": "Бобові: Netracell & Archimedea",
     "checklist.task_calendar": "Календар на 1999 рік",
     "checklist.task_invigorations": "Зміцнення гельмінтів",
-    "checklist.task_descendia": "Descendia",
+    "checklist.task_descendia": "Десцендія",
     "checklist.task_descendia_sp": "Десцендія СП",
     "checklist.task_palladino": "Магазин Палладіно",
     "checklist.task_yonta_weekly": "Йонта: Щотижневий магазин",
@@ -1066,7 +1066,7 @@
     "rivens.state_challenge": "Виклик",
     "rivens.state_veiled": "Завуальований",
     "rivens.sort_name": "Назва",
-    "rivens.sort_plat": "Platinum",
+    "rivens.sort_plat": "Платина",
     "rivens.sort_grade": "Оцінка",
     "rivens.type_all": "всі",
     "ui.dashboard.descendia_penance_desc_very_toxic": "Вороги випромінюють руйнівну світлову ауру, яка завдає шкоди Тенно та союзникам, які потрапляють у неї.",
@@ -1219,7 +1219,19 @@
     "adversaries.rank": "Ранг {rank}",
     "adversaries.no_data": "Немає даних про немесиса.",
     "ui.riven_card.riven_suffix": "Рівен",
-    "rivens.type_unknown": "Невідомий"
+    "rivens.type_unknown": "Невідомий",
+    "ui.dashboard.time_now": "Щойно",
+    "ui.dashboard.time_ago_min": "{n} хв тому",
+    "ui.dashboard.time_ago_hour": "{n} г тому",
+    "ui.dashboard.time_ago_day": "{n} дн тому",
+    "settings.cursorStyle_system": "Система",
+    "settings.cursorStyle_default": "За замовчуванням",
+    "settings.cursorStyle_retro": "Ретро",
+    "maps.name_poe": "Рівнини Ейдолона",
+    "maps.name_vallis": "Долина Орб",
+    "maps.name_deimos": "Дрейф Камбіона",
+    "maps.name_duviri": "Дувірі",
+    "ui.dashboard.time_expired": "Термін минув"
   },
   "inventory": {
     "filled": "Filled",

@@ -5,7 +5,7 @@
  * arcanes and resources.  Provides categorised tabs and multi-column
  * filtering (e.g., "Owned + Unmastered").
  */
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, Fragment } from 'react';
 import { useUi } from '../contexts/UiContext'
 import { resolveGameTerm } from '../lib/gameTerm'
 import { Search, Filter, ArrowUpDown, Check, Box, Zap, Gem, X, Layers } from 'lucide-react';
@@ -785,7 +785,10 @@ export default function Inventory() {
   const modBg = useCallback((mf, item) => {
     if (!framesPath) return '';
     if (mf === 'Tektolyst') {
-      const modName = item?.name;
+      // Antique mod frame files are named by the mod's ENGLISH name (e.g.
+      // "Ulashta-Shol.png") — the localized name would 404. englishName is
+      // stamped at parse time from the EN dict; fall back to the name.
+      const modName = item?.englishName || item?.name;
       if (modName) {
         const src = convertFileSrc(`${framesPath}/${mf}/${modName.replace(/\s+/g, '')}.png`);
         return src;
@@ -1189,10 +1192,10 @@ export default function Inventory() {
                         {item.description &&
                     <p className="text-[10px] text-kronos-dim/70 mt-0.5 line-clamp-2 leading-relaxed">
                             {item.description.split(/\r\n/).map((line, i, arr) => (
-                              <React.Fragment key={i}>
+                              <Fragment key={i}>
                                 {line}
                                 {i < arr.length - 1 && <br />}
-                              </React.Fragment>
+                              </Fragment>
                             ))}
                           </p>
                     }

@@ -16,10 +16,10 @@ const ICONS = {
 };
 
 const MAPS = [
-{ name: 'Plains of Eidolon', raw: 'poe_full.png', labeled: 'PlainsofEidolon_4k_Map.png' },
-{ name: 'Orb Vallis', raw: 'venus_full.png', labeled: 'OrbVallis4kMap-min.png' },
-{ name: 'Cambion Drift', raw: 'deimos_full.png', labeled: 'CambianDrift4kMap.png' },
-{ name: 'Duviri', raw: 'Duviri_map_with_caves.png', labeled: 'Duviri_map_with_caves.png' }];
+{ name: 'Plains of Eidolon', nameKey: 'maps.name_poe', raw: 'poe_full.png', labeled: 'PlainsofEidolon_4k_Map.png' },
+{ name: 'Orb Vallis', nameKey: 'maps.name_vallis', raw: 'venus_full.png', labeled: 'OrbVallis4kMap-min.png' },
+{ name: 'Cambion Drift', nameKey: 'maps.name_deimos', raw: 'deimos_full.png', labeled: 'CambianDrift4kMap.png' },
+{ name: 'Duviri', nameKey: 'maps.name_duviri', raw: 'Duviri_map_with_caves.png', labeled: 'Duviri_map_with_caves.png' }];
 
 
 const placeholderSvg = (text) => `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -488,7 +488,7 @@ export default function Maps() {
     requestAnimationFrame(applyTransform);
   }, [applyTransform, clamp, imgNatural]);
 
-  const mapTabs = MAPS.map((m, i) => ({ id: i.toString(), label: m.name }));
+  const mapTabs = MAPS.map((m, i) => ({ id: i.toString(), label: m.nameKey ? (t(m.nameKey) !== m.nameKey ? t(m.nameKey) : m.name) : m.name }));
 
   const importCustomMarkersFromGame = useCallback(() => {
     if (!inventoryData?.customMarkers?.length) return;
@@ -698,7 +698,7 @@ export default function Maps() {
                   <img
                     ref={imgRef}
                     src={mapsPath ? convertFileSrc(`${mapsPath}/${mapFilename}`) : placeholderSvg(t('maps.image_unavailable'))}
-                    alt={MAPS[parseInt(activeTab)].name}
+                    alt={MAPS[parseInt(activeTab)].nameKey ? (t(MAPS[parseInt(activeTab)].nameKey) !== MAPS[parseInt(activeTab)].nameKey ? t(MAPS[parseInt(activeTab)].nameKey) : MAPS[parseInt(activeTab)].name) : MAPS[parseInt(activeTab)].name}
                     onLoad={onImgLoad}
                     onError={(e) => {e.currentTarget.onerror = null;e.currentTarget.src = placeholderSvg(t('maps.image_unavailable'));}}
                     style={{ width: '100%', height: '100%', display: 'block', userSelect: 'none', pointerEvents: 'none', maxWidth: 'none', maxHeight: 'none' }}

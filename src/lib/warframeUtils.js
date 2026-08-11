@@ -472,9 +472,27 @@ export function resolveChallengeDesc(path, dict, EC, ERg, allyPath = '') {
 
 
 /**
- * Resolve a Nightwave challenge's flavour (lore) text.
- * Returns '' if no flavour entry exists in ExportChallenges.
+ * Resolve a 1999/Hex protoframe ally agent path (e.g.
+ * /Lotus/Types/Gameplay/1999Wf/ProtoframeAllies/QuincyAllyAgent) to the
+ * localized messenger name (e.g. /Lotus/Language/1999/MessengerQuincyName
+ * = "Квінсі"). Returns '' when the path isn't a known protoframe ally.
  */
+function resolveProtoframeAllyName(allyPath, dict) {
+  if (!allyPath || !dict) return ''
+  const leaf = allyPath.split('/').pop() || ''
+  const name = leaf.replace(/AllyAgent$/, '')
+  if (!name || name === leaf) return ''
+  // DE internal codenames differ from display names for some protoframes:
+  // Amir is keyed "Jabir" (like Zylok → SybarisPistolName). Look up the
+  // display-name key first, then the codename alias.
+  const CODENAMES = { Amir: 'Jabir' }
+  const dictName = CODENAMES[name] || name
+  const key = `/Lotus/Language/1999/Messenger${dictName}Name`
+  const val = dict[key] || dict['/' + key]
+  if (val && typeof val === 'string' && !val.startsWith('/Lotus/')) return clean(val)
+  return ''
+}
+
 export function resolveChallengeFlavour(path, dict, EC, ERg, allyPath = '') {
   if (!path) return ''
   const entry = EC[path]
@@ -485,7 +503,7 @@ export function resolveChallengeFlavour(path, dict, EC, ERg, allyPath = '') {
       // flavor loses its subject (e.g. "Eleanor needs sniper cover" -> bare
       // "needs sniper cover for this mission.").
       if (allyPath) {
-        const allyName = resolveNode(allyPath, dict, ERg) || ''
+        const allyName = resolveProtoframeAllyName(allyPath, dict) || resolveNode(allyPath, dict, ERg) || ''
         res = res.replace(/\|ALLY\|/g, allyName)
       }
       res = clean(res)
@@ -524,7 +542,10 @@ export function resolveRewardText(reward, dict, ERg, uniqueNameToName = {}, sep 
     if (resolved) parts.push(resolved)
   })
   cItems.forEach(ci => {
-    const name = ci.type?.name ?? ci.ItemType ?? ci.type ?? ci.key ?? ''
+    // Prefer the ItemType path (/Lotus/...) over ci.type?.name: warframestat.us
+    // pre-resolves type.name to the ENGLISH display name, which would bypass
+    // the localized dict lookup (e.g. "Mutalist Alad V Nav Coordinate").
+    const name = ci.ItemType ?? (ci.type && typeof ci.type === 'string' ? ci.type : ci.type?.name) ?? ci.key ?? ''
     const resolved = resolveNameStr(name)
     if (resolved) {
       const count = ci.count ?? ci.ItemCount ?? 1
@@ -685,6 +706,18 @@ function nameFromPath(path = '', locale = 'en') {
  *  1. uniqueNameToName map → dict localisation
  *  2. Direct dict lookup
  */
+// Leaf name mismatches between the export uniqueName and the language dict key.
+// e.g. /Lotus/Language/Items/InfestedAladNavCodeName exists in the dict but the
+// export uniqueName leaf is "InfestedAladNavCoordinate" (DE abbreviates Coordinate
+// to "Code" inside the loc key) — step-4 leaf-match misses it. Map the leaf to
+// the real dict key so resolveItemName localizes the item without an EN fallback.
+const ITEM_LEAF_ALIAS = {
+  InfestedAladNavCoordinate: '/Lotus/Language/Items/InfestedAladNavCodeName',
+  // DE's official worldState API sends "InfestedAladCoordinate" (no "Nav") —
+  // same item, same dict key.
+  InfestedAladCoordinate: '/Lotus/Language/Items/InfestedAladNavCodeName',
+};
+
 export function resolveItemName(path, dict, uniqueNameToName, locale = 'en') {
   if (!path) return ''
 
@@ -771,6 +804,16 @@ export function resolveItemName(path, dict, uniqueNameToName, locale = 'en') {
   }
 
   // 4c. English wfcd name as fallback (only if no localized dict entry found)
+  if (!resolved) {
+    const leaf = path.split('/').pop().replace(/StoreItem$/i, '');
+    if (ITEM_LEAF_ALIAS[leaf]) {
+      const aliasKey = ITEM_LEAF_ALIAS[leaf];
+      const aliasVal = dict[aliasKey] || dict['/' + aliasKey];
+      if (aliasVal && typeof aliasVal === 'string' && !aliasVal.startsWith('/Lotus/')) {
+        resolved = clean(aliasVal);
+      }
+    }
+  }
   if (!resolved && englishFallback) resolved = englishFallback;
 
   // 5. nameFromPath (fallback)
@@ -911,11 +954,11 @@ export function resolveAnyImage(rewardOrItem, EI, nameToImage, uniqueNameToName 
 // ─── Time Formatting Utilities ───────────────────────────────────────────
 
 /** Format time remaining until expiry as "Xd Xh", "Xh Xm", or "Xm". */
-export function timeRemaining(expiry) {
+export function timeRemaining(expiry, t) {
   if (!expiry) return ''
   const expDate = typeof expiry === 'object' && expiry.$date ? new Date(parseInt(expiry.$date.$numberLong, 10)) : new Date(expiry)
   const diff = expDate - Date.now()
-  if (diff < 0) return 'Expired'
+  if (diff < 0) return t ? t('ui.dashboard.time_expired') : 'Expired'
   const d = Math.floor(diff / 86_400_000)
   const h = Math.floor((diff % 86_400_000) / 3_600_000)
   const m = Math.floor((diff % 3_600_000) / 60_000)
@@ -926,17 +969,17 @@ export function timeRemaining(expiry) {
 
 
 /** Format elapsed time since a past date as "Xd ago", "Xh ago", or "Xm ago". */
-export function timeSince(date) {
+export function timeSince(date, t) {
   if (!date) return ''
   const d = typeof date === 'object' && date.$date ? new Date(parseInt(date.$date.$numberLong, 10)) : new Date(date)
   const diff = Date.now() - d.getTime()
-  if (diff < 0) return 'Just now'
+  if (diff < 0) return t ? t('ui.dashboard.time_now') : 'Just now'
   const m = Math.floor(diff / 60_000)
   const h = Math.floor(m / 60)
   const day = Math.floor(h / 24)
-  if (day > 0) return `${day}d ago`
-  if (h > 0) return `${h}h ago`
-  return `${m}m ago`
+  if (day > 0) return t ? t('ui.dashboard.time_ago_day', { n: day }) : `${day}d ago`
+  if (h > 0) return t ? t('ui.dashboard.time_ago_hour', { n: h }) : `${h}h ago`
+  return t ? t('ui.dashboard.time_ago_min', { n: m }) : `${m}m ago`
 }
 
 

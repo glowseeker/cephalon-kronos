@@ -52,103 +52,103 @@
   },
   "peely": {
     "/Lotus/Upgrades/Stickers/DropSpecialItemChanceOnWeakpointKillSticker": {
-      "name": "Argon Combo #2",
+      "name": "Argon Kombosu #2",
       "description": "Zayıf Nokta öldürmesinde: Health Orbs, Energy Orbs, Ammo, Pheroglands veya SporeX Charges düşme şansı %20 artar."
     },
     "/Lotus/Upgrades/Stickers/ToxinGasResistanceOnHealthOrbSticker": {
-      "name": "Breathless",
+      "name": "Nefessiz",
       "description": "30s boyunca Gaz ve Toxin direnci kazan. Toplanan Health Orbs 20s ekler."
     },
     "/Lotus/Upgrades/Stickers/DropHealingBurgerChanceSticker": {
-      "name": "Burgerfest",
+      "name": "Burger Şenliği",
       "description": "Düşmanların %15 ihtimali var: yakındaki müttefikleri %10 ve savunma hedeflerini %100 iyileştirebilen Argon Burger Kutuları düşürür."
     },
     "/Lotus/Upgrades/Stickers/StickerSporePrimer": {
-      "name": "Catscratch Fever",
+      "name": "Kedi Ateşi",
       "description": "Her 20s'de, 30m içindeki bir düşman Saryn'ın Sporelarından etkilenir."
     },
     "/Lotus/Upgrades/Stickers/CreateShieldOnHeavySlamSticker": {
-      "name": "Crushing Chills",
+      "name": "Ezici Soğuk",
       "description": "6x combo Heavy Slam, 10s soğuma süresiyle 3 Snow Globe oluşturur."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyShotgun": {
-      "name": "Doktor's Orders",
+      "name": "Doktor'un Emirleri",
       "description": "EFV-8 Mars'ı +450% hasar ile ikincil silah olarak ekip."
     },
     "/Lotus/Upgrades/Stickers/DropEfervonGrenadeChanceSticker": {
-      "name": "Fly, Fly!",
+      "name": "Uç, uç!",
       "description": "Düşmanların %15 ihtimali var: Hell-Scrubber kirleticiliğini temizleyen el bombaları düşürür."
     },
     "/Lotus/Upgrades/Stickers/AvatarKnockdownResistanceSticker": {
-      "name": "Going Steady",
+      "name": "Sağlam",
       "description": "Knockdown direnci için %100 şans."
     },
     "/Lotus/Upgrades/Stickers/DeathPreventionOnKillsSticker": {
-      "name": "Hi-Score",
+      "name": "Yüksek Skor",
       "description": "Kill başına 20 puan, Weakpoint Kill başına 100 puan. 1000, 2500, 5000 puanlarda bonus canlanma."
     },
     "/Lotus/Upgrades/Stickers/CreateChasingAntiMatterDropSticker": {
-      "name": "It Sees You",
+      "name": "Seni Görüyor",
       "description": "Anti-Matter damlası 25m uzaklıkta belirir ve 20s'de bir kovalar. Başarıda 1 Pix Chip kazan."
     },
     "/Lotus/Upgrades/Stickers/ToxinProcOnDamageSticker": {
-      "name": "Old Pizza",
+      "name": "Eski Pizza",
       "description": "Hasar alındığında: %6 şansla Toxin durumunu al. Bekleme: 5s. Başarıda 1 Pix Chip."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyMelee": {
-      "name": "Only Knives",
+      "name": "Sadece Bıçaklar",
       "description": "Scaldra Dual Viciss'ı +450% hasar ile yakın dövüş silahı olarak ekip."
     },
     "/Lotus/Upgrades/Stickers/FreezePlayerOverTimeSticker": {
-      "name": "Optimism",
+      "name": "İyimserlik",
       "description": "8s'de Cold stack'leri biriktir. 10 stack'te 3s için don. Rulo veya Void Sling ile 3 stack erit."
     },
     "/Lotus/Upgrades/Stickers/NPCReviveSticker": {
-      "name": "Panic Call",
+      "name": "Paniğe Düşüş",
       "description": "Minerva veya Velmir size yeniden canlandırmaya çalışacak. 30s."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyRifle": {
-      "name": "Resolutions",
+      "name": "Kararlar",
       "description": "Purgator 1'i +450% hasar ile birincil silah olarak ekip."
     },
     "/Lotus/Upgrades/Stickers/RemoveStatusesOnHeavyAttackSticker": {
-      "name": "Reverse-O",
+      "name": "Tersine-O",
       "description": "Ağır saldırı isabeti: 10m içindeki düşmanlara negatif durum etkileri aktar."
     },
     "/Lotus/Upgrades/Stickers/EjectButtonSticker": {
-      "name": "Slippery Customer",
+      "name": "Kaygan Herif",
       "description": "İlk kez yere düştüğünde: güvende telepore, %50 HP/Kalkan ile canlan, 9s için invulnerable."
     },
     "/Lotus/Upgrades/Stickers/NullStarOnWeakpointKillSticker": {
-      "name": "Spinnin' Around",
+      "name": "Fırıl Fırıl",
       "description": "Weakpoint öldürmeleri 1 Null Star oluşturur (max 18). Null Stars hasarı %5 azaltır."
     },
     "/Lotus/Upgrades/Stickers/ElementalAmmoChanceOnEximusKillSticker": {
-      "name": "Super Scavenger",
+      "name": "Süper Çöpçü",
       "description": "Eximus öldürüldüğünde: %45 ihtimalil El...  (truncated at 40000 chars)"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemySmg": {
-      "name": "Through My Heart",
+      "name": "Tam Kalbinden",
       "description": "EFV-5 Jupiter'ı +450% hasar ile birincil silah olarak ekip."
     },
     "/Lotus/Upgrades/Stickers/DecoyOnDamagedSticker": {
-      "name": "Too Hot",
+      "name": "Çok Sıcak",
       "description": "70% HP altındaki hasar Molt klonu oluşturur her 10s."
     },
     "/Lotus/Upgrades/Stickers/AllowNecramechSummonSticker": {
-      "name": "Vintage Tech",
+      "name": "Vintage Teknoloji",
       "description": "Bir Necramech çağır. Yok edildikten sonra 60s bekleme süresi."
     },
     "/Lotus/Upgrades/Stickers/AllowThermianRpgSummonSticker": {
-      "name": "Wakeup Call",
+      "name": "Uyandırma Çağrısı",
       "description": "Yüklenmiş bir Thermian RPG, Gear Wheel'dan dağıtılabilir. 60s."
     },
     "/Lotus/Upgrades/Stickers/SuperGlideParkourSticker": {
-      "name": "Walking on Air",
+      "name": "Havada Yürüyüş",
       "description": "Aim Glide ve Wall Latch süresini +100% artır. Yerçekimini %100 azalt."
     },
     "/Lotus/Upgrades/Stickers/WeaponColdDamageSticker": {
-      "name": "XL Frosty",
+      "name": "XL Buzlu",
       "description": "Birincil ve ikincil silahlara +30% Cold hasarı ekle."
     }
   },
@@ -1066,7 +1066,7 @@
     "rivens.state_challenge": "Meydan okumak",
     "rivens.state_veiled": "örtülü",
     "rivens.sort_name": "İsim",
-    "rivens.sort_plat": "Platinum",
+    "rivens.sort_plat": "Platin",
     "rivens.sort_grade": "Seviye",
     "rivens.type_all": "Tüm",
     "ui.dashboard.descendia_penance_desc_very_toxic": "Düşmanlar, Tenno'ya ve buraya giren müttefiklere zarar veren, hasar verici bir ışık aurası yayar.",
@@ -1219,7 +1219,19 @@
     "adversaries.rank": "Rütbe {rank}",
     "adversaries.no_data": "Nemesis verileri yok.",
     "ui.riven_card.riven_suffix": "Riven",
-    "rivens.type_unknown": "Bilinmiyor"
+    "rivens.type_unknown": "Bilinmiyor",
+    "ui.dashboard.time_now": "Az öteden",
+    "ui.dashboard.time_ago_min": "{n} dk önce",
+    "ui.dashboard.time_ago_hour": "{n} sa önce",
+    "ui.dashboard.time_ago_day": "{n} g önce",
+    "settings.cursorStyle_system": "Sistem",
+    "settings.cursorStyle_default": "Varsayılan",
+    "settings.cursorStyle_retro": "Retro",
+    "maps.name_poe": "Eidolon Ovaları",
+    "maps.name_vallis": "Orb Vadisi",
+    "maps.name_deimos": "Cambion Sürüklenmesi",
+    "maps.name_duviri": "Duviri",
+    "ui.dashboard.time_expired": "Süresi doldu"
   },
   "inventory": {
     "filled": "Filled",

@@ -52,103 +52,103 @@
   },
   "peely": {
     "/Lotus/Upgrades/Stickers/DropSpecialItemChanceOnWeakpointKillSticker": {
-      "name": "Argon Combo #2",
+      "name": "氬氣組合 #2",
       "description": "弱點擊殺時: 健康球、能量球、彈藥、佩洛格蘭德、斯普雷克斯彈药掉落率提高 20%。"
     },
     "/Lotus/Upgrades/Stickers/ToxinGasResistanceOnHealthOrbSticker": {
-      "name": "Breathless",
+      "name": "無法呼吸",
       "description": "獲得30秒的氣體和毒素100%抵抗。收集的生命球額外增加20秒。"
     },
     "/Lotus/Upgrades/Stickers/DropHealingBurgerChanceSticker": {
-      "name": "Burgerfest",
+      "name": "漢堡節",
       "description": "敵人有15%機率掉落阿戈頓演歌箱，可治療附近盟友10%及防守目標100%。"
     },
     "/Lotus/Upgrades/Stickers/StickerSporePrimer": {
-      "name": "Catscratch Fever",
+      "name": "貓抓熱",
       "description": "每20秒內30m範圍的一名敵人會受到薩林的孢子影響。"
     },
     "/Lotus/Upgrades/Stickers/CreateShieldOnHeavySlamSticker": {
-      "name": "Crushing Chills",
+      "name": "粉碎寒意",
       "description": "6倍 combo 的重擊會在10秒冷卻中生成最多3個雪球 globe。"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyShotgun": {
-      "name": "Doktor's Orders",
+      "name": "醫生的命令",
       "description": "以+450%傷害裝備EFV-8馬斯作為副武器。"
     },
     "/Lotus/Upgrades/Stickers/DropEfervonGrenadeChanceSticker": {
-      "name": "Fly, Fly!",
+      "name": "飛吧，飛吧！",
       "description": "敵人有15%機率掉落清除Hell-Scrubber污染的手榴彈。"
     },
     "/Lotus/Upgrades/Stickers/AvatarKnockdownResistanceSticker": {
-      "name": "Going Steady",
+      "name": "穩如泰山",
       "description": "100% 抗擊擊倒的機率。"
     },
     "/Lotus/Upgrades/Stickers/DeathPreventionOnKillsSticker": {
-      "name": "Hi-Score",
+      "name": "高分",
       "description": "每次殺死得20分， Weakpoint Kill得100分。1000, 2500, 5000分時獲得額外復活。"
     },
     "/Lotus/Upgrades/Stickers/CreateChasingAntiMatterDropSticker": {
-      "name": "It Sees You",
+      "name": "它看見你了",
       "description": "反物質掉落物出現在25m外，每20秒追襲一次。成功獲得1 Pix Chip。"
     },
     "/Lotus/Upgrades/Stickers/ToxinProcOnDamageSticker": {
-      "name": "Old Pizza",
+      "name": "老披薩",
       "description": "受到傷害時: 6%機率獲得毒素狀態。冷卻: 5秒。成功獲得1 Pix Chip。"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyMelee": {
-      "name": "Only Knives",
+      "name": "只有刀",
       "description": "以+450%傷害裝備斯卡爾德拉雙菁菁作為近戰武器。"
     },
     "/Lotus/Upgrades/Stickers/FreezePlayerOverTimeSticker": {
-      "name": "Optimism",
+      "name": "樂觀",
       "description": "每8秒累積Cold stacks。10 stacks時凍結3秒。滾動或Void Sling融化3 stacks。"
     },
     "/Lotus/Upgrades/Stickers/NPCReviveSticker": {
-      "name": "Panic Call",
+      "name": "求救信號",
       "description": "米內爾瓦或維里米爾會嘗試覆活你。冷卻: 30秒。"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyRifle": {
-      "name": "Resolutions",
+      "name": "決心",
       "description": "以+450%傷害裝備Purgator 1作為主武器。"
     },
     "/Lotus/Upgrades/Stickers/RemoveStatusesOnHeavyAttackSticker": {
-      "name": "Reverse-O",
+      "name": "反轉O",
       "description": "重擊命中時: 將負面狀態效果轉移到10m內的敵人身上。"
     },
     "/Lotus/Upgrades/Stickers/EjectButtonSticker": {
-      "name": "Slippery Customer",
+      "name": "滑頭",
       "description": "第一次倒下時: 安全傳送, 50% HP/盾牌復活, 9秒無敵。"
     },
     "/Lotus/Upgrades/Stickers/NullStarOnWeakpointKillSticker": {
-      "name": "Spinnin' Around",
+      "name": "團團轉",
       "description": "弱點擊殺產生1 Null Star(最大18)。Null Stars減少5%傷害。"
     },
     "/Lotus/Upgrades/Stickers/ElementalAmmoChanceOnEximusKillSticker": {
-      "name": "Super Scavenger",
+      "name": "超級拾荒者",
       "description": "擊殺Eximus時: 45%機率掉落元素彈藥包。"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemySmg": {
-      "name": "Through My Heart",
+      "name": "直穿心臟",
       "description": "以+450%傷害裝備EFV-5木星作為主武器。"
     },
     "/Lotus/Upgrades/Stickers/DecoyOnDamagedSticker": {
-      "name": "Too Hot",
+      "name": "太燙了",
       "description": "受到70%HP以下傷害時每10秒生成Molt克隆。"
     },
     "/Lotus/Upgrades/Stickers/AllowNecramechSummonSticker": {
-      "name": "Vintage Tech",
+      "name": "復古科技",
       "description": "召喚Necramech。破壞後60秒冷卻。"
     },
     "/Lotus/Upgrades/Stickers/AllowThermianRpgSummonSticker": {
-      "name": "Wakeup Call",
+      "name": "喚醒鈴聲",
       "description": "從裝備輪部署一個上載的Thermian RPG。冷卻: 60秒。"
     },
     "/Lotus/Upgrades/Stickers/SuperGlideParkourSticker": {
-      "name": "Walking on Air",
+      "name": "凌空漫步",
       "description": "增加 Aim Glide 和 Wall Latch 持續時間 +100%。降低重力 100%。"
     },
     "/Lotus/Upgrades/Stickers/WeaponColdDamageSticker": {
-      "name": "XL Frosty",
+      "name": "XL冰霜",
       "description": "向主要和副武器添加+30% Cold傷害。"
     }
   },
@@ -1065,8 +1065,8 @@
     "rivens.state_unveiled": "揭幕",
     "rivens.state_challenge": "挑戰",
     "rivens.state_veiled": "含蓄",
-    "rivens.sort_name": "Name",
-    "rivens.sort_plat": "Platinum",
+    "rivens.sort_name": "名稱",
+    "rivens.sort_plat": "白金",
     "rivens.sort_grade": "年級",
     "rivens.type_all": "全部",
     "ui.dashboard.descendia_penance_desc_very_toxic": "敵人會發出具有破壞性的光環，對 Tenno 和進入其中的盟友造成傷害。",
@@ -1219,7 +1219,19 @@
     "adversaries.rank": "等級 {rank}",
     "adversaries.no_data": "無尼米西斯資料。",
     "ui.riven_card.riven_suffix": "Riven",
-    "rivens.type_unknown": "未知"
+    "rivens.type_unknown": "未知",
+    "ui.dashboard.time_now": "剛剛",
+    "ui.dashboard.time_ago_min": "{n} 分鐘前",
+    "ui.dashboard.time_ago_hour": "{n} 小時前",
+    "ui.dashboard.time_ago_day": "{n} 天前",
+    "settings.cursorStyle_system": "系統",
+    "settings.cursorStyle_default": "預設",
+    "settings.cursorStyle_retro": "復古",
+    "maps.name_poe": "夜靈平原",
+    "maps.name_vallis": "奧布山谷",
+    "maps.name_deimos": "魔胎之境",
+    "maps.name_duviri": "雙衍王境",
+    "ui.dashboard.time_expired": "已過期"
   },
   "inventory": {
     "filled": "Filled",

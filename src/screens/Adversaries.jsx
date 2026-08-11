@@ -30,14 +30,14 @@ const PROGENITOR_DICT_KEYS = {
   Ash: '/Lotus/Language/Suits/AshName',
   Atlas: '/Lotus/Language/Suits/AtlasName',
   Banshee: '/Lotus/Language/Suits/BansheeName',
-  Baruuk: '/Lotus/Language/Suits/BaruukName',
+  Baruuk: '/Lotus/Language/Suits/PacifistName',
   Excalibur: '/Lotus/Language/Suits/ExcaliburName',
   Hydroid: '/Lotus/Language/Suits/HydroidName',
   Inaros: '/Lotus/Language/Suits/InarosName',
   Khora: '/Lotus/Language/Suits/KhoraName',
   Nekros: '/Lotus/Language/Suits/NekrosName',
   Rhino: '/Lotus/Language/Suits/RhinoName',
-  Styanax: '/Lotus/Language/Suits/StyanaxName',
+  Styanax: '/Lotus/Language/Suits/HopliteFrameName',
   Wukong: '/Lotus/Language/Suits/WukongName',
   Zephyr: '/Lotus/Language/Suits/ZephyrName',
   Ivara: '/Lotus/Language/Suits/IvaraName',
@@ -50,12 +50,12 @@ const PROGENITOR_DICT_KEYS = {
   Valkyr: '/Lotus/Language/Suits/ValkyrName',
   Voruna: '/Lotus/Language/Suits/WerewolfName',
   Ember: '/Lotus/Language/Suits/EmberName',
-  Jade: '/Lotus/Language/Suits/JadeName',
+  Jade: '/Lotus/Language/Suits/ChoirName',
   Nezha: '/Lotus/Language/Suits/NezhaName',
-  Protea: '/Lotus/Language/Suits/ProteanName',
+  Protea: '/Lotus/Language/Suits/OdaliskName',
   Chroma: '/Lotus/Language/Suits/ChromaName',
   Frost: '/Lotus/Language/Suits/FrostName',
-  Qorvex: '/Lotus/Language/Suits/QorvexName',
+  Qorvex: '/Lotus/Language/Suits/QorvexSuitName',
   Sevagoth: '/Lotus/Language/Suits/SevagothName',
   Yareli: '/Lotus/Language/Suits/YareliName',
   Dante: '/Lotus/Language/Suits/PagemasterName',
@@ -79,8 +79,9 @@ const PROGENITOR_DICT_KEYS = {
   Octavia: '/Lotus/Language/Suits/BardName',
   Revenant: '/Lotus/Language/Suits/RevenantName',
   Vauban: '/Lotus/Language/Suits/VaubanName',
-  Wisp: '/Lotus/Language/Suits/WispName',
-  Xaku: '/Lotus/Language/Suits/XakuName',
+  Wisp: '/Lotus/Language/Suits/WispFrameName',
+  Xaku: '/Lotus/Language/Suits/BrokenFrameName',
+  Volt: '/Lotus/Language/Suits/VoltName',
 };
 
 
@@ -115,8 +116,14 @@ export default function Adversaries() {
     if (!inventoryData?.NemesisHistory) return [];
     return inventoryData.NemesisHistory.map((n) => {
       const wfName = n.KillingSuit ? resolveItemName(n.KillingSuit, dict, uniqueNameToName) || n.KillingSuit.split('/').pop() : '?';
+      // WF_PROGENITOR keys are English base names; the localized wfName
+      // (e.g. "Нова-прайм") would never match. Derive the element from the
+      // raw path leaf (e.g. /Lotus/.../NovaPrime → "Nova") instead.
+      const leaf = (n.KillingSuit || '').split('/').pop() || '';
+      const leafBase = leaf.replace(/Prime$/, '');
       const baseName = stripPrime(wfName.replace(/ Prime$/, ''));
-      return { ...n, wfName, element: WF_PROGENITOR[baseName] || null };
+      const element = WF_PROGENITOR[leafBase] || WF_PROGENITOR[baseName] || null;
+      return { ...n, wfName, element };
     });
   }, [inventoryData, dict, uniqueNameToName]);
 

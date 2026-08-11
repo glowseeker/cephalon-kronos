@@ -122,10 +122,10 @@ export default function MirroredMonitoringProvider({ children }) {
     })
 
     // Lightweight path queries - these return static paths, no file I/O
-    invoke('get_card_images_path').then(setCardImagesPath).catch(() => {})
+    invoke('get_card_images_path').then(setCardImagesPath).catch(() => { })
 
     // Check shared monitoring state
-    invoke('get_monitoring_active').then(setIsMonitoring).catch(() => {})
+    invoke('get_monitoring_active').then(setIsMonitoring).catch(() => { })
 
     invoke('sidebar_load_data')
       .then(async result => {
@@ -170,7 +170,7 @@ export default function MirroredMonitoringProvider({ children }) {
           setDescendiaDesc(descMap)
         }
 
-        // Set exports immediately (no wfcd blocking) — load wfcd in background
+        // Set exports immediately (no wfcd blocking) - load wfcd in background
         setExportData(exports)
 
         if (exports) {
@@ -206,7 +206,7 @@ export default function MirroredMonitoringProvider({ children }) {
     if (autoStartedRef.current) return
     autoStartedRef.current = true
     if (autoStartRef.current && !isMonitoring) {
-      startMonitoringFn().catch(() => {})
+      startMonitoringFn().catch(() => { })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -300,7 +300,7 @@ export default function MirroredMonitoringProvider({ children }) {
             localStorage.setItem('lastUpdate', String(result.inventoryTimestamp))
           }
         })
-        .catch(() => {})
+        .catch(() => { })
     })
     return () => { unsub.then(f => f()) }
   }, [])
@@ -332,7 +332,7 @@ export default function MirroredMonitoringProvider({ children }) {
           intervalRef.current = setInterval(async () => {
             setNextRetryAt(Date.now() + 180_000)
             const r = await callApiHelperFn()
-            invoke('set_monitoring_active', { active: true, result: r, statusText: r === 'success' ? 'Syncing active' : r === 'cached' ? 'Game not running, using cached data' : r }).catch(() => {})
+            invoke('set_monitoring_active', { active: true, result: r, statusText: r === 'success' ? 'Syncing active' : r === 'cached' ? 'Game not running, using cached data' : r }).catch(() => { })
           }, 180_000)
         } finally {
           processingRef.current = false
@@ -598,12 +598,12 @@ export default function MirroredMonitoringProvider({ children }) {
     const result = await callApiHelperFn()
     setNextRetryAt(Date.now() + intervalMs)
     const msg = result === 'success' ? 'Syncing active' : result === 'cached' ? 'Game not running, using cached data' : result
-    invoke('set_monitoring_active', { active: true, result, statusText: msg }).catch(() => {})
+    invoke('set_monitoring_active', { active: true, result, statusText: msg }).catch(() => { })
     intervalRef.current = setInterval(async () => {
       setNextRetryAt(Date.now() + intervalMs)
       const r = await callApiHelperFn()
       const msg2 = r === 'success' ? 'Syncing active' : r === 'cached' ? 'Game not running, using cached data' : r
-      invoke('set_monitoring_active', { active: true, result: r, statusText: msg2 }).catch(() => {})
+      invoke('set_monitoring_active', { active: true, result: r, statusText: msg2 }).catch(() => { })
     }, intervalMs)
   }, [isMonitoring, callApiHelperFn])
 
@@ -613,7 +613,7 @@ export default function MirroredMonitoringProvider({ children }) {
     setNextRetryAt(0)
     setMonitorResult('idle')
     setStatusText('Syncing stopped')
-    invoke('set_monitoring_active', { active: false, result: 'idle', statusText: 'Syncing stopped' }).catch(() => {})
+    invoke('set_monitoring_active', { active: false, result: 'idle', statusText: 'Syncing stopped' }).catch(() => { })
   }, [])
 
   const refreshPrices = useCallback(() => {
@@ -689,7 +689,7 @@ export default function MirroredMonitoringProvider({ children }) {
     EI, nameToImage, uniqueNameToName, globalRewardPool, dropIndex,
     arbyTiers: ARBY_TIERS,
     setAutoStart, startMonitoring: startMonitoringFn,
-    stopMonitoring: stopMonitoringFn,     manualRefresh: async () => {
+    stopMonitoring: stopMonitoringFn, manualRefresh: async () => {
       const wasMonitoring = intervalRef.current !== null
       const result = await callApiHelperFn()
       if (!wasMonitoring) {
@@ -701,12 +701,12 @@ export default function MirroredMonitoringProvider({ children }) {
     nextRetryAt, callApiHelper: callApiHelperFn, refreshPrices,
     retryCardImages: () => Promise.resolve(), setWorldState,
   }), [exportData, isMonitoring, monitorResult, autoStart, lastUpdate, nextRetryAt, rawInventory,
-      inventoryData, isInventoryLoading, worldState, statusText,
-      spIncursions, arbys, archonModifiers, arbitrationModifiers,
-      dict, suppDict, archimedeaMap, EC, ERg, ES, ENW, ENWRawRewards,
-      ExportImages, ExportTextIcons, masteryProgress,
-      EI, nameToImage, uniqueNameToName, globalRewardPool, dropIndex,
-      allPrices, isPriceLoading, priceFetchProgress, priceLastUpdated, refreshPrices])
+    inventoryData, isInventoryLoading, worldState, statusText,
+    spIncursions, arbys, archonModifiers, arbitrationModifiers,
+    dict, suppDict, archimedeaMap, EC, ERg, ES, ENW, ENWRawRewards,
+    ExportImages, ExportTextIcons, masteryProgress,
+    EI, nameToImage, uniqueNameToName, globalRewardPool, dropIndex,
+    allPrices, isPriceLoading, priceFetchProgress, priceLastUpdated, refreshPrices])
 
   return (
     <MonitoringContext.Provider value={value}>

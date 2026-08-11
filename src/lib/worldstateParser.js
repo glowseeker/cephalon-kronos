@@ -180,6 +180,38 @@ function parseZarimanCycle(raw, bountyCycle) {
 /** Duviri emotional state cycle.
  *  5 states (Sorrow, Fear, Joy, Anger, Envy), each 2 hours.  Rotates from Unix epoch 0.
  *  State names are NOT in DE dicts — resolved via ui.dashboard.duviri_state.* i18n keys. */
+/**
+ * Generic leaf fallback for circuit reward shorts. The EndlessXpSchedule
+ * sends bare names ("Dread", "Sibear") that rarely match dict keys directly.
+ * Index the dict once and look for a key whose leaf equals the short or
+ * short+"Name" under the weapon/item name folders; prefer exact NAME keys
+ * over Desc/Flavour and over non-name folders.
+ */
+const CIRCUIT_LEAF_INDEX = (() => {
+  const idx = new Map() // leaf -> first name-like value
+  let built = false
+  const build = (dict) => {
+    if (built) return idx
+    built = true
+    for (const [key, val] of Object.entries(dict || {})) {
+      if (typeof val !== 'string' || val.startsWith('/Lotus/') || !val) continue
+      const leaf = key.split('/').pop()
+      if (!leaf) continue
+      const isNameKey = /Name$/.test(leaf)
+      if (!isNameKey) continue
+      const short = leaf.replace(/Name$/, '')
+      if (!idx.has(short)) idx.set(short, val)
+    }
+    return idx
+  }
+  return { get: (short, dict) => build(dict).get(short) }
+})();
+
+function matchCircuitDictLeaf(short, dict) {
+  if (!short || !dict) return ''
+  return CIRCUIT_LEAF_INDEX.get(short, dict) || ''
+}
+
 function parseDuviriCycle(_raw) {
   const states = ['sorrow', 'fear', 'joy', 'anger', 'envy']
   const stateLenMs = 7200000 // 2 hours
@@ -393,6 +425,13 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
     // DE short name "AckAndBrunt" would PascalSplit to "Ack And Brunt"; the
     // game name uses an ampersand ("Ack & Brunt" in every locale).
     AckAndBrunt: '/Lotus/Language/Items/RegorAxeShieldName',
+    // Circuit-exclusive weapon offerings (Stalker weapons, classic arsenal).
+    // The DE short names don't match any dict leaf, so map them explicitly:
+    Zylok: '/Lotus/Language/Weapons/SybarisPistolName',
+    Sibear: '/Lotus/Language/Items/IceHammerName',
+    Dread: '/Lotus/Language/Items/StalkerBowName',
+    Despair: '/Lotus/Language/Items/StalkerKunaiName',
+    Hate: '/Lotus/Language/Items/StalkerScytheName',
     Nekros: '/Lotus/Language/Suits/NecroName',
     Valkyr: '/Lotus/Language/Suits/BerserkerName',
     Oberon: '/Lotus/Language/Suits/PaladinName',
@@ -419,6 +458,12 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
     const dictKey = CIRCUIT_NAME_KEYS[short] || `/Lotus/Language/Suits/${short}Name`
     const loc = mergedDict[dictKey] || mergedDict['/' + dictKey]
     if (loc && !loc.startsWith('/Lotus/')) return clean(loc)
+    // Generic leaf fallback: circuit shorts are bare names that don't always
+    // map to dict keys (e.g. "Dread" → StalkerBowName). Search the dict for a
+    // key whose leaf is the short (or short+Name) under the common name
+    // folders. This keeps future rotation additions working without map edits.
+    const leafFallback = matchCircuitDictLeaf(short, mergedDict)
+    if (leafFallback) return clean(leafFallback)
     return resolveItemName(short, mergedDict, uniqueNameToName, locale)
   }
 

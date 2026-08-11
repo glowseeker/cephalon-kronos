@@ -15,7 +15,8 @@ const POLARITY_FILES = {
   'AP_FUSION': 'PolarityAura.png',
   'AP_WARD': 'PolarityWard.png',
   'AP_UMBRA': 'PolarityUmbra.png',
-  'AP_ANY': 'PolarityUniversal.png'
+  'AP_ANY': 'PolarityUniversal.png',
+  'AP_UNIVERSAL': 'PolarityUniversal.png'
 };
 
 function u(base, folder, file) {

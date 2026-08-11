@@ -138,11 +138,18 @@ const POLARITY_FILES = {
   'AP_FUSION': 'PolarityAura.png',
   'AP_WARD': 'PolarityWard.png',
   'AP_UMBRA': 'PolarityUmbra.png',
-  'AP_ANY': 'PolarityUniversal.png'
+  'AP_ANY': 'PolarityUniversal.png',
+  'AP_UNIVERSAL': 'PolarityUniversal.png'
 };
 
-function renderDesc(text, textColor, iconsPath, tagIconMap) {
+function renderDesc(text, textColor, iconsPath, tagIconMap, t) {
   if (!text) return null;
+  const resolveLabel = (word, t) => {
+    if (!t || !word) return word;
+    const key = 'ui.elements.' + word.toLowerCase();
+    const val = t(key);
+    return val === key ? word : val;
+  };
   const normalized = text.replace(/\r\n/g, '\n');
   const parts = normalized.split(/(<[A-Z_]+>)/);
   const elements = [];
@@ -183,7 +190,7 @@ function renderDesc(text, textColor, iconsPath, tagIconMap) {
           elements.push(
             <span key={`${elements.length}-color`} style={{ color: currentColor, display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
                 {iconFile && iconsPath ? <img src={u(iconsPath, '', iconFile)} style={{ width: '11px', height: '11px', flexShrink: 0 }} alt="" onError={(e) => e.target.style.display = 'none'} /> : null}
-                <span>{word}</span>
+                <span>{resolveLabel(word, t)}</span>
               </span>
           );
           if (rest) elements.push(<span key={`${elements.length}-rest`} style={{ color: textColor }}>{rest}</span>);
@@ -257,8 +264,13 @@ const ModCard = memo(function ModCard({ mod, framesPath, iconsPath, cardImagesPa
   const { t } = useUi();
   const mf = mod.modFrame || 'Normal Common';
   const custom = CUSTOM.has(mf);
-  const color = mf === 'Tektolyst' ? TEKTOLYST_TEXT_COLORS[mod.name] || TIER_COLORS[mf] || '#FFFFFF' : TIER_COLORS[mf] || '#FFFFFF';
-  const tektolystGroup = mf === 'Tektolyst' ? TEKTOLYST_COLOR_GROUPS[mod.name] || 'Silver' : null;
+  // Tektolyst (antique) cards: image files, text colors and pip groups are
+  // keyed by the mod's ENGLISH name (e.g. "Ulashta-Shol") — the localized
+  // name would 404/miss. englishName is stamped at parse time from the EN
+  // dict; fall back to the localized name only when unavailable.
+  const tektolystKey = mod.englishName || mod.name;
+  const color = mf === 'Tektolyst' ? TEKTOLYST_TEXT_COLORS[tektolystKey] || TIER_COLORS[mf] || '#FFFFFF' : TIER_COLORS[mf] || '#FFFFFF';
+  const tektolystGroup = mf === 'Tektolyst' ? TEKTOLYST_COLOR_GROUPS[tektolystKey] || 'Silver' : null;
   const cardScale = width / 180;
   const iconSrc = (name) => iconsPath ? convertFileSrc(`${iconsPath}/${name}.png`) : null;
 
@@ -356,7 +368,7 @@ const ModCard = memo(function ModCard({ mod, framesPath, iconsPath, cardImagesPa
   }
 
   const f = (file) => u(framesPath, mf, `${file}.png`);
-  const tektolystBg = mf === 'Tektolyst' && mod.name ? f(mod.name.replace(/\s+/g, '')) : null;
+  const tektolystBg = mf === 'Tektolyst' && tektolystKey ? f(tektolystKey.replace(/\s+/g, '')) : null;
   const arcaneBg = mf === 'Arcanes' && mod.rarity ? f(`Arcane${mod.rarity.charAt(0).toUpperCase()}${mod.rarity.slice(1)}`) : null;
   const bg = arcaneBg || tektolystBg || f('Background');
   const ft = custom ? null : f('FrameTop');
@@ -448,7 +460,7 @@ const ModCard = memo(function ModCard({ mod, framesPath, iconsPath, cardImagesPa
             </p>
             {hasDesc &&
           <p className="leading-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'Outfit, sans-serif', color: color, fontSize: `${11 * cardScale}px` }}>
-                {renderDesc(desc, color, iconsPath, tagIconMap)}
+                {renderDesc(desc, color, iconsPath, tagIconMap, t)}
               </p>
           }
           </div>
@@ -471,7 +483,7 @@ const ModCard = memo(function ModCard({ mod, framesPath, iconsPath, cardImagesPa
             </p>
             {hasDesc &&
           <p className="leading-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'Outfit, sans-serif', color: color, fontSize: `${10 * cardScale}px` }}>
-                {renderDesc(desc, color, iconsPath, tagIconMap)}
+                {renderDesc(desc, color, iconsPath, tagIconMap, t)}
               </p>
           }
             {mod.max_rank > 0 &&
@@ -521,7 +533,7 @@ const ModCard = memo(function ModCard({ mod, framesPath, iconsPath, cardImagesPa
             </p>
             {hasDesc &&
           <p className="leading-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]" style={{ fontFamily: 'Outfit, sans-serif', color: color, fontSize: `${11 * cardScale}px` }}>
-                {renderDesc(desc, color, iconsPath, tagIconMap)}
+                {renderDesc(desc, color, iconsPath, tagIconMap, t)}
               </p>
           }
           </div>
@@ -555,20 +567,20 @@ const ModCard = memo(function ModCard({ mod, framesPath, iconsPath, cardImagesPa
       }} />
       }
 
-      {!custom && mod.baseDrain > 0 &&
+      {!custom && mod.baseDrain != null && (mod.baseDrain + rank) > 0 &&
       <span className="absolute font-bold pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" style={{
         top: `${72 / CANVAS_H * 100}%`, right: `${50 / CANVAS_W * 100}%`,
         zIndex: 4, color: color, fontFamily: 'Outfit, sans-serif',
         fontSize: `${9 * cardScale}px`, lineHeight: 1, textAlign: 'right'
       }}>
-          {mod.baseDrain + rank}
+          {Math.max(0, mod.baseDrain + rank)}
         </span>
       }
 
       {cat && mf !== 'Arcanes' && !hideCategory &&
       <div className="absolute text-center pointer-events-none" style={{ left: 0, right: 0, bottom: mf === 'Antivirus' ? `${55 / CANVAS_H * 100}%` : mf === 'Potency' ? `${26 / CANVAS_H * 100}%` : mf === 'Tektolyst' ? `${48 / CANVAS_H * 100}%` : `${38 / CANVAS_H * 100}%`, zIndex: 4 }}>
           <p className="font-semibold uppercase tracking-wider drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]" style={{ fontFamily: 'Outfit, sans-serif', color: mf === 'Potency' ? '#FFD700' : color, fontSize: `${11 * cardScale}px` }}>
-            {cat}
+            {t(`mods.cat_${cat.toLowerCase()}`)}
           </p>
         </div>
       }

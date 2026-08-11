@@ -591,7 +591,7 @@ Cephalon Fragment exclusions: `/Eidolon`, `/Music`, `/FrameFighter`,
       setup_weapon_information_onnx.py
       pipeline/                 scraping, preprocessing, training
 
-  helpers/                      (removed — C++ helper deleted)
+  helpers/                      (removed - C++ helper deleted)
     training_extractor.rs       standalone OCR training data extractor
     theme_training_extractor.rs standalone theme data extractor
 

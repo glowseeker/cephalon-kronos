@@ -52,103 +52,103 @@
   },
   "peely": {
     "/Lotus/Upgrades/Stickers/DropSpecialItemChanceOnWeakpointKillSticker": {
-      "name": "Argon Combo #2",
+      "name": "Комбо Аргон #2",
       "description": "При убийстве в уязвимую точку: +20% шанса получить Сферы Здоровья, Сферы Энергии, Боеприпасы, Фороланды или Заряды SporeX."
     },
     "/Lotus/Upgrades/Stickers/ToxinGasResistanceOnHealthOrbSticker": {
-      "name": "Breathless",
+      "name": "Бездыханный",
       "description": "Получаете 100% сопротивления Газу и Токсину на 30 секунд. Собранные Сферы Здоровья добавляют 20 секунд."
     },
     "/Lotus/Upgrades/Stickers/DropHealingBurgerChanceSticker": {
-      "name": "Burgerfest",
+      "name": "Бургерфест",
       "description": "Враги имеют 15% шанс выпустить Ящики Argon Burger, которые могут лечить ближайших союзников на 10% и оборонительные цели на 100%."
     },
     "/Lotus/Upgrades/Stickers/StickerSporePrimer": {
-      "name": "Catscratch Fever",
+      "name": "Кошачья лихорадка",
       "description": "Каждые 20с, враг в радиусе 30м поражается Spore Saryn."
     },
     "/Lotus/Upgrades/Stickers/CreateShieldOnHeavySlamSticker": {
-      "name": "Crushing Chills",
+      "name": "Дробящий холод",
       "description": "Тяжёлый разрушитель с 6-кратным комбо создаёт до 3 Снежных шаров с перезарядкой 10с."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyShotgun": {
-      "name": "Doktor's Orders",
+      "name": "Приказы Доктора",
       "description": "Экипировать EFV-8 Mars с +450% урона как вторичное оружие."
     },
     "/Lotus/Upgrades/Stickers/DropEfervonGrenadeChanceSticker": {
-      "name": "Fly, Fly!",
+      "name": "Лети, лети!",
       "description": "Враги имеют 15% шанс выпустить Гранаты, очищающие загрязнение Hell-Scrubber."
     },
     "/Lotus/Upgrades/Stickers/AvatarKnockdownResistanceSticker": {
-      "name": "Going Steady",
+      "name": "Неколебимый",
       "description": "100% шанс сопротивиться Knockdown."
     },
     "/Lotus/Upgrades/Stickers/DeathPreventionOnKillsSticker": {
-      "name": "Hi-Score",
+      "name": "Рекорд",
       "description": "Получаете 20 очков за убийство, 100 за убийство в уязвимую точку. Бонусные воскрешения при 1000, 2500, 5000 очках."
     },
     "/Lotus/Upgrades/Stickers/CreateChasingAntiMatterDropSticker": {
-      "name": "It Sees You",
+      "name": "Оно видит тебя",
       "description": "Капля Антиматерии появляется на 25м и преследует каждые 20с. Получаете 1 Pix Chip за успех."
     },
     "/Lotus/Upgrades/Stickers/ToxinProcOnDamageSticker": {
-      "name": "Old Pizza",
+      "name": "Старая пицца",
       "description": "При получении урона: 6% шанс получить статус Токсина. Перезарядка: 5с. Получаете 1 Pix Chip за успех."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyMelee": {
-      "name": "Only Knives",
+      "name": "Только ножи",
       "description": "Экипировать Scaldra Dual Viciss с +450% урона как ближнее оружие."
     },
     "/Lotus/Upgrades/Stickers/FreezePlayerOverTimeSticker": {
-      "name": "Optimism",
+      "name": "Оптимизм",
       "description": "Накапливайте Cold stacks каждые 8с. Замерзание на 10 стаков на 3 секунды. Кататься или Void Sling для растопки 3 стаков."
     },
     "/Lotus/Upgrades/Stickers/NPCReviveSticker": {
-      "name": "Panic Call",
+      "name": "Панический вызов",
       "description": "Минерва или Велимир попытаются ожить. Перезарядка: 30с."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyRifle": {
-      "name": "Resolutions",
+      "name": "Решения",
       "description": "Экипировать Purgator 1 с +450% урона как основное оружие."
     },
     "/Lotus/Upgrades/Stickers/RemoveStatusesOnHeavyAttackSticker": {
-      "name": "Reverse-O",
+      "name": "Реверс-О",
       "description": "При тяжёлой атаке: перенесите отрицательные эффекты статуса на врагов в радиусе 10м."
     },
     "/Lotus/Upgrades/Stickers/EjectButtonSticker": {
-      "name": "Slippery Customer",
+      "name": "Скользкий тип",
       "description": "В первый раз, когда вы падаете: телепортироваться в безопасное место, ожить с 50% Здоровье/Щиты, неуязвим на 9с."
     },
     "/Lotus/Upgrades/Stickers/NullStarOnWeakpointKillSticker": {
-      "name": "Spinnin' Around",
+      "name": "Кружусь вокруг",
       "description": "Убийства в уязвимую точку создают 1 Null Star (max 18). Null Stars снижают урон на 5%."
     },
     "/Lotus/Upgrades/Stickers/ElementalAmmoChanceOnEximusKillSticker": {
-      "name": "Super Scavenger",
+      "name": "Супер-собиратель",
       "description": "При убийстве Eximus: 45% шанс выпустить Элементальный Боеприпасный Пакет."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemySmg": {
-      "name": "Through My Heart",
+      "name": "Прямо в сердце",
       "description": "Экипировать EFV-5 Jupiter с +450% урона как основное оружие."
     },
     "/Lotus/Upgrades/Stickers/DecoyOnDamagedSticker": {
-      "name": "Too Hot",
+      "name": "Слишком жарко",
       "description": "Получение урона ниже 70% Здоровье создаёт клон Молт каждые 10с."
     },
     "/Lotus/Upgrades/Stickers/AllowNecramechSummonSticker": {
-      "name": "Vintage Tech",
+      "name": "Винтажная техника",
       "description": "Призывает Necramech. Перезарядка 60с после уничтожения."
     },
     "/Lotus/Upgrades/Stickers/AllowThermianRpgSummonSticker": {
-      "name": "Wakeup Call",
+      "name": "Побудка",
       "description": "Заряженный Thermian RPG может быть развернут из шкалы экипировки. Перезарядка: 60с."
     },
     "/Lotus/Upgrades/Stickers/SuperGlideParkourSticker": {
-      "name": "Walking on Air",
+      "name": "Ходьба по воздуху",
       "description": "Увеличивает продолжительность Aim Glide и Wall Latch на +100%. Снижает гравитацию на 100%."
     },
     "/Lotus/Upgrades/Stickers/WeaponColdDamageSticker": {
-      "name": "XL Frosty",
+      "name": "XL Морозко",
       "description": "Добавляет +30% урона Холод к основным и вторичным оружиям."
     }
   },
@@ -730,7 +730,7 @@
     "checklist.task_pulses": "Импульсы: Netracell и Archimedea",
     "checklist.task_calendar": "Календарь 1999 года",
     "checklist.task_invigorations": "Гельминт Бодрость",
-    "checklist.task_descendia": "Descendia",
+    "checklist.task_descendia": "Десцендия",
     "checklist.task_descendia_sp": "Десцендия СП",
     "checklist.task_palladino": "Магазин Палладино",
     "checklist.task_yonta_weekly": "Йонта: еженедельный магазин",
@@ -1065,8 +1065,8 @@
     "rivens.state_unveiled": "раскрытый",
     "rivens.state_challenge": "Испытание",
     "rivens.state_veiled": "завуалированный",
-    "rivens.sort_name": "Name",
-    "rivens.sort_plat": "Platinum",
+    "rivens.sort_name": "Название",
+    "rivens.sort_plat": "Платина",
     "rivens.sort_grade": "Оценка",
     "rivens.type_all": "Все",
     "ui.dashboard.descendia_penance_desc_very_toxic": "Враги излучают разрушительную световую ауру, которая наносит урон Тэнно и союзникам, входящим в нее.",
@@ -1219,7 +1219,19 @@
     "adversaries.rank": "Ранг {rank}",
     "adversaries.no_data": "Нет данных о немесисе.",
     "ui.riven_card.riven_suffix": "Ривен",
-    "rivens.type_unknown": "Неизвестно"
+    "rivens.type_unknown": "Неизвестно",
+    "ui.dashboard.time_now": "Только что",
+    "ui.dashboard.time_ago_min": "{n} мин. назад",
+    "ui.dashboard.time_ago_hour": "{n} ч назад",
+    "ui.dashboard.time_ago_day": "{n} дн. назад",
+    "settings.cursorStyle_system": "Система",
+    "settings.cursorStyle_default": "По умолчанию",
+    "settings.cursorStyle_retro": "Ретро",
+    "maps.name_poe": "Равнины Эйдолона",
+    "maps.name_vallis": "Долина Орб",
+    "maps.name_deimos": "Дрейф Камбиона",
+    "maps.name_duviri": "Дувири",
+    "ui.dashboard.time_expired": "Истекло"
   },
   "inventory": {
     "filled": "Filled",

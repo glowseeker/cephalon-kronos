@@ -224,6 +224,14 @@ const FOLDER_OVERRIDES = {
   Fairy: 'Wisp', Jade: 'Nyx',
 };
 
+// Resources whose ExportResources entry has an empty name and whose parentType
+// is absent from all export tables. DE does not provide a locKey for these
+// internal research/dev items — map the uppercase leaf to the canonical name
+// the game displays (source: Warframe in-game UI / public manifest).
+const RESOURCE_LEAF_NAME = {
+  GENERICDOJOCOLORPIGMENT: 'Color Pigment',
+};
+
 
 // ─── Name / Image Resolution ─────────────────────────────────────────────────
 
@@ -330,14 +338,25 @@ function _resolveNameInternal(un, dict, locale = 'en', depth, ...tables) {
     const entry = tbl?.[un] || tbl?.[normalized];
     if (!entry) continue;
     const locKey = entry.name ?? entry.displayName ?? '';
+    // Name-less/delegated resources: the canonical leaf alias wins over any
+    // wfcd slug literal or parent-leaf splitPascal (GenericDojoColorPigment).
+    if (entry.parentName) {
+      const leafAlias = RESOURCE_LEAF_NAME[(un.split('/').pop() || '').toUpperCase()];
+      if (leafAlias) return cleanName(leafAlias);
+    }
     if (locKey) {
       if (dict[locKey]) {
         const resolved = cleanName(dict[locKey]);
         if (resolved) return resolved;
       }
       if (!locKey.startsWith('/Lotus/')) {
-        const cleaned = cleanName(locKey);
-        if (cleaned) return cleaned;
+        // A wfcd pre-resolved literal is not authoritative when the entry also
+        // carries a parentName (name delegation) — let the parentName/alias
+        // branch below decide (e.g. GenericDojoColorPigment → "Color Pigment").
+        if (!entry.parentName) {
+          const cleaned = cleanName(locKey);
+          if (cleaned) return cleaned;
+        }
       }
     } else if (entry.resultType) {
       // If recipe has no name, try to resolve its resultType
@@ -394,6 +413,49 @@ function _resolveNameInternal(un, dict, locale = 'en', depth, ...tables) {
     // Try common language path pattern for store items
     const langKey = '/Lotus/Language/StoreItems/' + leaf;
     if (dict[langKey]) return cleanName(dict[langKey]);
+  }
+
+  // Case-insensitive leaf fallback: some inventory ItemTypes come back in
+  // ALL-CAPS (e.g. GENERICDOJOCOLORPIGMENT) while the export/wfcd tables key
+  // them camelCase (GenericDojoColorPigment). Exact-key lookups above miss,
+  // so match the leaf case-insensitively across the known tables.
+  const ciLeaf = un.split('/').pop().toUpperCase();
+  if (ciLeaf) {
+    for (const tbl of tables) {
+      if (!tbl) continue;
+      const hit = Object.keys(tbl).find(k => k.split('/').pop().toUpperCase() === ciLeaf);
+      if (hit) {
+        const entry = tbl[hit];
+        const locKey = entry?.name ?? entry?.displayName ?? '';
+        // Resource aliases take priority whenever the entry delegates naming
+        // to a parent (parentName): the wfcd slug literal ("Genericdojocolorpigment")
+        // and the parent-leaf splitPascal are both noise vs the canonical alias.
+        if (entry?.parentName) {
+          const leafAlias = RESOURCE_LEAF_NAME[ciLeaf];
+          if (leafAlias) return cleanName(leafAlias);
+        }
+        if (locKey) {
+          if (dict[locKey]) {
+            const resolved = cleanName(dict[locKey]);
+            if (resolved) return resolved;
+          }
+          if (!locKey.startsWith('/Lotus/')) {
+            // Same guard as the direct-match loop: a wfcd slug literal must
+            // not shadow the parentName/alias resolution for name-less
+            // resources (GenericDojoColorPigment).
+            if (!entry.parentName) {
+              const cleaned = cleanName(locKey);
+              if (cleaned) return cleaned;
+            }
+          }
+        } else if (entry?.parentName) {
+          // Empty name (e.g. /Lotus/Types/Items/Research/DojoColors/GenericDojoColorPigment
+          // has name:"") — the game delegates the display name to the parentType.
+          const fromParent = _resolveNameInternal(entry.parentName, dict, locale, depth + 1, ...tables);
+          if (fromParent) return fromParent;
+        }
+      }
+    }
   }
 
   return cleanName(nameFromPath(un));
@@ -588,6 +650,11 @@ function extractModCategory(exportType, un, entry) {
     if (un.includes('Killswitch')) return 'Peculiar'
     // Beast stance mods - path-based before STANCE fallback
     if (un.includes('/Pets/BeastWeapons/')) return 'Beasts'
+    // Melee stance mods live under /Weapons/Tenno/Melee/MeleeTrees/ — not the
+    // /Mods/ tree — so path-detect them explicitly. Needed because some
+    // MeleeTree entries are absent from the export, leaving exportType empty
+    // and the /Mods/ regex unmatched (category would be null → only in "All").
+    if (un.includes('/MeleeTrees/') || un.includes('/Pets/') && un.includes('Stance')) return 'Stance'
     const m2 = un.match(/\/Mods\/(?:Sets|PvPMods)\/([^/]+)/)
     if (m2 && TYPE_TO_CATEGORY[m2[1]]) return TYPE_TO_CATEGORY[m2[1]]
     const m = un.match(/\/Mods\/([^/]+)/)
@@ -822,7 +889,11 @@ function detectArcaneCategory(un, name) {
 
 export function parseInventory(raw, exports, dict, locale = 'en', i18nData = null) {
   if (!raw || typeof raw !== 'object' || !exports) return { all: [] };
-  dict = (dict && Object.keys(dict).length > 0) ? dict : (exports?.['dict.en'] || exports?.dict || {})
+  // Prefer the per-locale dict (exports.dict = dict.{locale}.json). The
+  // dict.en fallback exists only for English runs — when the localed dict is
+  // present it MUST win, otherwise an empty dict param (first render before
+  // exports land) silently degrades the whole inventory to English.
+  dict = (dict && Object.keys(dict).length > 0) ? dict : (exports?.dict || exports?.['dict.en'] || {})
 
   const toMap = (data, wrapperKey) => {
     if (!data) return {};
@@ -885,6 +956,23 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
   // the original public-export-plus data.
   const useWI = !!exports.WI_Warframes;
 
+  // warframe-items pre-resolves mod polarity to focus-school names; the DE
+  // export uses AP_* codes. ModCard/RivenCard POLARITY_FILES are keyed by the
+  // AP_* codes, so map schools back (used when an entry has no original
+  // export counterpart).
+  const SCHOOL_TO_AP = {
+    madurai: 'AP_ATTACK',
+    vazarin: 'AP_DEFENSE',
+    naramon: 'AP_TACTIC',
+    zenurik: 'AP_POWER',
+    penjaga: 'AP_PRECEPT',
+    unairu: 'AP_WARD',
+    universal: 'AP_UNIVERSAL',
+    umbra: 'AP_UMBRA',
+    aura: 'AP_FUSION',
+    any: 'AP_ANY',
+  };
+
   const mergeWithOrig = (wiMap, origKey) => {
     const map = wiMap ? { ...wiMap } : {};
     if (origKey && exports[origKey]) {
@@ -934,10 +1022,26 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
           ) {
             map[un].icon = origIcon;
           }
+          // Polarity is normalized below (after the if/else) so it runs for
+          // every entry, including WI-only mods that have no original export
+          // counterpart (e.g. Railjack crew-ship mods: Lavan/Zekti/Vidar).
         } else {
           // Entry only in original data
           map[un] = origEntry;
         }
+      }
+    }
+    // Normalize polarity to DE AP_* codes for ALL entries. warframe-items
+    // pre-resolves polarity to focus-school names (madurai/vazarin/naramon/
+    // zenurik/penjaga/unairu/universal/umbra/aura) while the DE export uses
+    // AP_* codes; ModCard/RivenCard POLARITY_FILES is keyed by AP_* so school
+    // names render NO icon. Prefer the original export's AP_* polarity when
+    // present; otherwise map the school name.
+    for (const [un, entry] of Object.entries(map)) {
+      if (!entry || typeof entry.polarity !== 'string') continue;
+      if (!entry.polarity.startsWith('AP_')) {
+        const ap = SCHOOL_TO_AP[entry.polarity];
+        if (ap) entry.polarity = ap;
       }
     }
     return map;
@@ -1659,6 +1763,41 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
       mod.category = extractModCategory(entry?.type, un, entry);
       mod.baseDrain = entry?.baseDrain ?? null;
       mod.icon = entry?.icon ?? null;
+      // English reference name for mod-frame image lookups. The Tektolyst
+      // (antique) frame backgrounds are named by the mod's English name
+      // (e.g. "Ulashta-Shol.png") — the localized name would 404. Resolve via
+      // the EN dict (exports['dict.en']) when available.
+      if (mod.modFrame === 'Tektolyst') {
+        const enDict = exports?.['dict.en'] || exports?.dictEn || null;
+        const ukDict = dict || {};
+        let enName = null;
+        if (entry?.name && enDict) {
+          enName = enDict[entry.name] || enDict['/' + entry.name] || null;
+        }
+        // ExportUpgradesLocalized (DE public manifest, keyed by main.rs) can
+        // overwrite EM[un].name with a LITERAL localized string ("Яр Дал"),
+        // which is not a locKey — enDict[literal] misses. It also poisons
+        // exports.ExportUpgrades (EM === the export object in the non-WI
+        // path), so recover the original locKey by reverse-locating the
+        // localized name in the uk/active dict, then resolve that key in the
+        // EN dict.
+        if (!enName && enDict && ukDict && entry?.name && typeof entry.name === 'string' && !entry.name.startsWith('/Lotus/')) {
+          const locKey = Object.keys(ukDict).find(k => ukDict[k] === entry.name);
+          if (locKey) enName = enDict[locKey] || enDict['/' + locKey] || null;
+        }
+        // The live inventory may key the antique under a casing/path variant
+        // that misses EM[un] (entry undefined). Fall back to a case-insensitive
+        // leaf match across the raw ExportUpgrades so the EN name still resolves.
+        if (!enName && enDict) {
+          const leaf = un.split('/').pop().toUpperCase();
+          const rawEU = exports.ExportUpgrades || exports?.ExportUpgrades_orig || EM;
+          const hit = leaf ? Object.keys(rawEU).find(k => k.split('/').pop().toUpperCase() === leaf) : null;
+          if (hit && rawEU[hit]?.name?.startsWith('/Lotus/')) {
+            enName = enDict[rawEU[hit].name] || enDict['/' + rawEU[hit].name] || null;
+          }
+        }
+        mod.englishName = enName || null;
+      }
       if (!mod.icon && exports.PeelyPixMap?.[un]) {
         mod.icon = exports.PeelyPixMap[un];
       }
@@ -1805,6 +1944,10 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
     if (un.includes('/Projections/') || un.includes('/Upgrades/Relic/') || un.includes('OroFusexOrnament')) continue;
     // Hidden resource — user requested it be excluded (Tethra Data Fragments)
     if (un === '/Lotus/Types/Items/SyndicateDogTags/MuseumDogTag') continue;
+    // Hidden internal test item — user requested it be excluded from resources
+    if (un === '/Lotus/Types/Items/MiscItems/TestPartItem'
+        || un === '/Lotus/Types/Gameplay/InfestedMicroplanet/EncounterObjects/TestPartItem'
+        || un.endsWith('/TestPartItem')) continue;
     const name = resolveName(un, dict, locale, ER, ERel, EW, ES);
     // Prime parts are shown in the prime-sets tab, not as resources. Match the
     // ItemType path (always English) — localized names like "Afuris Prime: Lauf"

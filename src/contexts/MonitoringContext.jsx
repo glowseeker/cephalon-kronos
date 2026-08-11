@@ -398,13 +398,13 @@ export function MonitoringProvider({ children }) {
       const notifConfig = raw.find(n => n.id === r.notifId)
       const cooldownMin = notifConfig?.config?.cooldown
       const cooldownMs = (typeof cooldownMin === 'number' ? cooldownMin : 0) * 60 * 1000
-      
+
       const lastTime = lastFired[dedupKey] || 0
       const now = Date.now()
 
       if (!notifiedRef.current.notifMgr.has(dedupKey) || (cooldownMs > 0 && now - lastTime >= cooldownMs)) {
         notifiedRef.current.notifMgr.add(dedupKey)
-        
+
         if (cooldownMs > 0) {
           lastFired[dedupKey] = now
           updatedLastFired = true
@@ -501,112 +501,112 @@ export function MonitoringProvider({ children }) {
       const tsStr = String(ts ?? Date.now())
       setLastUpdate(tsStr)
       localStorage.setItem('lastUpdate', tsStr)
-      invoke('relay_event', { event: 'sidebar-data-updated', payload: { ts: tsStr } }).catch(() => {})
+      invoke('relay_event', { event: 'sidebar-data-updated', payload: { ts: tsStr } }).catch(() => { })
     }, 0)
   }, [exportData, dict])
   useEffect(() => {
     if (startedRef.current) return
     startedRef.current = true
 
-    ; (async () => {
-      await loadSettings()
-      localeRef.current = getSetting('gameLocale', 'en')
-      i18nRef.current = await loadLocale(localeRef.current)
-      setStatusText('Checking updates & assets…')
-      const [updatesRes, exportsRes, mediaRes, pricerRes, spiRes, arbRes, descRes] = await Promise.allSettled([
-        invoke('check_exports', { locale: localeRef.current, force: false }),
-        invoke('load_all_exports', { locale: localeRef.current }),
-        invoke('check_media_assets'),
-        invoke('check_pricer_models'),
-        invoke('load_txt_file', { name: 'sp-incursions.txt' }),
-        invoke('load_txt_file', { name: 'arbys.txt' }),
-        invoke('load_txt_file', { name: 'descendia.txt' }),
-      ])
+      ; (async () => {
+        await loadSettings()
+        localeRef.current = getSetting('gameLocale', 'en')
+        i18nRef.current = await loadLocale(localeRef.current)
+        setStatusText('Checking updates & assets…')
+        const [updatesRes, exportsRes, mediaRes, pricerRes, spiRes, arbRes, descRes] = await Promise.allSettled([
+          invoke('check_exports', { locale: localeRef.current, force: false }),
+          invoke('load_all_exports', { locale: localeRef.current }),
+          invoke('check_media_assets'),
+          invoke('check_pricer_models'),
+          invoke('load_txt_file', { name: 'sp-incursions.txt' }),
+          invoke('load_txt_file', { name: 'arbys.txt' }),
+          invoke('load_txt_file', { name: 'descendia.txt' }),
+        ])
 
-      const exports = exportsRes.status === 'fulfilled' ? exportsRes.value : null
-      const spiText = spiRes.status === 'fulfilled' ? spiRes.value : null
-      const arbText = arbRes.status === 'fulfilled' ? arbRes.value : null
-      // Retired in v0.8: ExportUpgrades_fixed.json patched file — the DE
-      // manifest now ships levelStats for every locale including English
-      // (downloaded as ExportUpgrades_{locale}.json by check_exports).
-      if (exports) {
-        try {
-          for (const [fname, key] of [
-            ['ExportAvionics_fixed.json', 'ExportAvionicsFixed'],
-            ['mod-icon-map.json', 'ModIconMap'],
-            ['peely-pix-map.json', 'PeelyPixMap'],
-            ['peely-pix-names.json', 'PeelyPixNames'],
-          ]) {
-            const bytes = await invoke('read_file_bytes', { relative: `data/assets/data/${fname}` }).catch(() => null)
-            if (bytes) {
-              exports[key] = JSON.parse(new TextDecoder().decode(new Uint8Array(bytes)))
+        const exports = exportsRes.status === 'fulfilled' ? exportsRes.value : null
+        const spiText = spiRes.status === 'fulfilled' ? spiRes.value : null
+        const arbText = arbRes.status === 'fulfilled' ? arbRes.value : null
+        // Retired in v0.8: ExportUpgrades_fixed.json patched file - the DE
+        // manifest now ships levelStats for every locale including English
+        // (downloaded as ExportUpgrades_{locale}.json by check_exports).
+        if (exports) {
+          try {
+            for (const [fname, key] of [
+              ['ExportAvionics_fixed.json', 'ExportAvionicsFixed'],
+              ['mod-icon-map.json', 'ModIconMap'],
+              ['peely-pix-map.json', 'PeelyPixMap'],
+              ['peely-pix-names.json', 'PeelyPixNames'],
+            ]) {
+              const bytes = await invoke('read_file_bytes', { relative: `data/assets/data/${fname}` }).catch(() => null)
+              if (bytes) {
+                exports[key] = JSON.parse(new TextDecoder().decode(new Uint8Array(bytes)))
+              }
+            }
+          } catch { }
+        }
+
+        // Set exports immediately (no wfcd blocking) — defer the wfcd load to
+        // the background so the shell UI renders without a 15s hitch.
+        setExportData(exports)
+        exportDataRef.current = exports
+
+        if (exports) {
+          loadWarframeItemsMaps().then(({ maps: wiMaps, supplement: wiSupplement }) => {
+            const enhanced = { ...exports, ...wiMaps }
+            enhanced.uniqueNameToName = { ...enhanced.uniqueNameToName, ...wiSupplement.uniqueNameToName }
+            enhanced.nameToImage = { ...enhanced.nameToImage, ...wiSupplement.nameToImage }
+            enhanced.WI_Supplement = wiSupplement
+            setExportData(enhanced)
+            exportDataRef.current = enhanced
+            // wfcd English names (WI_Weapons) attach in the background after
+            // the initial parse, so riven weapon_name_en fell back to code
+            // paths ("CrpHeavyRifle") which never match the price model.
+            // Re-parse with the enhanced exports once wfcd has landed.
+            if (rawInventoryRef.current) {
+              applyRaw(rawInventoryRef.current, undefined, enhanced)
+            }
+          })
+        }
+        setSpIncursions(spiText || '')
+        setArbys(arbText || '')
+        // Parse descendia descriptions
+        const descText = descRes.status === 'fulfilled' ? descRes.value : null
+        if (descText) {
+          const descMap = {}
+          for (const line of descText.split('\n')) {
+            const trimmed = line.trim()
+            if (!trimmed || trimmed.startsWith('#')) continue
+            const sepIdx = trimmed.indexOf(': ')
+            if (sepIdx > 0) {
+              descMap[trimmed.slice(0, sepIdx)] = trimmed.slice(sepIdx + 2)
             }
           }
-        } catch { }
-      }
-
-      // Set exports immediately (no wfcd blocking) — defer the wfcd load to
-      // the background so the shell UI renders without a 15s hitch.
-      setExportData(exports)
-      exportDataRef.current = exports
-
-      if (exports) {
-        loadWarframeItemsMaps().then(({ maps: wiMaps, supplement: wiSupplement }) => {
-          const enhanced = { ...exports, ...wiMaps }
-          enhanced.uniqueNameToName = { ...enhanced.uniqueNameToName, ...wiSupplement.uniqueNameToName }
-          enhanced.nameToImage = { ...enhanced.nameToImage, ...wiSupplement.nameToImage }
-          enhanced.WI_Supplement = wiSupplement
-          setExportData(enhanced)
-          exportDataRef.current = enhanced
-          // wfcd English names (WI_Weapons) attach in the background after
-          // the initial parse, so riven weapon_name_en fell back to code
-          // paths ("CrpHeavyRifle") which never match the price model.
-          // Re-parse with the enhanced exports once wfcd has landed.
-          if (rawInventoryRef.current) {
-            applyRaw(rawInventoryRef.current, undefined, enhanced)
-          }
-        })
-      }
-      setSpIncursions(spiText || '')
-      setArbys(arbText || '')
-      // Parse descendia descriptions
-      const descText = descRes.status === 'fulfilled' ? descRes.value : null
-      if (descText) {
-        const descMap = {}
-        for (const line of descText.split('\n')) {
-          const trimmed = line.trim()
-          if (!trimmed || trimmed.startsWith('#')) continue
-          const sepIdx = trimmed.indexOf(': ')
-          if (sepIdx > 0) {
-            descMap[trimmed.slice(0, sepIdx)] = trimmed.slice(sepIdx + 2)
-          }
+          setDescendiaDesc(descMap)
         }
-        setDescendiaDesc(descMap)
-      }
 
-      // Sync monitoring state with other windows
-      invoke('get_monitoring_active').then((active) => {
-        if (active) setIsMonitoring(true)
-      }).catch(() => {})
+        // Sync monitoring state with other windows
+        invoke('get_monitoring_active').then((active) => {
+          if (active) setIsMonitoring(true)
+        }).catch(() => { })
 
-      setStatusText('Loading inventory…')
-      const invRes = await Promise.allSettled([invoke('load_cached_inventory')])
+        setStatusText('Loading inventory…')
+        const invRes = await Promise.allSettled([invoke('load_cached_inventory')])
 
-      if (invRes[0].status === 'fulfilled' && invRes[0].value) {
-        const result = invRes[0].value
-        applyRaw(result[0], result[1])
-        hasCachedDataRef.current = true
-        setStatusText('Loaded cached data')
-      } else {
-        hasCachedDataRef.current = false
-        setStatusText('No cached data – start syncing in Settings')
-        setInventoryData(null)
-      }
+        if (invRes[0].status === 'fulfilled' && invRes[0].value) {
+          const result = invRes[0].value
+          applyRaw(result[0], result[1])
+          hasCachedDataRef.current = true
+          setStatusText('Loaded cached data')
+        } else {
+          hasCachedDataRef.current = false
+          setStatusText('No cached data – start syncing in Settings')
+          setInventoryData(null)
+        }
 
-      if (autoStartRef.current) {
-        startMonitoring().catch(() => {})
-      }
-    })()
+        if (autoStartRef.current) {
+          startMonitoring().catch(() => { })
+        }
+      })()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
 
@@ -635,22 +635,22 @@ export function MonitoringProvider({ children }) {
     const fetchBountyCycle = async () => {
       const raw = await invoke('fetch_url', { url: BOUNTY_CYCLE_API }).catch(() => null)
       if (raw) {
-        try { setBountyCycle(JSON.parse(raw)) } catch {}
+        try { setBountyCycle(JSON.parse(raw)) } catch { }
       }
     }
     fetchBountyCycle()
     const iv = setInterval(fetchBountyCycle, 120_000)
     return () => clearInterval(iv)
   }, [])
-const [nextRetryAt, setNextRetryAt] = useState(0)
+  const [nextRetryAt, setNextRetryAt] = useState(0)
 
-const hasCachedData = useCallback(async () => {
-  if (hasCachedDataRef.current) return true
-  try {
-    const result = await invoke('sidebar_load_inventory')
-    return !!result?.inventory
-  } catch { return false }
-}, [])
+  const hasCachedData = useCallback(async () => {
+    if (hasCachedDataRef.current) return true
+    try {
+      const result = await invoke('sidebar_load_inventory')
+      return !!result?.inventory
+    } catch { return false }
+  }, [])
   const callApiHelper = useCallback(async () => {
     if (busyRef.current) return
     busyRef.current = true
@@ -688,12 +688,12 @@ const hasCachedData = useCallback(async () => {
     const result = await callApiHelper()
     const msg = result === 'success' ? 'Syncing active' : result === 'cached' ? 'Game not running, using cached data' : result
     setNextRetryAt(Date.now() + intervalMs)
-    invoke('set_monitoring_active', { active: true, result, statusText: msg }).catch(() => {})
+    invoke('set_monitoring_active', { active: true, result, statusText: msg }).catch(() => { })
     intervalRef.current = setInterval(async () => {
       setNextRetryAt(Date.now() + intervalMs)
       const r = await callApiHelper()
       const msg2 = r === 'success' ? 'Syncing active' : r === 'cached' ? 'Game not running, using cached data' : r
-      invoke('set_monitoring_active', { active: true, result: r, statusText: msg2 }).catch(() => {})
+      invoke('set_monitoring_active', { active: true, result: r, statusText: msg2 }).catch(() => { })
     }, intervalMs)
   }, [isMonitoring, callApiHelper])
 
@@ -703,7 +703,7 @@ const hasCachedData = useCallback(async () => {
     setNextRetryAt(0)
     setMonitorResult('idle')
     setStatusText('Syncing stopped')
-    invoke('set_monitoring_active', { active: false, result: 'idle', statusText: 'Syncing stopped' }).catch(() => {})
+    invoke('set_monitoring_active', { active: false, result: 'idle', statusText: 'Syncing stopped' }).catch(() => { })
   }, [])
 
   const manualRefresh = useCallback(async () => {
@@ -983,8 +983,8 @@ const hasCachedData = useCallback(async () => {
       const ducatTop = [...enriched].sort((a, b) => b.evDucats - a.evDucats).slice(0, 5)
       const platTop = [...enriched].sort((a, b) => b.evPlat - a.evPlat).slice(0, 5)
       const payload = { ducat_top: ducatTop, plat_top: platTop, era: voidTier }
-      invoke('show_overlay_window', { label: 'overlay-relic-picker' }).catch(() => {})
-      invoke('relay_event', { event: 'relic-picker-data', payload }).catch(() => {})
+      invoke('show_overlay_window', { label: 'overlay-relic-picker' }).catch(() => { })
+      invoke('relay_event', { event: 'relic-picker-data', payload }).catch(() => { })
     }))
 
     subs.push(listen('relic-picker-tier', (e) => {
@@ -1006,7 +1006,7 @@ const hasCachedData = useCallback(async () => {
       const ducatTop = [...enriched].sort((a, b) => b.evDucats - a.evDucats).slice(0, 5)
       const platTop = [...enriched].sort((a, b) => b.evPlat - a.evPlat).slice(0, 5)
       const payload = { ducat_top: ducatTop, plat_top: platTop, era: voidTier }
-      invoke('relay_event', { event: 'relic-picker-data', payload }).catch(() => {})
+      invoke('relay_event', { event: 'relic-picker-data', payload }).catch(() => { })
     }))
 
     subs.push(listen('archon-hunt-modifiers', (e) => {
@@ -1066,7 +1066,7 @@ const hasCachedData = useCallback(async () => {
           intervalRef.current = setInterval(async () => {
             setNextRetryAt(Date.now() + 180_000)
             const r = await callApiHelper()
-            invoke('set_monitoring_active', { active: true, result: r, statusText: r === 'success' ? 'Syncing active' : r === 'cached' ? 'Game not running, using cached data' : r }).catch(() => {})
+            invoke('set_monitoring_active', { active: true, result: r, statusText: r === 'success' ? 'Syncing active' : r === 'cached' ? 'Game not running, using cached data' : r }).catch(() => { })
           }, 180_000)
         } finally {
           processingRef.current = false

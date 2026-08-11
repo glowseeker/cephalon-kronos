@@ -52,103 +52,103 @@
   },
   "peely": {
     "/Lotus/Upgrades/Stickers/DropSpecialItemChanceOnWeakpointKillSticker": {
-      "name": "Argon Combo #2",
+      "name": "คอโบอาร์กอน #2",
       "description": "เมื่อกำจริงจุดอ่อน: +20% โอกาสได้คริสตัลสุขภาพ คริสตัลพลังงาน ระบบนอก ฟอร์โกลันด์ หรือสปอเร็กซ์ชาร์จ"
     },
     "/Lotus/Upgrades/Stickers/ToxinGasResistanceOnHealthOrbSticker": {
-      "name": "Breathless",
+      "name": "ไร้ลมหายใจ",
       "description": "ได้รับความต้านทาน 100% ต่อน้ำมันและสสารพิษเป็นเวลา 30 วินาที เก็บคริสตัลสุขภาพเพิ่ม 20 วินาที"
     },
     "/Lotus/Upgrades/Stickers/DropHealingBurgerChanceSticker": {
-      "name": "Burgerfest",
+      "name": "เทศกาลเบอร์เกอร์",
       "description": "ศัตรูมีโอกาส 15% ว่างแฟลชท์อาลกอนเวอร์เจอร์ 10%"
     },
     "/Lotus/Upgrades/Stickers/StickerSporePrimer": {
-      "name": "Catscratch Fever",
+      "name": "ไข้แมวข่วน",
       "description": "ทุก 20 วินาที ศัตรูภายใน 30 เมตรถูกสปอร์ของซาริน"
     },
     "/Lotus/Upgrades/Stickers/CreateShieldOnHeavySlamSticker": {
-      "name": "Crushing Chills",
+      "name": "หนาวเข้ากระดูก",
       "description": "Heavy Slam พร้อมคอมโบ x6 สร้างหินบวมก้อนหิมม่า 3 ลูกที่มีคูลดาวน์ 10 วินาที"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyShotgun": {
-      "name": "Doktor's Orders",
+      "name": "คำสั่งของด็อกเตอร์",
       "description": "ติดตั้ง EFV-8 Mars พร้อม +450% ความเสียหมดเป็นอาวุธยานี้"
     },
     "/Lotus/Upgrades/Stickers/DropEfervonGrenadeChanceSticker": {
-      "name": "Fly, Fly!",
+      "name": "บินสิ บิน!",
       "description": "ศัตรูมีโอกาส 15% ว่างแฟลชท์ที่ช่วยล้างสารปฏิปีการณ์ Hell-Scrubber"
     },
     "/Lotus/Upgrades/Stickers/AvatarKnockdownResistanceSticker": {
-      "name": "Going Steady",
+      "name": "ยืนหยัด",
       "description": "100% โอกาสต่อสู้กับการกดดัน"
     },
     "/Lotus/Upgrades/Stickers/DeathPreventionOnKillsSticker": {
-      "name": "Hi-Score",
+      "name": "คะแนนสูง",
       "description": "ได้ 20 คะแนะโครงการฆ่า 100 คะแนะโครงการฆ่าจุดอ่อน รีวอเวลูน์โบนัสที่ 1000 2500 5000 คะแนะ"
     },
     "/Lotus/Upgrades/Stickers/CreateChasingAntiMatterDropSticker": {
-      "name": "It Sees You",
+      "name": "มันเห็นคุณ",
       "description": "หยดแอนติแมตเตอร์ปรากฏอยู่ 25m ห่าง และไล่ตามทุก 20s ได้ 1 Pix Chip บนความสำเร็จ"
     },
     "/Lotus/Upgrades/Stickers/ToxinProcOnDamageSticker": {
-      "name": "Old Pizza",
+      "name": "พิซซ่าเก่า",
       "description": "เมื่อได้รับความเสียหมด: 6% โอกาสได้รับสถานะภาวะพิษ เวลาเย็ดดู: 5s ได้ 1 Pix Chip บนความสำเร็จ"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyMelee": {
-      "name": "Only Knives",
+      "name": "มีดเท่านั้น",
       "description": "ติดตั้ง Scaldra Dual Viciss พร้อม +450% ความเสียหมดเป็นอาวุธประชาน"
     },
     "/Lotus/Upgrades/Stickers/FreezePlayerOverTimeSticker": {
-      "name": "Optimism",
+      "name": "มองโลกในแง่ดี",
       "description": "สะสมเกลี่ยวน้ำแข็งทุก 8s. แช่แข็งที่ 10 เกลี่ยวต์เป็นเวลา 3s. กดหรือวอยด์สลิงเพื่อละลาย 3 เกลี่ยว"
     },
     "/Lotus/Upgrades/Stickers/NPCReviveSticker": {
-      "name": "Panic Call",
+      "name": "โทรฉุกเฉิน",
       "description": "มิเนอร์วาหรือเวลิมิล์จะพยายามชุบชูใหคุณ เวลาเย็ดดู: 30s"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyRifle": {
-      "name": "Resolutions",
+      "name": "ปณิธาน",
       "description": "ติดตั้ง Purgator 1 พร้อม +450% ความเสียหมดเป็นอาวุธหลัก"
     },
     "/Lotus/Upgrades/Stickers/RemoveStatusesOnHeavyAttackSticker": {
-      "name": "Reverse-O",
+      "name": "รีเวิร์ส-โอ",
       "description": "เมื่อโจมตีหนัก: โยนเอฟเฟกต์สถานะลบให้ศัตรูภายใน 10m"
     },
     "/Lotus/Upgrades/Stickers/EjectButtonSticker": {
-      "name": "Slippery Customer",
+      "name": "ตัวแสบ",
       "description": "ครั้งแรกที่คุณลง: ทางปลอด 50% HP/盾牌 9s"
     },
     "/Lotus/Upgrades/Stickers/NullStarOnWeakpointKillSticker": {
-      "name": "Spinnin' Around",
+      "name": "หมุนไปรอบๆ",
       "description": "การฆ่าจุดอ่อนสร้าง Null Star (สูงสุด 18) Null Stars ลดความเสียหมด 5%"
     },
     "/Lotus/Upgrades/Stickers/ElementalAmmoChanceOnEximusKillSticker": {
-      "name": "Super Scavenger",
+      "name": "ยอดนักเก็บ",
       "description": "เมื่อฆ่า Eximus: โอกาส 45% ที่จะได้ Elemental Ammo Pack"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemySmg": {
-      "name": "Through My Heart",
+      "name": "ทะลุหัวใจ",
       "description": "ติดตั้ง EFV-5 จูเรียน พร้อม +450% ความเสียหมดเป็นอาวุธหลัก"
     },
     "/Lotus/Upgrades/Stickers/DecoyOnDamagedSticker": {
-      "name": "Too Hot",
+      "name": "ร้อนเกินไป",
       "description": "ได้รับความเสียหมดต่ำกว่า 70% HP สร้างโคลง Molt ทุก 10s"
     },
     "/Lotus/Upgrades/Stickers/AllowNecramechSummonSticker": {
-      "name": "Vintage Tech",
+      "name": "เทคโนวินเทจ",
       "description": "เรียก Necramech เวลาเย็ดดู 60s หลังจากทำลาย"
     },
     "/Lotus/Upgrades/Stickers/AllowThermianRpgSummonSticker": {
-      "name": "Wakeup Call",
+      "name": "ปลุกให้ตื่น",
       "description": "Thermian RPG ที่โหลดแล้วสามารถปรับใช้จากหน้ากว๊าก เวลาเย็ดดู: 60s"
     },
     "/Lotus/Upgrades/Stickers/SuperGlideParkourSticker": {
-      "name": "Walking on Air",
+      "name": "เดินบนอากาศ",
       "description": "เพิ่มระยะเวลา Aim Glide และ Wall Latch +100% ลดดุลกด 100%"
     },
     "/Lotus/Upgrades/Stickers/WeaponColdDamageSticker": {
-      "name": "XL Frosty",
+      "name": "XL เย็นฉ่ำ",
       "description": "เพิ่ม +30% ความเสียหมดน้ำแข็งให้อาวุธหลักและรอง"
     }
   },
@@ -1065,8 +1065,8 @@
     "rivens.state_unveiled": "เปิดตัวแล้ว",
     "rivens.state_challenge": "ท้าทาย",
     "rivens.state_veiled": "สวมหน้ากาก",
-    "rivens.sort_name": "Name",
-    "rivens.sort_plat": "Platinum",
+    "rivens.sort_name": "ชื่อ",
+    "rivens.sort_plat": "แพลตตินัม",
     "rivens.sort_grade": "ระดับ",
     "rivens.type_all": "ทั้งหมด",
     "ui.dashboard.descendia_penance_desc_very_toxic": "ศัตรูปล่อยออร่าแสงที่สร้างความเสียหาย ซึ่งสร้างความเสียหายให้กับ Tenno และพันธมิตรที่เข้าไป",
@@ -1219,7 +1219,19 @@
     "adversaries.rank": "อันดับ {rank}",
     "adversaries.no_data": "ไม่มีข้อมูลนีมิสิส์",
     "ui.riven_card.riven_suffix": "ริเวิน",
-    "rivens.type_unknown": "ไม่ทราบ"
+    "rivens.type_unknown": "ไม่ทราบ",
+    "ui.dashboard.time_now": "เมื่อสักครู่",
+    "ui.dashboard.time_ago_min": "{n} นาทีที่แล้ว",
+    "ui.dashboard.time_ago_hour": "{n} ชั่วโมงที่แล้ว",
+    "ui.dashboard.time_ago_day": "{n} วันที่แล้ว",
+    "settings.cursorStyle_system": "ระบบ",
+    "settings.cursorStyle_default": "ค่าเริ่มต้น",
+    "settings.cursorStyle_retro": "เรโทร์",
+    "maps.name_poe": "ที่ราบอีดอลอน",
+    "maps.name_vallis": "ออร์บแวลลิส",
+    "maps.name_deimos": "แคมเบียนดริฟต์",
+    "maps.name_duviri": "ดูวีรี",
+    "ui.dashboard.time_expired": "หมดอายุ"
   },
   "inventory": {
     "filled": "Filled",

@@ -52,63 +52,63 @@
   },
   "peely": {
     "/Lotus/Upgrades/Stickers/DropSpecialItemChanceOnWeakpointKillSticker": {
-      "name": "Argon Combo #2",
+      "name": "Combo Argón #2",
       "description": "Al matar con un punto débil: +20% de probabilidad de soltar Orbes de Salud, Orbes de Energía, Munición, Fórmulas o Cargas SporeX."
     },
     "/Lotus/Upgrades/Stickers/ToxinGasResistanceOnHealthOrbSticker": {
-      "name": "Breathless",
+      "name": "Sin aliento",
       "description": "Ganas 100% de resistencia a Gas y Tóxico durante 30s. Los Orbes de Salud recogidos añaden 20s."
     },
     "/Lotus/Upgrades/Stickers/DropHealingBurgerChanceSticker": {
-      "name": "Burgerfest",
+      "name": "Festiburger",
       "description": "Los enemigos tienen un 15% de probabilidad de soltar Cajas Argon Burger que pueden curar aliados cercanos un 10% y objetivos defensivos un 100%."
     },
     "/Lotus/Upgrades/Stickers/StickerSporePrimer": {
-      "name": "Catscratch Fever",
+      "name": "Fiebre felina",
       "description": "Cada 20s, un enemigo dentro de 30m es afectado por las esporas de Saryn."
     },
     "/Lotus/Upgrades/Stickers/CreateShieldOnHeavySlamSticker": {
-      "name": "Crushing Chills",
+      "name": "Escalofríos",
       "description": "Heavy Slam con combo x6 crea hasta 3 Globos de Nieve con un cooldown de 10s."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyShotgun": {
-      "name": "Doktor's Orders",
+      "name": "Órdenes del Doktor",
       "description": "Equipa un EFV-8 Mars con +450% de daño como arma secundaria."
     },
     "/Lotus/Upgrades/Stickers/DropEfervonGrenadeChanceSticker": {
-      "name": "Fly, Fly!",
+      "name": "¡Vuela, vuela!",
       "description": "Los enemigos tienen un 15% de probabilidad de soltar granadas que eliminan la contaminación Hell-Scrubber."
     },
     "/Lotus/Upgrades/Stickers/AvatarKnockdownResistanceSticker": {
-      "name": "Going Steady",
+      "name": "Firme",
       "description": "100% de probabilidad de resistir el Derribo."
     },
     "/Lotus/Upgrades/Stickers/DeathPreventionOnKillsSticker": {
-      "name": "Hi-Score",
+      "name": "Puntuación máxima",
       "description": "Ganas 20 puntos por asesinato, 100 por Weakpoint Kill. Revivencias bonus en 1000, 2500, 5000 puntos."
     },
     "/Lotus/Upgrades/Stickers/CreateChasingAntiMatterDropSticker": {
-      "name": "It Sees You",
+      "name": "Te ve",
       "description": "Una gota Anti-Matter aparece a 25m y persigue cada 20s. Ganas 1 Pix Chip al tener éxito."
     },
     "/Lotus/Upgrades/Stickers/ToxinProcOnDamageSticker": {
-      "name": "Old Pizza",
+      "name": "Pizza vieja",
       "description": "Al recibir daño: 6% de probabilidad de recibir el estado Tóxico. Enfriamiento: 5s. Ganas 1 Pix Chip al tener éxito."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyMelee": {
-      "name": "Only Knives",
+      "name": "Solo cuchillos",
       "description": "Equipa las Garras Duales Scaldra con +450% de daño como armas cuerpo a cuerpo."
     },
     "/Lotus/Upgrades/Stickers/FreezePlayerOverTimeSticker": {
-      "name": "Optimism",
+      "name": "Optimismo",
       "description": "Acumula Cold stacks cada 8s. Congelado a 10 stacks durante 3s. Rodar o Void Sling para descongelar 3 stacks."
     },
     "/Lotus/Upgrades/Stickers/NPCReviveSticker": {
-      "name": "Panic Call",
+      "name": "Llamada de pánico",
       "description": "Minerva o Velimir intentarán revivirte. Cooldown: 30s."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyRifle": {
-      "name": "Resolutions",
+      "name": "Propósitos",
       "description": "Equipa un Purgator 1 con +450% de daño como arma principal."
     },
     "/Lotus/Upgrades/Stickers/RemoveStatusesOnHeavyAttackSticker": {
@@ -116,39 +116,39 @@
       "description": "Al ataque pesado: transfiere efectos de estado negativos a enemigos en 10m."
     },
     "/Lotus/Upgrades/Stickers/EjectButtonSticker": {
-      "name": "Slippery Customer",
+      "name": "Tipo escurridizo",
       "description": "La primera vez que caes: teletransporte a la seguridad, revivir con 50% de Salud/Escudos, invulnerable 9s."
     },
     "/Lotus/Upgrades/Stickers/NullStarOnWeakpointKillSticker": {
-      "name": "Spinnin' Around",
+      "name": "Dando vueltas",
       "description": "Los asesinatos en punto débil generan 1 Estrella Nula (máx 18). Las Estrellas Nulas reducen el daño un 5%."
     },
     "/Lotus/Upgrades/Stickers/ElementalAmmoChanceOnEximusKillSticker": {
-      "name": "Super Scavenger",
+      "name": "Súper recolector",
       "description": "Al matar un Eximus: 45% de probabilidad de soltar un Paquete de Munición Elemental."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemySmg": {
-      "name": "Through My Heart",
+      "name": "Justo al corazón",
       "description": "Equipa un EFV-5 Jupiter con +450% de daño como arma principal."
     },
     "/Lotus/Upgrades/Stickers/DecoyOnDamagedSticker": {
-      "name": "Too Hot",
+      "name": "Demasiado caliente",
       "description": "Recibir daño por debajo del 70% de Salud crea un clon Molt cada 10s."
     },
     "/Lotus/Upgrades/Stickers/AllowNecramechSummonSticker": {
-      "name": "Vintage Tech",
+      "name": "Tecnología vintage",
       "description": "Invoca un Necramech. Cooldown de 60s tras ser destruido."
     },
     "/Lotus/Upgrades/Stickers/AllowThermianRpgSummonSticker": {
-      "name": "Wakeup Call",
+      "name": "Llamada de atención",
       "description": "Un Thermian RPG cargado puede desplegarse desde la rueda de equipo. Cooldown: 60s."
     },
     "/Lotus/Upgrades/Stickers/SuperGlideParkourSticker": {
-      "name": "Walking on Air",
+      "name": "Caminando sobre el aire",
       "description": "Aumenta la duración de Planeo y Agarre en pared +100%. Reduce la gravedad en un 100%."
     },
     "/Lotus/Upgrades/Stickers/WeaponColdDamageSticker": {
-      "name": "XL Frosty",
+      "name": "XL Frío",
       "description": "Añade +30% de daño de Frío a armas principales y secundarias."
     }
   },
@@ -752,7 +752,7 @@
     "sync.next_update": "Siguiente actualización en:",
     "riven_card.na": "N/D",
     "riven_card.plat_short": "{p}p",
-    "riven_card.tier_label": "0 - 1 arma",
+    "riven_card.tier_label": "{roll} - {tier} arma",
     "riven_card.roll_average": "Promedio",
     "riven_card.roll_bad": "Malo",
     "riven_card.roll_good": "Bueno",
@@ -1066,7 +1066,7 @@
     "rivens.state_challenge": "Desafíos",
     "rivens.state_veiled": "Velo",
     "rivens.sort_name": "Nombre",
-    "rivens.sort_plat": "Platinum",
+    "rivens.sort_plat": "Platino",
     "rivens.sort_grade": "Grado",
     "rivens.type_all": "Todos",
     "ui.dashboard.descendia_penance_desc_very_toxic": "Los enemigos emiten un aura de luz dañina que daña a Tenno y a los aliados que entran en él.",
@@ -1219,7 +1219,19 @@
     "adversaries.rank": "Rango {rank}",
     "adversaries.no_data": "Sin datos de nemeso.",
     "ui.riven_card.riven_suffix": "Riven",
-    "rivens.type_unknown": "Desconocido"
+    "rivens.type_unknown": "Desconocido",
+    "ui.dashboard.time_now": "Ahora mismo",
+    "ui.dashboard.time_ago_min": "hace {n} min",
+    "ui.dashboard.time_ago_hour": "hace {n} h",
+    "ui.dashboard.time_ago_day": "hace {n} d",
+    "settings.cursorStyle_system": "Sistema",
+    "settings.cursorStyle_default": "Predeterminado",
+    "settings.cursorStyle_retro": "Retro",
+    "maps.name_poe": "Llanuras de Eidolon",
+    "maps.name_vallis": "Vallis Orbital",
+    "maps.name_deimos": "Deriva Cambion",
+    "maps.name_duviri": "Duviri",
+    "ui.dashboard.time_expired": "Caducado"
   },
   "inventory": {
     "filled": "Filled",

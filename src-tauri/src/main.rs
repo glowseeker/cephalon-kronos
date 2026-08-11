@@ -164,6 +164,7 @@ const EXPORT_FILES: &[&str] = &[
     "ExportFlavour.json",
     "dict.json",
     "supp-dict.json",
+    "dict.en.json",
 ];
 
 const BASE_URL: &str =
@@ -284,7 +285,9 @@ async fn check_exports(locale: String, force: Option<bool>) -> Result<String, St
     }
 
     // Clean up old locale-specific filenames if they exist
-    for old in &["dict.en.json", "supp-dict-en.json"] {
+    // (dict.en.json is now a real asset — the English reference dict used to
+    //  resolve English item names for image lookups — so it is kept.)
+    for old in &["supp-dict-en.json"] {
         let old_path = export_dir.join(old);
         let _ = fs::remove_file(&old_path);
     }
@@ -292,10 +295,23 @@ async fn check_exports(locale: String, force: Option<bool>) -> Result<String, St
     let client = reqwest::Client::new();
     let mut updated_count = 0u32;
 
+    // Locale-dependent files (the game dict and locale manifest upgrades) are
+    // downloaded into locale-neutral filenames (dict.json, ExportUpgrades_{locale}.json).
+    // The dict.json on disk is normally overwritten with the current locale's content,
+    // but the app bundle ships an English dict.json as a default. We must force a
+    // re-fetch whenever the active locale changes, otherwise game-sourced strings
+    // (location names, syndicate names, etc.) keep rendering in English even though
+    // the UI locale is, e.g., 'de'. A tiny ".dict-locale" marker records which locale
+    // the current dict.json was downloaded for.
+    let marker_path = export_dir.join(".dict-locale");
+    let disk_locale: Option<String> = fs::read_to_string(&marker_path).ok().map(|s| s.trim().to_string());
+    let locale_changed = disk_locale.as_deref() != Some(locale.as_str());
+
     // JSON exports - refresh once per day
     for file_name in EXPORT_FILES {
         let path = export_dir.join(file_name);
-        let needs_update = force || !path.exists() || file_age_secs(&path) > 86_400;
+        let is_locale_file = matches!(*file_name, "dict.json" | "supp-dict.json");
+        let needs_update = force || !path.exists() || file_age_secs(&path) > 86_400 || (is_locale_file && locale_changed);
 
         if needs_update {
             let url = match *file_name {
@@ -306,6 +322,11 @@ async fn check_exports(locale: String, force: Option<bool>) -> Result<String, St
             download_file(&client, &url, &path).await.map_err(|e| {
                 format!("Failed to download {}: {}", file_name, e)
             })?;
+            // Record which locale this locale-neutral file was fetched for, so a
+            // locale switch forces a re-fetch on the next check_exports run.
+            if matches!(*file_name, "dict.json" | "supp-dict.json") {
+                let _ = fs::write(&marker_path, &locale);
+            }
             updated_count += 1;
         }
     }

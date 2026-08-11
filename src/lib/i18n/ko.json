@@ -52,103 +52,103 @@
   },
   "peely": {
     "/Lotus/Upgrades/Stickers/DropSpecialItemChanceOnWeakpointKillSticker": {
-      "name": "Argon Combo #2",
+      "name": "아르곤 콤보 #2",
       "description": "약점 킬: 체력 구슬, 에너지 구슬, 탄약, 포로글랜드, 스포어X 탄환 드롭률 20% 증가."
     },
     "/Lotus/Upgrades/Stickers/ToxinGasResistanceOnHealthOrbSticker": {
-      "name": "Breathless",
+      "name": "숨 막힘",
       "description": "30초간 가스 및 독성 100% 저항 획득. 수집한 체력 구슬로 20초 추가."
     },
     "/Lotus/Upgrades/Stickers/DropHealingBurgerChanceSticker": {
-      "name": "Burgerfest",
+      "name": "버거 축제",
       "description": "적: 15% 확률로 인근 동료를 10% 치유하고 방어 목표를 100% 치유할 수 있는 아르곤 버거 박스 드롭."
     },
     "/Lotus/Upgrades/Stickers/StickerSporePrimer": {
-      "name": "Catscratch Fever",
+      "name": "고양이 열병",
       "description": "20초마다 30m 이내의 적 1마리가 살리의 포자 영향을 받음."
     },
     "/Lotus/Upgrades/Stickers/CreateShieldOnHeavySlamSticker": {
-      "name": "Crushing Chills",
+      "name": "으스스한 한기",
       "description": "6배 콤보 헤비 슬램으로 10초 쿨타임으로 최대 3개의 스노우글로브 생성."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyShotgun": {
-      "name": "Doktor's Orders",
+      "name": "닥터의 명령",
       "description": "보조 무기로 +450% 데미지 EFV-8 마르스 장착."
     },
     "/Lotus/Upgrades/Stickers/DropEfervonGrenadeChanceSticker": {
-      "name": "Fly, Fly!",
+      "name": "날아라, 날아라!",
       "description": "적: 15% 확률로 헬 스크러버 오염을 치우는 수류탄 드롭."
     },
     "/Lotus/Upgrades/Stickers/AvatarKnockdownResistanceSticker": {
-      "name": "Going Steady",
+      "name": "흔들림 없는",
       "description": "녹다운 저항 100% 확률."
     },
     "/Lotus/Upgrades/Stickers/DeathPreventionOnKillsSticker": {
-      "name": "Hi-Score",
+      "name": "하이스코어",
       "description": "킬당 20점, 약점 킬당 100점. 1000, 2500, 5000점에서 보너스 부활."
     },
     "/Lotus/Upgrades/Stickers/CreateChasingAntiMatterDropSticker": {
-      "name": "It Sees You",
+      "name": "너를 보고 있어",
       "description": "25m 멀리 반물질 드롭이 나타나 20초마다 추격. 성공 시 1 Pix Chip 획득."
     },
     "/Lotus/Upgrades/Stickers/ToxinProcOnDamageSticker": {
-      "name": "Old Pizza",
+      "name": "오래된 피자",
       "description": "피격 시: 6% 확률로 독 상태 이상 획득. 쿨타임: 5초. 성공 시 1 Pix Chip 획득."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyMelee": {
-      "name": "Only Knives",
+      "name": "칼만",
       "description": "근접 무기로 +450% 데미지 스칼드라 듀얼비시스 장착."
     },
     "/Lotus/Upgrades/Stickers/FreezePlayerOverTimeSticker": {
-      "name": "Optimism",
+      "name": "낙관주의",
       "description": "8초마다 Cold 스택 축적. 10스택 시 3초간 동결. 굴러나가거나 Void Sling으로 3스택 해제."
     },
     "/Lotus/Upgrades/Stickers/NPCReviveSticker": {
-      "name": "Panic Call",
+      "name": "패닉 콜",
       "description": "미네르바 또는 벨미르가 부활 시도. 쿨타임: 30초."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyRifle": {
-      "name": "Resolutions",
+      "name": "다짐",
       "description": "주 무기로 +450% 데미지 페르가터 1 장착."
     },
     "/Lotus/Upgrades/Stickers/RemoveStatusesOnHeavyAttackSticker": {
-      "name": "Reverse-O",
+      "name": "리버스-O",
       "description": "헤비 어택 히트: 10m 이내의 적에게 부정적 상태 이펙트 전이."
     },
     "/Lotus/Upgrades/Stickers/EjectButtonSticker": {
-      "name": "Slippery Customer",
+      "name": "날렵한 녀석",
       "description": "최초 다운시: 안전하게 텔레포트, 50% HP/방패로 부활, 9초간 무적."
     },
     "/Lotus/Upgrades/Stickers/NullStarOnWeakpointKillSticker": {
-      "name": "Spinnin' Around",
+      "name": "빙글빙글",
       "description": "약점 킬로 인해 Null Star 1개 생성 (최대 18). Null Star는 데미지 5% 감소."
     },
     "/Lotus/Upgrades/Stickers/ElementalAmmoChanceOnEximusKillSticker": {
-      "name": "Super Scavenger",
+      "name": "슈퍼 수집가",
       "description": "엑시머스 킬: 45% 확률로 원소 탄약 팩 드롭."
     },
     "/Lotus/Upgrades/Stickers/StickerEnemySmg": {
-      "name": "Through My Heart",
+      "name": "심장을 꿰뚫어",
       "description": "주 무기로 +450% 데미지 EFV-5 지구스 장착."
     },
     "/Lotus/Upgrades/Stickers/DecoyOnDamagedSticker": {
-      "name": "Too Hot",
+      "name": "너무 뜨거워",
       "description": "70% HP 이하 피격 시 10초마다 몰트 클론 생성."
     },
     "/Lotus/Upgrades/Stickers/AllowNecramechSummonSticker": {
-      "name": "Vintage Tech",
+      "name": "빈티지 테크",
       "description": "네크라밋 소환. 파괴 후 60초 쿨타임."
     },
     "/Lotus/Upgrades/Stickers/AllowThermianRpgSummonSticker": {
-      "name": "Wakeup Call",
+      "name": "기상 콜",
       "description": "장비 휠에서 배치할 수 있는 장전된 테르미안 RPG. 쿨타임: 60초."
     },
     "/Lotus/Upgrades/Stickers/SuperGlideParkourSticker": {
-      "name": "Walking on Air",
+      "name": "공중 보행",
       "description": "에임 글라이드와 벽 잡기 지속시간 +100% 증가. 중력 100% 감소."
     },
     "/Lotus/Upgrades/Stickers/WeaponColdDamageSticker": {
-      "name": "XL Frosty",
+      "name": "XL 프로스티",
       "description": "주 및 보조 무기에 +30% Cold 데미지 추가."
     }
   },
@@ -752,7 +752,7 @@
     "sync.next_update": "다음 업데이트까지 남은 시간: 0",
     "riven_card.na": "N/A",
     "riven_card.plat_short": "{p}p",
-    "riven_card.tier_label": "0 - 1 무기",
+    "riven_card.tier_label": "{roll} - {tier} 무기",
     "riven_card.roll_average": "평균",
     "riven_card.roll_bad": "나쁨",
     "riven_card.roll_good": "좋음",
@@ -1066,7 +1066,7 @@
     "rivens.state_challenge": "도전 과제",
     "rivens.state_veiled": "베일드",
     "rivens.sort_name": "이름",
-    "rivens.sort_plat": "Platinum",
+    "rivens.sort_plat": "플래티넘",
     "rivens.sort_grade": "학년 ",
     "rivens.type_all": "전체",
     "ui.dashboard.descendia_penance_desc_very_toxic": "적은 텐노와 그 안으로 들어오는 아군에게 피해를 주는 빛의 기운을 발산합니다.",
@@ -1219,7 +1219,19 @@
     "adversaries.rank": "랭크 {rank}",
     "adversaries.no_data": "네메시스 데이터가 없습니다.",
     "ui.riven_card.riven_suffix": "라이븐",
-    "rivens.type_unknown": "알 수 없는"
+    "rivens.type_unknown": "알 수 없는",
+    "ui.dashboard.time_now": "방금",
+    "ui.dashboard.time_ago_min": "{n}분 전",
+    "ui.dashboard.time_ago_hour": "{n}시간 전",
+    "ui.dashboard.time_ago_day": "{n}일 전",
+    "settings.cursorStyle_system": "시스템",
+    "settings.cursorStyle_default": "기본값",
+    "settings.cursorStyle_retro": "레트로",
+    "maps.name_poe": "에이돌론 평원",
+    "maps.name_vallis": "오브 발리스",
+    "maps.name_deimos": "캠비온 드리프트",
+    "maps.name_duviri": "두비리",
+    "ui.dashboard.time_expired": "만료됨"
   },
   "inventory": {
     "filled": "Filled",

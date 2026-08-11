@@ -52,103 +52,103 @@
   },
   "peely": {
     "/Lotus/Upgrades/Stickers/DropSpecialItemChanceOnWeakpointKillSticker": {
-      "name": "Argon Combo #2",
+      "name": "アルゴンコンボ #2",
       "description": "弱点撃破時: ヘルスオーブ、エネルギーオーブ、弾薬、フォアゴン、スポアエックスチャージのドロップ率が20%上昇。"
     },
     "/Lotus/Upgrades/Stickers/ToxinGasResistanceOnHealthOrbSticker": {
-      "name": "Breathless",
+      "name": "息もできない",
       "description": "ガスと毒に100%抵抗獲得（30秒）。回収したヘルスオーブで20秒追加。"
     },
     "/Lotus/Upgrades/Stickers/DropHealingBurgerChanceSticker": {
-      "name": "Burgerfest",
+      "name": "バーガーフェス",
       "description": "敵は15%の確率で、近くの味方を10%回復し守備目標を100%回復できるアルゴンバーガーボックスをドロップ。"
     },
     "/Lotus/Upgrades/Stickers/StickerSporePrimer": {
-      "name": "Catscratch Fever",
+      "name": "ネコひっかき熱",
       "description": "20秒ごとに、30m以内の敵1体がサリンのスポアの影響を受ける。"
     },
     "/Lotus/Upgrades/Stickers/CreateShieldOnHeavySlamSticker": {
-      "name": "Crushing Chills",
+      "name": "砕ける寒気",
       "description": "6コンボのヘビースラムで10秒クールダウンに最大3個のスノーグローブを生成。"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyShotgun": {
-      "name": "Doktor's Orders",
+      "name": "ドクターの命令",
       "description": "二次武器として+450%ダメージのEFV-8マースを装備。"
     },
     "/Lotus/Upgrades/Stickers/DropEfervonGrenadeChanceSticker": {
-      "name": "Fly, Fly!",
+      "name": "飛べ、飛べ！",
       "description": "敵は15%の確率でヘルスクランバー汚染をクリアする手榴弾をドロップ。"
     },
     "/Lotus/Upgrades/Stickers/AvatarKnockdownResistanceSticker": {
-      "name": "Going Steady",
+      "name": "不動の心",
       "description": "ノックダウンに100%抵抗。"
     },
     "/Lotus/Upgrades/Stickers/DeathPreventionOnKillsSticker": {
-      "name": "Hi-Score",
+      "name": "ハイスコア",
       "description": "キルにつき20ポイント、 Weakpoint Killにつき100ポイント。1000, 2500, 5000ポイントでボーナス復活。"
     },
     "/Lotus/Upgrades/Stickers/CreateChasingAntiMatterDropSticker": {
-      "name": "It Sees You",
+      "name": "見られている",
       "description": "25m先にアンチマターデロップが出現し、20秒ごとに追跡。成功で1 Pix Chip獲得。"
     },
     "/Lotus/Upgrades/Stickers/ToxinProcOnDamageSticker": {
-      "name": "Old Pizza",
+      "name": "古いピザ",
       "description": "ダメージ時: 6%の確率で毒ステータスを受ける。クールダウン: 5秒。成功で1 Pix Chip獲得。"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyMelee": {
-      "name": "Only Knives",
+      "name": "ナイフのみ",
       "description": "近接武器として+450%ダメージのスカルドラ・デュアルビシスを装備。"
     },
     "/Lotus/Upgrades/Stickers/FreezePlayerOverTimeSticker": {
-      "name": "Optimism",
+      "name": "楽観主義",
       "description": "8秒ごとにクールスタックを蓄積。10スタックで3秒間凍結。ロールまたはVoid Slingで3スタック解凍。"
     },
     "/Lotus/Upgrades/Stickers/NPCReviveSticker": {
-      "name": "Panic Call",
+      "name": "パニックコール",
       "description": "ミネルバまたはヴェリミルが蘇生を試みます。クールダウン: 30秒。"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemyRifle": {
-      "name": "Resolutions",
+      "name": "決意",
       "description": "主要武器として+450%ダメージのパージァレーター1を装備。"
     },
     "/Lotus/Upgrades/Stickers/RemoveStatusesOnHeavyAttackSticker": {
-      "name": "Reverse-O",
+      "name": "リバースO",
       "description": "ヘビィアタックヒット時: 10m以内の敵に負のステータス効果を移譲。"
     },
     "/Lotus/Upgrades/Stickers/EjectButtonSticker": {
-      "name": "Slippery Customer",
+      "name": "すばしっこい奴",
       "description": "初回ダウン時: 安全にテレポート、50% HP/シールドで復活、9秒間無敵。"
     },
     "/Lotus/Upgrades/Stickers/NullStarOnWeakpointKillSticker": {
-      "name": "Spinnin' Around",
+      "name": "ぐるぐる回る",
       "description": "弱点キルでNull Starを1つ生成（最大18）。Null Starはダメージを5%軽減。"
     },
     "/Lotus/Upgrades/Stickers/ElementalAmmoChanceOnEximusKillSticker": {
-      "name": "Super Scavenger",
+      "name": "スーパースカベンジャー",
       "description": "Eximusキル時: 45%の確率でエレメンタル弾薬パックをドロップ。"
     },
     "/Lotus/Upgrades/Stickers/StickerEnemySmg": {
-      "name": "Through My Heart",
+      "name": "心臓めがけて",
       "description": "主要武器として+450%ダメージのEFV-5ジュピターを装備。"
     },
     "/Lotus/Upgrades/Stickers/DecoyOnDamagedSticker": {
-      "name": "Too Hot",
+      "name": "熱すぎる",
       "description": "70%HP以下のダメージを受けると10秒毎にMoltクローンを生成。"
     },
     "/Lotus/Upgrades/Stickers/AllowNecramechSummonSticker": {
-      "name": "Vintage Tech",
+      "name": "ビンテージ技術",
       "description": "ネクラメックを召喚。破壊後60秒クールダウン。"
     },
     "/Lotus/Upgrades/Stickers/AllowThermianRpgSummonSticker": {
-      "name": "Wakeup Call",
+      "name": "モーニングコール",
       "description": "装備ホイールから展開できる装填済みサーマンRPG。クールダウン: 60秒。"
     },
     "/Lotus/Upgrades/Stickers/SuperGlideParkourSticker": {
-      "name": "Walking on Air",
+      "name": "空中散歩",
       "description": "エイムグライドと壁ラッチの時間を+100%延長。重力を100%低下。"
     },
     "/Lotus/Upgrades/Stickers/WeaponColdDamageSticker": {
-      "name": "XL Frosty",
+      "name": "XLフロスティ",
       "description": "主要・副武器に+30% Coldダメージを追加。"
     }
   },
@@ -752,7 +752,7 @@
     "sync.next_update": "次の更新",
     "riven_card.na": "N/A",
     "riven_card.plat_short": "{p}p",
-    "riven_card.tier_label": "武器0〜1個",
+    "riven_card.tier_label": "{roll} - {tier} 武器",
     "riven_card.roll_average": "平均",
     "riven_card.roll_bad": "悪い",
     "riven_card.roll_good": "良い",
@@ -1066,7 +1066,7 @@
     "rivens.state_challenge": "チャレンジ",
     "rivens.state_veiled": "ベールをかぶった",
     "rivens.sort_name": "名前",
-    "rivens.sort_plat": "Platinum",
+    "rivens.sort_plat": "プラチナ",
     "rivens.sort_grade": "等級",
     "rivens.type_all": "すべて",
     "ui.dashboard.descendia_penance_desc_very_toxic": "敵は天王とそれに入る仲間にダメージを与えるダメージを与える光のオーラを発します。",
@@ -1219,7 +1219,19 @@
     "adversaries.rank": "ランク {rank}",
     "adversaries.no_data": "ネメシスデータがありません。",
     "ui.riven_card.riven_suffix": "リヴェン",
-    "rivens.type_unknown": "不明"
+    "rivens.type_unknown": "不明",
+    "ui.dashboard.time_now": "たった今",
+    "ui.dashboard.time_ago_min": "{n}分前",
+    "ui.dashboard.time_ago_hour": "{n}時間前",
+    "ui.dashboard.time_ago_day": "{n}日前",
+    "settings.cursorStyle_system": "システム",
+    "settings.cursorStyle_default": "デフォルト",
+    "settings.cursorStyle_retro": "レトロ",
+    "maps.name_poe": "エイドロンの平原",
+    "maps.name_vallis": "オーブ・ヴァリス",
+    "maps.name_deimos": "キャンビオン・ドリフト",
+    "maps.name_duviri": "デュヴィリ",
+    "ui.dashboard.time_expired": "期限切れ"
   },
   "inventory": {
     "filled": "Filled",

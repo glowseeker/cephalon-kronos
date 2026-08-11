@@ -573,7 +573,7 @@ export default function SettingsScreen() {
                     </> :
                 null}
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-tight text-kronos-text">{cs}</span>
+                <span className="text-[10px] font-black uppercase tracking-tight text-kronos-text">{t('settings.cursorStyle_' + cs)}</span>
               </button>
             )}
             <div className="flex items-center gap-2 ml-4">

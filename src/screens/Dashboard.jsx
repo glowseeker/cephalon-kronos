@@ -335,13 +335,13 @@ export default function Dashboard() {
 
 
   const bountyTabs = useMemo(() => [
-  { id: 'holdfasts', label: 'Holdfasts', icon: iconSrc('MiniMapZariman') },
-  { id: 'cavia', label: 'Cavia', icon: iconSrc('MiniMapCaviaHubSyndicate') },
-  { id: 'hex', label: 'Hex', icon: iconSrc('MiniMapMarkersJobBoard') },
-  { id: 'cetus', label: 'Cetus', icon: iconSrc('MiniMapEidolonCetusElder') },
-  { id: 'deimos', label: 'Deimos', icon: iconSrc('MiniMapDeimosGrandmother') },
-  { id: 'vallis', label: 'Vallis', icon: iconSrc('MiniMapHubFortuna') }],
-  [iconsPath]);
+  { id: 'holdfasts', label: dict?.['/Lotus/Language/Syndicates/ZarimanName'] || 'Holdfasts', icon: iconSrc('MiniMapZariman') },
+  { id: 'cavia', label: dict?.['/Lotus/Language/EntratiLab/EntratiGeneral/EntratiLabSyndicateName'] || 'Cavia', icon: iconSrc('MiniMapCaviaHubSyndicate') },
+  { id: 'hex', label: dict?.['/Lotus/Language/1999/MessengerHexName'] || 'Hex', icon: iconSrc('MiniMapMarkersJobBoard') },
+  { id: 'cetus', label: dict?.['/Lotus/Language/Syndicates/CetusName'] || 'Cetus', icon: iconSrc('MiniMapEidolonCetusElder') },
+  { id: 'deimos', label: dict?.['/Lotus/Language/InfestedMicroplanet/EntratiSyndicateName'] || 'Deimos', icon: iconSrc('MiniMapDeimosGrandmother') },
+  { id: 'vallis', label: dict?.['/Lotus/Language/Syndicates/SolarisSecretName'] || 'Vallis', icon: iconSrc('MiniMapHubFortuna') }],
+  [iconsPath, locale, dict]);
 
   const renderBounties = () => {
     if (!locationBounties || !bountyCycle) {
@@ -562,7 +562,7 @@ export default function Dashboard() {
               <>
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] text-kronos-dim uppercase">{t('ui.dashboard.ends')}</span>
-                    <span className="text-[14px] text-kronos-text">{timeRemaining(nw.expiry)}</span>
+                    <span className="text-[14px] text-kronos-text">{timeRemaining(nw.expiry, t)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] text-kronos-dim uppercase">{t('ui.dashboard.creds')}</span>
@@ -589,7 +589,7 @@ export default function Dashboard() {
 
               <div className="flex flex-col items-center justify-center flex-1">
                   <p className="text-[12px] text-kronos-dim uppercase mb-1">{t('ui.dashboard.ends_in')}</p>
-                  <p className="text-lg font-black text-kronos-text">{timeRemaining(nw.expiry)}</p>
+                  <p className="text-lg font-black text-kronos-text">{timeRemaining(nw.expiry, t)}</p>
                 </div>
               }
             </div>
@@ -861,7 +861,7 @@ export default function Dashboard() {
         {/* Season header */}
         <div className="flex items-center justify-between px-1">
           <p className={`text-sm font-black uppercase tracking-widest ${seasonInfo.color}`}>{seasonName}</p>
-          <p className="text-[10px] text-kronos-dim font-mono">{timeRemaining(nextExpiry)}{t('ui.dashboard.darvo_left')}</p>
+          <p className="text-[10px] text-kronos-dim font-mono">{timeRemaining(nextExpiry, t)}{t('ui.dashboard.darvo_left')}</p>
         </div>
 
         {/* Month tabs */}
@@ -1061,7 +1061,7 @@ export default function Dashboard() {
 
           })}
         </div>
-        <p className="text-[10px] text-kronos-dim font-mono mt-2 text-right">{timeRemaining(current.expiry)}{t('ui.dashboard.darvo_left')}</p>
+        <p className="text-[10px] text-kronos-dim font-mono mt-2 text-right">{timeRemaining(current.expiry, t)}{t('ui.dashboard.darvo_left')}</p>
       </div>);
 
   };
@@ -1139,7 +1139,7 @@ export default function Dashboard() {
           <div key={idx} className="bg-kronos-panel/40 rounded p-2 border border-transparent hover:border-kronos-accent/20 transition-all">
               <div className="flex justify-between items-start mb-1">
                 <span className="text-[10px] font-black text-kronos-accent uppercase tracking-wider">{a.missionType}</span>
-                <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(a.expiry)}</span>
+                <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(a.expiry, t)}</span>
               </div>
               <p className="text-[11px] font-bold text-kronos-text uppercase leading-none mb-1">{a.node}</p>
               <div className="flex justify-between items-end">
@@ -1177,7 +1177,7 @@ export default function Dashboard() {
         <div className="bg-kronos-panel/40 rounded p-2">
           <p className="text-sm font-bold text-kronos-text uppercase">{vt.node}</p>
           <p className="text-xs text-kronos-dim mt-0.5 font-mono">
-            {vt.active ? t('ui.dashboard.baro_departing', { time: timeRemaining(vt.expiry) }) : t('ui.dashboard.baro_arriving', { time: timeRemaining(vt.activation) })}
+            {vt.active ? t('ui.dashboard.baro_departing', { time: timeRemaining(vt.expiry, t) }) : t('ui.dashboard.baro_arriving', { time: timeRemaining(vt.activation, t) })}
           </p>
         </div>
       </Card>);
@@ -1259,7 +1259,7 @@ export default function Dashboard() {
           <div key={`booster-${idx}`} className="space-y-1 pb-2 border-kronos-panel/40 last:border-0">
               <div className="flex justify-between items-start">
                 <p className="text-xs font-black text-kronos-accent uppercase tracking-widest">{b.nameI18nKey ? t(b.nameI18nKey) : b.name}</p>
-                <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(b.expiry)}{t('ui.dashboard.darvo_left')}</span>
+                <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(b.expiry, t)}{t('ui.dashboard.darvo_left')}</span>
               </div>
             </div>
           )}
@@ -1269,7 +1269,7 @@ export default function Dashboard() {
           <div key={idx} className="space-y-1 pb-2 border-b border-kronos-panel/40 last:border-0">
               <div className="flex justify-between items-start">
                 <p className="text-xs font-black text-kronos-accent uppercase tracking-widest">{e.name}</p>
-                <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(e.expiry)}{t('ui.dashboard.darvo_left')}</span>
+                <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(e.expiry, t)}{t('ui.dashboard.darvo_left')}</span>
               </div>
 
               {(e.rewards?.length > 0 || e.mainReward) &&
@@ -1334,7 +1334,7 @@ export default function Dashboard() {
 
         })}
         {expiry &&
-        <p className="text-[10px] text-kronos-dim mt-2 text-right font-mono tracking-tighter">{t('ui.dashboard.rotates_in').replace('{time}', timeRemaining(expiry).toUpperCase())}
+        <p className="text-[10px] text-kronos-dim mt-2 text-right font-mono tracking-tighter">{t('ui.dashboard.rotates_in').replace('{time}', timeRemaining(expiry, t).toUpperCase())}
           </p>
         }
       </div>);
@@ -1472,7 +1472,7 @@ export default function Dashboard() {
               <div key={label} className="bg-kronos-panel/40 rounded p-2 flex flex-col gap-0.5">
                     <p className="text-[10px] text-kronos-dim uppercase tracking-wider leading-none">{label}</p>
                     <p className="text-sm font-bold uppercase text-kronos-accent leading-tight">{getState(data)}</p>
-                    <p className="text-xs text-kronos-dim font-mono">{timeRemaining(data.expiry)}</p>
+                    <p className="text-xs text-kronos-dim font-mono">{timeRemaining(data.expiry, t)}</p>
                   </div>
               )}
               </div>
@@ -1495,7 +1495,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 mt-1">
                       <span className="text-[12px] text-kronos-dim font-mono">
-                        {timeRemaining(currentArby.ts + 3600000)}
+                        {timeRemaining(currentArby.ts + 3600000, t)}
                       </span>
                       <GradeBadge grade={currentArby.grade} />
                     </div>
@@ -1583,7 +1583,7 @@ export default function Dashboard() {
                       <span className="text-[10px] text-kronos-dim font-bold uppercase tracking-wider">
                         {left}/{deal.total}{isSoldOut && <span className="text-red-500 font-black ml-1">({t('ui.dashboard.sold_out')})</span>}
                       </span>
-                      <span className="text-[10px] text-kronos-dim font-mono uppercase">{timeRemaining(deal.expiry)}{t('ui.dashboard.darvo_left')}</span>
+                      <span className="text-[10px] text-kronos-dim font-mono uppercase">{timeRemaining(deal.expiry, t)}{t('ui.dashboard.darvo_left')}</span>
                     </div>
                   </div>
                 </div>
@@ -1653,7 +1653,7 @@ export default function Dashboard() {
                   </div>
               )}
               </div>
-              <p className="text-xs text-kronos-dim mt-2 text-right">{timeRemaining(worldstate.sortie.expiry)}</p>
+              <p className="text-xs text-kronos-dim mt-2 text-right">{timeRemaining(worldstate.sortie.expiry, t)}</p>
             </Card>
           }
 
@@ -1696,7 +1696,7 @@ export default function Dashboard() {
                   </div>
                 </div>
             }
-              <p className="text-xs text-kronos-dim mt-2 text-right">{timeRemaining(worldstate.archonHunt.expiry)}</p>
+              <p className="text-xs text-kronos-dim mt-2 text-right">{timeRemaining(worldstate.archonHunt.expiry, t)}</p>
             </Card>
           }
 
@@ -1760,7 +1760,7 @@ export default function Dashboard() {
                       <span className="text-xs font-bold">{f.tier} - {f.missionType}</span>
                       <span className="text-[10px] text-kronos-dim leading-none mt-0.5">{f.node}</span>
                     </div>
-                    <span className="text-xs text-kronos-dim font-mono">{timeRemaining(f.expiry)}</span>
+                    <span className="text-xs text-kronos-dim font-mono">{timeRemaining(f.expiry, t)}</span>
                   </div>
               )}
               </div>
@@ -1863,7 +1863,7 @@ export default function Dashboard() {
 
                 <p className="font-bold leading-tight">{item.message}</p>
                 }
-                    <p className="text-[10px] text-kronos-dim mt-0.5 font-mono">{timeSince(item.date)}</p>
+                    <p className="text-[10px] text-kronos-dim mt-0.5 font-mono">{timeSince(item.date, t)}</p>
                   </div>
               )}
               </div>
