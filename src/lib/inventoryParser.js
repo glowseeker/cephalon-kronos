@@ -1717,10 +1717,15 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
     if (!un || un.includes('Randomized') || un.includes('RandomMod')) return;
 
     // Skip mods that were removed from the game but still sit in inventories
+    // or are otherwise obsolete (no longer obtainable / no effect). These are
+    // matched on their unique_name so the skip is locale-independent.
     const REMOVED_MOD = new Set([
       'Swift Deth', 'Tn Cross Attack', 'Boom Stick', 'Warrior',
     ]);
     if (REMOVED_MOD.has(resolveName(un, dict, locale, EA, EM) || nameFromPath(un))) return;
+    // Scan Aquatic Lifeforms (/LocateCreaturesMod) was removed from the game
+    // (replaced by the Oculara scanner). Hide it entirely regardless of locale.
+    if (un.includes('/LocateCreaturesMod')) return;
     const isArcane = (un.includes('CosmeticEnhancers') && !un.includes('CosmeticEnhancers/Peculiars')) || un.includes('/Arcane/') || un.toLowerCase().includes('arcane');
     if (isArcane) {
       const arcEntry = EA[un]
