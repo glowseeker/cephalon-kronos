@@ -44,11 +44,11 @@
   },
   "eras": {
     "Lith": "Lith",
-    "Meso": "Méso",
-    "Neo": "Néo",
+    "Meso": "Meso",
+    "Neo": "Neo",
     "Axi": "Axi",
-    "Requiem": "Requiem",
-    "Omnia": "Omnia"
+    "Requiem": "Réquiem",
+    "Omnia": "Ômnica"
   },
   "peely": {
     "/Lotus/Upgrades/Stickers/DropSpecialItemChanceOnWeakpointKillSticker": {

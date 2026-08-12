@@ -312,7 +312,7 @@ export default function Relics() {
               {Object.entries(grouped).sort(([a], [b]) => ERA_ORDER.indexOf(a) - ERA_ORDER.indexOf(b)).map(([era, eraRelics]) =>
             <div key={era} className="space-y-4">
                   <h3 className="font-black text-sm uppercase tracking-[0.2em] text-kronos-accent border-b border-kronos-accent/20 pb-1 ml-1">
-                    {ERA_ORDER.includes(era) ? t('relics.era_label', { era }) : era}
+                    {ERA_ORDER.includes(era) ? t('eras.' + era) : era}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
                     {eraRelics.map((item, idx) => {

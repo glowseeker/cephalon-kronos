@@ -43,12 +43,12 @@
     "Ability Strength": "能力強度"
   },
   "eras": {
-    "Lith": "利特",
-    "Meso": "梅索",
-    "Neo": "神",
-    "Axi": "阿克西",
-    "Requiem": "Requiem",
-    "Omnia": "Omnia"
+    "Lith": "古紀",
+    "Meso": "前紀",
+    "Neo": "中紀",
+    "Axi": "後紀",
+    "Requiem": "鎮魂",
+    "Omnia": "全紀"
   },
   "peely": {
     "/Lotus/Upgrades/Stickers/DropSpecialItemChanceOnWeakpointKillSticker": {

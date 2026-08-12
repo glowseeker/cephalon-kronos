@@ -67,7 +67,10 @@ export default function RivenCard({ riven, framesPath, iconsPath, width = 180, e
 
   const statsText = riven.stats?.map((s) => {
     const sign = s.positive ? '+' : '-';
-    const pct = s.isPercent ? '%' : '';
+    // s.value may already include a trailing "%" for OCR-parsed stats
+    // (rivenOcrI18n captures "+139.4%" as the value). Avoid double-rendering
+    // the unit as "+139.4% %" in that case.
+    const pct = s.isPercent && !/\s*%\s*$/.test(s.value) ? '%' : '';
     const val = s.positive ? s.value : s.value.replace(/^-/, '');
     return `${sign}${val}${pct} ${s.tag}`;
   }).join('\n') || '';

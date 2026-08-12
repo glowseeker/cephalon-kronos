@@ -43,10 +43,10 @@
     "Ability Strength": "ความแข็งของทักษะ"
   },
   "eras": {
-    "Lith": "ลิท",
-    "Meso": "เมโซ",
-    "Neo": "เนโอ",
-    "Axi": "แอกซี",
+    "Lith": "Lith",
+    "Meso": "Meso",
+    "Neo": "Neo",
+    "Axi": "Axi",
     "Requiem": "Requiem",
     "Omnia": "Omnia"
   },
