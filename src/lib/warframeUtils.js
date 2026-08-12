@@ -225,6 +225,20 @@ export function resolveNode(node, dict, ERg, locale = 'en') {
   // Sortie boss / modifier keys (SORTIE_BOSS_*, SORTIE_MODIFIER_*) are not in
   // the language dicts  -  resolve from the per-locale DE manifest table.
   const leaf = node.split('/').at(-1);
+  // Archon Hunt bosses (SORTIE_BOSS_BOREAL, etc.) have localized Narmer names
+  // in the dict at /Lotus/Language/Narmer/Archon{Leaf}. Prefer that over the
+  // English sortie table so e.g. zh renders 执刑官诡文枭主 instead of ARCHON BOREAL.
+  if (leaf.startsWith('SORTIE_BOSS_')) {
+    // worldstate gives the upper-case leaf SORTIE_BOSS_BOREAL; the dict
+    // Narmer key uses mixed case (ArchonBoreal), so title-case the tail.
+    const archonLeaf = leaf.replace(/^SORTIE_BOSS_ARCHON_/, '').replace(/^SORTIE_BOSS_/, '');
+    const archonName = archonLeaf.charAt(0).toUpperCase() + archonLeaf.slice(1).toLowerCase();
+    const archonKey = '/Lotus/Language/Narmer/Archon' + archonName;
+    const archonVal = dict[archonKey] || dict['/' + archonKey];
+    if (archonVal && typeof archonVal === 'string' && !archonVal.startsWith('/Lotus/')) {
+      return clean(archonVal);
+    }
+  }
   if (leaf.startsWith('SORTIE_')) {
     const translated = resolveSortieKey(leaf, locale);
     if (translated) return translated;
