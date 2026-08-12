@@ -1064,6 +1064,18 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
     const avMap = toMap(exports.ExportAvionics, 'ExportAvionics');
     for (const [un, entry] of Object.entries(avMap)) {
       if (!EM[un]) EM[un] = entry;
+      else {
+        // Railjack mods live in ExportAvionics but WI_Upgrades ships them with a
+        // pre-resolved English literal name (e.g. "Artillery Cheap Shot"). The
+        // Avionics entry carries the canonical /Lotus/... lockey, which is what
+        // resolves to the localized name via dict - so restore it whenever the
+        // existing name is a literal rather than a lockey.
+        const avName = entry?.name;
+        if (typeof avName === 'string' && avName.startsWith('/Lotus/') && EM[un].name && !EM[un].name.startsWith('/Lotus/')) {
+          EM[un] = { ...EM[un] };
+          EM[un].name = avName;
+        }
+      }
     }
   }
   // If a patched ExportUpgrades file is available (with levelStats, modSet), merge its entries

@@ -827,6 +827,24 @@ export function resolveItemName(path, dict, uniqueNameToName, locale = 'en') {
         resolved = clean(aliasVal);
       }
     }
+    // Focus lenses: uniqueName leaves like AttackLensGreater / WardLensOstron /
+    // PowerLensLua / AttackLens map to their /Lotus/Language/{Items,Equipment}/*/LensName
+    // dict keys so DE's localized lens names resolve (e.g. zh Greater Unairu Lens
+    // -> 高级 Unairu 晶体) instead of falling back to the English wfcd literal.
+    if (!resolved) {
+      const lensM = leaf.match(/^(Attack|Defense|Power|Tactic|Ward)Lens(?:Greater|Ostron|Lua)?$/);
+      if (lensM) {
+        const school = lensM[1];
+        const variant = leaf.slice(school.length + 4); // '' | 'Greater' | 'Ostron' | 'Lua'
+        const prefix = variant === 'Lua' ? '/Lotus/Language/Equipment/Lua' : '/Lotus/Language/Items/';
+        const baseName = variant === 'Ostron' ? 'Ostron' : variant === 'Greater' ? 'Greater' : '';
+        const lensKey = `${prefix}${baseName}${school}LensName`;
+        const lensVal = dict[lensKey] || dict['/' + lensKey];
+        if (lensVal && typeof lensVal === 'string' && !lensVal.startsWith('/Lotus/')) {
+          resolved = clean(lensVal);
+        }
+      }
+    }
   }
   if (!resolved && englishFallback) resolved = englishFallback;
 
