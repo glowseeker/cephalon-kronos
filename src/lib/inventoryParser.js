@@ -1116,6 +1116,14 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
       }
     }
   }
+  // Purge mods removed from the game (e.g. Scan Aquatic Lifeforms /LocateCreaturesMod, which was
+  // replaced by the Oculara scanner) from the master upgrade catalog so they never surface in
+  // owned inventory, the mod collection, or autocomplete - across all locales.
+  for (const un of Object.keys(EM)) {
+    if (un.includes('/LocateCreaturesMod')) {
+      delete EM[un];
+    }
+  }
   const EA = useWI
     ? mergeWithOrig(exports.WI_Arcanes, 'ExportArcanes')
     : toMap(exports.ExportArcanes, 'ExportArcanes');
