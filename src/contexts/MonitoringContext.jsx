@@ -528,7 +528,17 @@ export function MonitoringProvider({ children }) {
         ])
 
         i18nRef.current = localeRes.status === 'fulfilled' ? localeRes.value : null
-        const exports = exportsRes.status === 'fulfilled' ? exportsRes.value : null
+        const rawExports = exportsRes.status === 'fulfilled' ? exportsRes.value : null
+        // load_all_exports now returns Vec<(String, String)> (key + raw JSON text)
+        // to avoid the 34MB serde_json::Value re-serialization bottleneck.
+        // Parse each file's JSON in JS (WebKit JSON.parse is faster than debug Rust).
+        const exports = rawExports
+          ? rawExports.reduce((acc, [key, text]) => {
+              try { acc[key] = JSON.parse(text) } catch { acc[key] = {} }
+              return acc
+            }, {})
+          : null
+
         const spiText = spiRes.status === 'fulfilled' ? spiRes.value : null
         const arbText = arbRes.status === 'fulfilled' ? arbRes.value : null
         // Retired in v0.8: ExportUpgrades_fixed.json patched file - the DE

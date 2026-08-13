@@ -102,10 +102,12 @@ fn init_pricer_inner() -> Option<RivenPricer> {
     eprintln!("[PRICER] dir exists: {}", dir.exists());
     eprintln!("[PRICER] onnx_path: {:?}", onnx_path);
 
+    let onnx_t0 = std::time::Instant::now();
     let raw = match tract_onnx::onnx().model_for_path(&onnx_path) {
         Ok(m) => m,
         Err(e) => { eprintln!("[PRICER] model_for_path failed: {e:?}"); return None; }
     };
+    eprintln!("[PRICER] ONNX model loaded in {:?} ms", onnx_t0.elapsed().as_millis());
 
     let with_shapes = raw
         .with_input_fact(0, InferenceFact::dt_shape(i32::datum_type(), tvec![1, 1]))

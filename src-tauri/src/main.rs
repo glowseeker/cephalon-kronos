@@ -497,12 +497,6 @@ async fn load_txt_file(app_handle: tauri::AppHandle, name: String) -> Result<Str
     Ok(String::new())
 }
 
-// --- Inventory Management ---
-//
-// Inventory is fetched by scanning Warframe process memory for the auth token
-// (memory_scan::scan_auth), then calling mobile.warframe.com via reqwest.
-// The result is cached at data/user/inventory.json.
-
 /// Load the previously saved inventory JSON and its file modification timestamp.
 /// Returns `None` if no inventory has been fetched yet (fresh install).
 /// Called by MonitoringContext on startup to restore the last known state.
@@ -579,11 +573,15 @@ async fn call_api_helper(_app_handle: tauri::AppHandle) -> Result<Value, String>
     Ok(value)
 }
 
-/// Load all JSON export files into a single JSON object keyed by file stem
-/// (e.g. `{ "ExportWeapons": [...], "ExportWarframes": [...], ... }`).
-/// Called by MonitoringContext once on startup; passed to inventoryParser.js.
+/// Read all JSON export files as raw text strings, keyed by file stem.
+///
+/// Returns `Vec<(String, String)>` (key + raw file contents) instead of parsed
+/// `Value` objects. This avoids the expensive `serde_json::to_string` re-
+/// serialization of a 34MB `Value::Object` tree on the Tauri main event loop
+/// (which took ~18s in debug builds). The JS side does a single `JSON.parse`
+/// per file in the WebKit engine, which is far faster than debug Rust serde_json.
 #[tauri::command]
-async fn load_all_exports(app_handle: tauri::AppHandle, locale: String) -> Result<Value, String> {
+async fn load_all_exports(app_handle: tauri::AppHandle, locale: String) -> Result<Vec<(String, String)>, String> {
     let export_dir = resolve_path("data/export");
 
     // Pre-resolve all paths (fast metadata ops, non-blocking)
@@ -601,23 +599,22 @@ async fn load_all_exports(app_handle: tauri::AppHandle, locale: String) -> Resul
         })
         .collect();
 
-    // Concurrent I/O via tokio blocking thread pool
+    // Concurrent I/O via tokio blocking thread pool - raw file read only (no parse)
     let handles: Vec<_> = entries.into_iter().map(|(key, path)| {
-        tokio::task::spawn_blocking(move || -> Result<(String, Value), String> {
-            let file = fs::File::open(&path).map_err(|e| e.to_string())?;
-            let json: Value = serde_json::from_reader(std::io::BufReader::new(file))
-                .map_err(|e| e.to_string())?;
-            Ok((key, json))
+        tokio::task::spawn_blocking(move || -> Result<(String, String), String> {
+            let bytes = fs::read(&path).map_err(|e| e.to_string())?;
+            let text = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+            Ok((key, text))
         })
     }).collect();
 
-    let mut result = serde_json::Map::new();
+    let mut result: Vec<(String, String)> = Vec::new();
     for handle in handles {
-        let (key, json) = handle.await.map_err(|e| e.to_string())??;
-        result.insert(key, json);
+        let (key, text) = handle.await.map_err(|e| e.to_string())??;
+        result.push((key, text));
     }
 
-    // Drop data files (warframe-drop-data) - loaded under their stem key
+    // Drop data files - read as raw text too
     let drop_entries: Vec<(String, PathBuf)> = DROPDATA_FILES.iter()
         .filter_map(|(file_name, _url)| {
             let path = export_dir.join(file_name);
@@ -627,17 +624,16 @@ async fn load_all_exports(app_handle: tauri::AppHandle, locale: String) -> Resul
         .collect();
 
     let drop_handles: Vec<_> = drop_entries.into_iter().map(|(key, path)| {
-        tokio::task::spawn_blocking(move || -> Result<(String, Value), String> {
-            let file = fs::File::open(&path).map_err(|e| e.to_string())?;
-            let json: Value = serde_json::from_reader(std::io::BufReader::new(file))
-                .map_err(|e| e.to_string())?;
-            Ok((key, json))
+        tokio::task::spawn_blocking(move || -> Result<(String, String), String> {
+            let bytes = fs::read(&path).map_err(|e| e.to_string())?;
+            let text = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+            Ok((key, text))
         })
     }).collect();
 
     for handle in drop_handles {
-        let (key, json) = handle.await.map_err(|e| e.to_string())??;
-        result.insert(key, json);
+        let (key, text) = handle.await.map_err(|e| e.to_string())??;
+        result.push((key, text));
     }
 
     // Locale-specific ExportUpgrades from DE public manifest (localized levelStats).
@@ -645,17 +641,13 @@ async fn load_all_exports(app_handle: tauri::AppHandle, locale: String) -> Resul
     let locale_file = format!("ExportUpgrades_{}.json", locale);
     let locale_path = export_dir.join(&locale_file);
     if locale_path.exists() {
-        let locale_handle = tokio::task::spawn_blocking(move || -> Result<(String, Value), String> {
-            let file = fs::File::open(&locale_path).map_err(|e| e.to_string())?;
-            let json: Value = serde_json::from_reader(std::io::BufReader::new(file))
-                .map_err(|e| e.to_string())?;
-            Ok(("ExportUpgradesLocalized".to_string(), json))
-        });
-        let (lk, lv) = locale_handle.await.map_err(|e| e.to_string())??;
-        result.insert(lk, lv);
+        let bytes = fs::read(&locale_path).map_err(|e| e.to_string())?;
+        let text = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+        result.push(("ExportUpgradesLocalized".to_string(), text));
     }
 
-    Ok(Value::Object(result))
+    eprintln!("[STARTUP-TIMING] load_all_exports: {} files", result.len());
+    Ok(result)
 }
 
 // --- Notes Management ---
@@ -3305,8 +3297,13 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
                 }
                 // Eager-init the pricer so it's ready when the user first
                 // navigates to the Rivens tab or opens a riven overlay.
+                // init_pricer_inner() does ~15-20s of synchronous ONNX model
+                // compilation - run it on a blocking worker thread, NOT on the
+                // Tauri async runtime main thread (which would freeze rendering).
                 std::thread::sleep(std::time::Duration::from_millis(200));
-                crate::pricer::ensure_loaded();
+                tauri::async_runtime::spawn_blocking(|| {
+                    crate::pricer::ensure_loaded();
+                });
             });
             // Extract card images in the background (was synchronous before
             // app.run(), which froze the window during startup).
