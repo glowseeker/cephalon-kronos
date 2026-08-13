@@ -492,8 +492,10 @@ export function MonitoringProvider({ children }) {
     if (!ed) return
     // Yield frame before heavy parseInventory to prevent UI freeze
     setTimeout(() => {
+      const parseInvT0 = performance.now()
       try {
         const parsed = parseInventory(raw, ed, dict, localeRef.current, i18nRef.current)
+        invoke('log_terminal', { message: `[STARTUP] parseInventory took ${(performance.now() - parseInvT0).toFixed(0)}ms` }).catch(() => {})
         setInventoryData(parsed || null)
       } catch (err) {
         setInventoryData(null)
