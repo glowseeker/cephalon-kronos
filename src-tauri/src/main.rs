@@ -3169,7 +3169,7 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
         }
     }
     // Clear old debug log on startup so it doesn't grow infinitely
-    let log_path = resolve_path("data/user/overlay_debug.log");
+    let log_path = resolve_path("data/user/debug.log");
     let _ = std::fs::write(&log_path, "");
 
     // Load settings at startup to get saved notif_sound and notif_position
