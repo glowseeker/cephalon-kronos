@@ -200,7 +200,7 @@ export default function RivenOverlay() {
     setOcrLoading(true);
     setParsed(null);
     setEstimatedPrice(null);
-    invoke('ocr_riven_card', { position: pos }).
+    invoke('ocr_riven_card', { position: pos, game_locale: gameLocale }).
     then((res) => {
       if (aliveRef.current) {
         const p = parseRivenOcr(res.text, garbageRe, gameLocale);
@@ -355,7 +355,7 @@ export default function RivenOverlay() {
                   {parsed.stats.map((s, i) =>
               <div key={i} className="flex justify-between items-center px-2.5 py-1.5 rounded bg-white/[0.03]">
                       <span className="text-[12px] text-zinc-200 font-medium truncate pr-2">
-                        {displayStatName(s.name, statAliases)}
+                        {displayStatName(s.name, statAliases, gameI18n?.rivenStats)}
                       </span>
                       <span className={`text-[13px] font-black whitespace-nowrap ${posClass(s.value)}`}>
                         {fmtVal(s.value)}

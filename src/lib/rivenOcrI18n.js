@@ -815,9 +815,14 @@ export function cleanStatName(raw, aliases) {
     .trim().toLowerCase().replace(/\s+/g, '_')
 }
 
-/// Returns a human-readable display name for a stat: localized OCR text is
-/// resolved back to the English stat name when possible.
-export function displayStatName(raw, aliases) {
+/// Returns a human-readable display name for a stat.
+/// `aliases` maps folded localized variants -> pricer value (from buildStatAliases).
+/// `rivenStats` is the locale's English-key -> localized-name table (optional).
+/// When the OCR text resolves to a known stat, the **localized** name is returned
+/// (falling back to the English key only if the locale table lacks the entry, e.g.
+/// a proper noun or a stat DE stopped shipping). Unrecognized OCR text is returned
+/// cleaned rather than silently empty, so the overlay can flag it instead of hiding it.
+export function displayStatName(raw, aliases, rivenStats) {
   if (!raw) return ''
   const trimmed = raw.trim()
   if (aliases && aliases.size) {
@@ -825,31 +830,48 @@ export function displayStatName(raw, aliases) {
     for (const variant of [folded, expanded, tight]) {
       const hit = aliases.get(variant)
       if (hit) {
-        // pricer value → English display name
+        // pricer value -> English stat key
         for (const [enKey, pricerVal] of Object.entries(STAT_TO_PRICER)) {
-          if (pricerVal === hit) return enKey
+          if (pricerVal === hit) {
+            // Prefer the locale's localized name; fall back to the EN key only when
+            // the locale table does not ship a translation for this stat.
+            if (rivenStats && typeof rivenStats[enKey] === 'string' && rivenStats[enKey]) {
+              return rivenStats[enKey]
+            }
+            return enKey
+          }
         }
         return hit
       }
     }
   }
-  // Try exact case-insensitive match and return the properly-cased key
+  // Try exact case-insensitive match
   for (const key of Object.keys(STAT_TO_PRICER)) {
-    if (trimmed.toLowerCase() === key.toLowerCase()) return key
+    if (trimmed.toLowerCase() === key.toLowerCase()) return resolveDisplay(key, rivenStats)
   }
   // Try with leading vowel stripped (OCR artifact like "AHeat")
-  const deNoised = trimmed.replace(/^[aAeEiIoOuU]+/, '')
+  const deNoised = trimmed.replace(/^[aAeEiIoUu]+/, '')
   for (const key of Object.keys(STAT_TO_PRICER)) {
-    if (deNoised.toLowerCase() === key.toLowerCase()) return key
+    if (deNoised.toLowerCase() === key.toLowerCase()) return resolveDisplay(key, rivenStats)
   }
   // Try substring match
   for (const key of Object.keys(STAT_TO_PRICER)) {
     const kl = key.toLowerCase()
     const rl = trimmed.toLowerCase()
-    if (rl.includes(kl) || kl.includes(rl)) return key
+    if (rl.includes(kl) || kl.includes(rl)) return resolveDisplay(key, rivenStats)
   }
-  // Fallback: just clean up the raw OCR text
-  return trimmed.replace(/^[aAeEiIoOuU]+/, '')
+  // Fallback: just clean up the raw OCR text (surface it so it can be flagged,
+  // rather than silently dropping the stat name).
+  return trimmed.replace(/^[aAeEiIoUu]+/, '')
+}
+
+/// Return the localized stat name from the locale's `rivenStats` table when
+/// available, falling back to the English key only when no translation ships.
+function resolveDisplay(enKey, rivenStats) {
+  if (rivenStats && typeof rivenStats[enKey] === 'string' && rivenStats[enKey]) {
+    return rivenStats[enKey]
+  }
+  return enKey
 }
 
 /**

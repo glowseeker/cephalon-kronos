@@ -44,7 +44,13 @@ impl RivenCardPosition {
     }
 }
 
-fn ocr_card_image(app: &AppHandle, full: DynamicImage, position: RivenCardPosition, save_crop: bool) -> Result<RivenOcrResult, String> {
+fn ocr_card_image(
+    app: &AppHandle,
+    full: DynamicImage,
+    position: RivenCardPosition,
+    save_crop: bool,
+    game_locale: &str,
+) -> Result<RivenOcrResult, String> {
     let sw = full.width() as f64;
     let sh = full.height() as f64;
     let sx = sw / 1920.0;
@@ -118,7 +124,7 @@ fn ocr_card_image(app: &AppHandle, full: DynamicImage, position: RivenCardPositi
     let text_region = DynamicImage::ImageLuma8(binary)
         .crop_imm(0, text_start, w, h - text_start);
 
-    let results = crate::ocr_engine::recognize_riven(&text_region);
+    let results = crate::ocr_engine::recognize_riven(&text_region, game_locale);
     crate::logger::log_to_disk(app, &format!("[RIVEN OCR] Raw lines: {:?}", results));
 
     let mut merged: Vec<String> = Vec::new();
@@ -139,18 +145,28 @@ fn ocr_card_image(app: &AppHandle, full: DynamicImage, position: RivenCardPositi
 }
 
 #[tauri::command]
-pub fn ocr_riven_card(app: AppHandle, position: RivenCardPosition) -> Result<RivenOcrResult, String> {
+pub fn ocr_riven_card(
+    app: AppHandle,
+    position: RivenCardPosition,
+    game_locale: String,
+) -> Result<RivenOcrResult, String> {
     let Some(monitor) = get_target_monitor(&app) else {
         return Err("No target monitor".to_string());
     };
     let image = capture_monitor_image(&app, &monitor)?;
-    ocr_card_image(&app, DynamicImage::ImageRgba8(image), position, false)
+    ocr_card_image(&app, DynamicImage::ImageRgba8(image), position, false, &game_locale)
 }
 
 #[tauri::command]
-pub fn ocr_riven_card_from_file(app: AppHandle, path: String, position: RivenCardPosition, save_crop: Option<bool>) -> Result<RivenOcrResult, String> {
+pub fn ocr_riven_card_from_file(
+    app: AppHandle,
+    path: String,
+    position: RivenCardPosition,
+    save_crop: Option<bool>,
+    game_locale: String,
+) -> Result<RivenOcrResult, String> {
     let img = image::open(&path).map_err(|e| format!("Failed to load image: {}", e))?;
-    ocr_card_image(&app, img, position, save_crop.unwrap_or(false))
+    ocr_card_image(&app, img, position, save_crop.unwrap_or(false), &game_locale)
 }
 
 /// Stores the user's custom UI Scale percentage (e.g. 100 for 1.0, 80 for 0.8)
@@ -1063,7 +1079,12 @@ pub fn detect_slot_count_from_icons(app: AppHandle, manual: bool) {
 }
 
 fn run_ocr_internal(app: AppHandle, squad_size: usize, is_debug: bool, captured_image: Option<DynamicImage>) {
-    run_ocr_with_retry(app, squad_size, is_debug, captured_image, 0);
+    let game_locale = crate::load_settings_sync()
+        .get("gameLocale")
+        .and_then(|v| v.as_str())
+        .unwrap_or("en")
+        .to_string();
+    run_ocr_with_retry(app, squad_size, is_debug, captured_image, 0, game_locale);
 }
 
 /// Advanced preprocessing using contrast normalization + edge enhancement.
@@ -1143,7 +1164,7 @@ fn apply_ocr_preprocessing(slot_crop: &DynamicImage, _debug_slot: Option<usize>)
     binary
 }
 
-fn run_ocr_with_retry(app: AppHandle, squad_size: usize, is_debug: bool, captured_image: Option<DynamicImage>, attempt: u8) {
+fn run_ocr_with_retry(app: AppHandle, squad_size: usize, is_debug: bool, captured_image: Option<DynamicImage>, attempt: u8, game_locale: String) {
     let app_c = app.clone();
     std::thread::spawn(move || {
         let start_time = std::time::Instant::now();
@@ -1202,6 +1223,7 @@ fn run_ocr_with_retry(app: AppHandle, squad_size: usize, is_debug: bool, capture
             
             let app_for_thread = app_c.clone();
             let slot_idx = i;
+            let locale_for_slot = game_locale.clone();
 
             handles.push(std::thread::spawn(move || {
                 // Requiem image slots are appended after the regular OCR text slots.
@@ -1228,7 +1250,7 @@ fn run_ocr_with_retry(app: AppHandle, squad_size: usize, is_debug: bool, capture
 
                 let mut combined_lines = Vec::new();
                 for (_l_idx, line_img) in [(0usize, line1), (1usize, line2)] {
-                    let text = crate::ocr_engine::recognize(&line_img);
+                    let text = crate::ocr_engine::recognize(&line_img, &locale_for_slot);
                     if !text.is_empty() {
                         combined_lines.push(text);
                     }
@@ -1306,7 +1328,7 @@ fn clean_ocr_output(raw: &str) -> String {
         if found_loading && attempt < 1 {
             ocr_log!(&app_c, "[OCR] [Attempt {}] LOADING detected, retrying in 500ms...", attempt + 1);
             std::thread::sleep(std::time::Duration::from_millis(500));
-            run_ocr_with_retry(app_c, squad_size, is_debug, captured_image, attempt + 1);
+            run_ocr_with_retry(app_c, squad_size, is_debug, captured_image, attempt + 1, game_locale.clone());
             return;
         }
 

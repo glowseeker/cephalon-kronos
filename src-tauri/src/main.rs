@@ -442,6 +442,38 @@ async fn check_ocr_models() -> Result<String, String> {
         })?;
         downloaded += 1;
     }
+    // Download the per-language PP-OCRv5 recognition models needed for non-Latin
+    // scripts (Korean, Cyrillic, Thai, diacritic Latin). The DET model is shared
+    // by all locales; only the REC model + charset differ. `locale_model_files`
+    // (in ocr_engine.rs) returns the matching (rec_model, keys) per locale, so the
+    // download set stays in sync with what the locale-keyed engine actually loads.
+    // Resolve the full set of distinct per-language model pairs once.
+    let lang_pairs: Vec<(&'static str, &'static str)> = [
+        "ko", "uk", "ru", "th", "de", "fr", "es", "pt", "it", "tr", "pl",
+    ]
+        .iter()
+        .map(|l| crate::ocr_engine::locale_model_files(l))
+        .collect();
+    for (rec_name, keys_name) in lang_pairs {
+        let rec_path = models_dir.join(rec_name);
+        let keys_path = models_dir.join(keys_name);
+        if !rec_path.exists() {
+            let url = format!("{}/{}", base, rec_name);
+            if let Err(e) = download_file(&client, &url, &rec_path).await {
+                eprintln!("[OCR MODELS] Failed to download {}: {}", rec_name, e);
+            } else {
+                downloaded += 1;
+            }
+        }
+        if !keys_path.exists() {
+            let url = format!("{}/{}", base, keys_name);
+            if let Err(e) = download_file(&client, &url, &keys_path).await {
+                eprintln!("[OCR MODELS] Failed to download {}: {}", keys_name, e);
+            } else {
+                downloaded += 1;
+            }
+        }
+    }
     Ok(format!("Downloaded {} OCR model files", downloaded))
 }
 
@@ -2366,7 +2398,12 @@ async fn dispatch_hotkey_action(app: AppHandle, action: &str) {
                 _                  => crate::ocr::RivenCardPosition::Linked,
             };
             let pos_name = format!("{:?}", position);
-            match crate::ocr::ocr_riven_card(app.clone(), position) {
+            let game_locale = crate::load_settings_sync()
+                .get("gameLocale")
+                .and_then(|v| v.as_str())
+                .unwrap_or("en")
+                .to_string();
+            match crate::ocr::ocr_riven_card(app.clone(), position, game_locale) {
                 Ok(result) => {
                     let debug_path = format!("data/user/riven_ocr_{}.png", pos_name);
                     let msg = if result.text.is_empty() {
