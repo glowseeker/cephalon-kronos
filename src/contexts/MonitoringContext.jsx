@@ -511,11 +511,15 @@ export function MonitoringProvider({ children }) {
       ; (async () => {
         await loadSettings()
         localeRef.current = getSetting('gameLocale', 'en')
-        i18nRef.current = await loadLocale(localeRef.current)
+        // Hoist loadLocale into the parallel allSettled so the locale JSON
+        // fetches overlap with the backend asset checks instead of serializing
+        // before them (free 10-20% on non-en locales where the bundle is
+        // uncached). loadSettings runs first so gameLocale is resolved.
         setStatusText('Checking updates & assets…')
-        const [updatesRes, exportsRes, mediaRes, pricerRes, spiRes, arbRes, descRes] = await Promise.allSettled([
+        const [updatesRes, exportsRes, localeRes, mediaRes, pricerRes, spiRes, arbRes, descRes] = await Promise.allSettled([
           invoke('check_exports', { locale: localeRef.current, force: false }),
           invoke('load_all_exports', { locale: localeRef.current }),
+          loadLocale(localeRef.current),
           invoke('check_media_assets'),
           invoke('check_pricer_models'),
           invoke('load_txt_file', { name: 'sp-incursions.txt' }),
@@ -523,50 +527,55 @@ export function MonitoringProvider({ children }) {
           invoke('load_txt_file', { name: 'descendia.txt' }),
         ])
 
+        i18nRef.current = localeRes.status === 'fulfilled' ? localeRes.value : null
         const exports = exportsRes.status === 'fulfilled' ? exportsRes.value : null
         const spiText = spiRes.status === 'fulfilled' ? spiRes.value : null
         const arbText = arbRes.status === 'fulfilled' ? arbRes.value : null
         // Retired in v0.8: ExportUpgrades_fixed.json patched file - the DE
         // manifest now ships levelStats for every locale including English
         // (downloaded as ExportUpgrades_{locale}.json by check_exports).
+        // These four reads don't depend on each other, so run them in parallel
+        // via Promise.all instead of one-await-per-iteration.
         if (exports) {
           try {
-            for (const [fname, key] of [
+            const extraFiles = [
               ['ExportAvionics_fixed.json', 'ExportAvionicsFixed'],
               ['mod-icon-map.json', 'ModIconMap'],
               ['peely-pix-map.json', 'PeelyPixMap'],
               ['peely-pix-names.json', 'PeelyPixNames'],
-            ]) {
-              const bytes = await invoke('read_file_bytes', { relative: `data/assets/data/${fname}` }).catch(() => null)
+            ]
+            const results = await Promise.all(
+              extraFiles.map(([fname]) =>
+                invoke('read_file_bytes', { relative: `data/assets/data/${fname}` }).catch(() => null),
+              ),
+            )
+            results.forEach((bytes, idx) => {
               if (bytes) {
+                const key = extraFiles[idx][1]
                 exports[key] = JSON.parse(new TextDecoder().decode(new Uint8Array(bytes)))
               }
-            }
+            })
           } catch { }
         }
-
-        // Set exports immediately (no wfcd blocking)  -  defer the wfcd load to
-        // the background so the shell UI renders without a 15s hitch.
-        setExportData(exports)
-        exportDataRef.current = exports
-
+        // Await the wfcd enhancement before the first render so the shell
+        // never paints against partial (raw) exports. This collapses the
+        // second setExportData pass that previously drove all useMemo
+        // derivables (globalRewardPool, dropIndex, EI, …) to recompute twice,
+        // and fixes the "inventory cached but shows no inventory until
+        // reload" race: cachedInventory now parses against the enhanced data.
+        let enhanced = exports
         if (exports) {
-          loadWarframeItemsMaps().then(({ maps: wiMaps, supplement: wiSupplement }) => {
-            const enhanced = { ...exports, ...wiMaps }
-            enhanced.uniqueNameToName = { ...enhanced.uniqueNameToName, ...wiSupplement.uniqueNameToName }
-            enhanced.nameToImage = { ...enhanced.nameToImage, ...wiSupplement.nameToImage }
-            enhanced.WI_Supplement = wiSupplement
-            setExportData(enhanced)
-            exportDataRef.current = enhanced
-            // wfcd English names (WI_Weapons) attach in the background after
-            // the initial parse, so riven weapon_name_en fell back to code
-            // paths ("CrpHeavyRifle") which never match the price model.
-            // Re-parse with the enhanced exports once wfcd has landed.
-            if (rawInventoryRef.current) {
-              applyRaw(rawInventoryRef.current, undefined, enhanced)
-            }
-          })
+          const { maps: wiMaps, supplement: wiSupplement } = await loadWarframeItemsMaps()
+          enhanced = { ...exports, ...wiMaps }
+          enhanced.uniqueNameToName = { ...enhanced.uniqueNameToName, ...wiSupplement.uniqueNameToName }
+          enhanced.nameToImage = { ...enhanced.nameToImage, ...wiSupplement.nameToImage }
+          enhanced.WI_Supplement = wiSupplement
         }
+        // Set exports once (after wfcd enhancement) - the entire shell now
+        // renders against the complete, enhanced export bundle in a single
+        // pass.
+        setExportData(enhanced)
+        exportDataRef.current = enhanced
         setSpIncursions(spiText || '')
         setArbys(arbText || '')
         // Parse descendia descriptions

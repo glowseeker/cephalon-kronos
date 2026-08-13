@@ -131,24 +131,34 @@ export default function MirroredMonitoringProvider({ children }) {
       .then(async result => {
         const exports = result.exports ? { ...result.exports } : null
 
-        // Apply patched export files (same as main MonitoringContext)
+        // Apply patched export files in parallel (same as main MonitoringContext)
         if (exports) {
-          for (const [fname, key] of PATCH_FILES) {
-            try {
-              const bytes = await invoke('read_file_bytes', { relative: `data/assets/data/${fname}` })
-              if (bytes) exports[key] = JSON.parse(new TextDecoder().decode(new Uint8Array(bytes)))
-            } catch { /* patch file not found, skip */ }
-          }
+          try {
+            const results = await Promise.all(
+              PATCH_FILES.map(([fname]) =>
+                invoke('read_file_bytes', { relative: `data/assets/data/${fname}` }).catch(() => null),
+              ),
+            )
+            results.forEach((bytes, idx) => {
+              if (bytes) {
+                const key = PATCH_FILES[idx][1]
+                exports[key] = JSON.parse(new TextDecoder().decode(new Uint8Array(bytes)))
+              }
+            })
+          } catch { /* patch file not found, skip */ }
         }
 
-        // Inject warframe-items pre-resolved data into exports (same as main MonitoringContext)
+        // Await wfcd enhancement BEFORE the first render so the shell never
+        // paints against raw (un-enhanced) exports. This fixes the latent
+        // ReferenceError (wiSupplement referenced out of scope at the old
+        // block) + the double setExportData pass (151 + 174) that caused the
+        // mirrored window's inventory display race.
         if (exports) {
+          const { maps: wiMaps, supplement: wiSupplement } = await loadWarframeItemsMaps()
           exports.uniqueNameToName = { ...(exports.uniqueNameToName || {}), ...wiSupplement.uniqueNameToName }
           exports.nameToImage = { ...(exports.nameToImage || {}), ...wiSupplement.nameToImage }
           exports.WI_Supplement = wiSupplement
         }
-
-        setExportData(exports)
 
         const [spiRes, arbRes, descRes] = await Promise.allSettled([
           invoke('load_txt_file', { name: 'sp-incursions.txt' }),
@@ -170,18 +180,9 @@ export default function MirroredMonitoringProvider({ children }) {
           setDescendiaDesc(descMap)
         }
 
-        // Set exports immediately (no wfcd blocking) - load wfcd in background
+        // Set exports once (after wfcd enhancement) — single render pass.
         setExportData(exports)
 
-        if (exports) {
-          loadWarframeItemsMaps().then(({ maps: wiMaps, supplement: wiSupplement }) => {
-            const enhanced = { ...exports, ...wiMaps }
-            enhanced.uniqueNameToName = { ...(enhanced.uniqueNameToName || {}), ...wiSupplement.uniqueNameToName }
-            enhanced.nameToImage = { ...(enhanced.nameToImage || {}), ...wiSupplement.nameToImage }
-            enhanced.WI_Supplement = wiSupplement
-            setExportData(enhanced)
-          })
-        }
         if (result.inventory) {
           hasCachedDataRef.current = true
           setRawInventory(result.inventory)
