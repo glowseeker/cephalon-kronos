@@ -947,8 +947,7 @@ export default function Inventory() {
               const isParentMastered = set.mastered;
 
               const partsMet = set.parts.filter((p) => (p.crafted ?? 0) + p.quantity >= (p.need ?? 1)).length;
-              const totalNeeded = set.parts.reduce((s, p) => s + (p.need ?? 1), 0);
-              const completion = Math.min(100, partsMet / totalNeeded * 100);
+              const completion = Math.min(100, partsMet / set.parts.length * 100);
               const isComplete = partsMet >= set.parts.length;
               const bpPart = set.parts.find((p) => p.isBlueprint);
               const bpCount = bpPart?.quantity ?? 0;
@@ -976,7 +975,7 @@ export default function Inventory() {
                               <p className="text-xl font-black text-kronos-text uppercase whitespace-normal leading-tight">{set.name}{t('inventory.set')}</p>
                               <div className="flex items-center gap-2 mt-2">
                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded inline-block ${isComplete ? 'bg-green-500/20 text-green-400' : 'bg-kronos-accent/20 text-kronos-accent'}`}>
-                                  {setsPossible > 0 ? `${setsPossible} Set${setsPossible > 1 ? 's' : ''}` : `${partsMet}/${totalNeeded} (${Math.round(completion)}%)`}
+                                  {setsPossible > 0 ? `${setsPossible} Set${setsPossible > 1 ? 's' : ''}` : `${partsMet}/${set.parts.length} (${Math.round(completion)}%)`}
                                 </span>
                               </div>
                             </div>
@@ -1002,7 +1001,7 @@ export default function Inventory() {
                       <div className="grid gap-px border-t border-white/5" style={{ gridTemplateColumns: `repeat(${Math.min(set.parts.length, 6)}, 1fr)` }}>
                             {set.parts.map((part, pi) => {
                           const need = part.need ?? 1;
-                          const met = part.crafted !== undefined ? part.crafted >= need : part.quantity >= need;
+                          const met = (part.crafted ?? 0) + (part.quantity ?? 0) >= need;
                           const isBlueprint = part.isBlueprint;
                           const partPrice = primePrices?.[part.unique_name] ?? 0;
                           const partNorm = part.unique_name ? part.unique_name.replace('/StoreItems/', '/') : '';
