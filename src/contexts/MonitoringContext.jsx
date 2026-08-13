@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, useMemo } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, convertFileSrc } from '@tauri-apps/api/core'
 import { parseInventory } from '../lib/inventoryParser'
 import { loadLocale } from '../lib/i18n'
 import { buildDropIndex } from '../lib/dropsParser'
@@ -520,26 +520,50 @@ export function MonitoringProvider({ children }) {
         setStatusText('Checking updates & assets…')
         const startupT0 = performance.now()
         const [updatesRes, exportsRes, localeRes, mediaRes, pricerRes, spiRes, arbRes, descRes] = await Promise.allSettled([
-          invoke('check_exports', { locale: localeRef.current, force: false }),
-          invoke('load_all_exports', { locale: localeRef.current }),
-          loadLocale(localeRef.current),
-          invoke('check_media_assets'),
-          invoke('check_pricer_models'),
-          invoke('load_txt_file', { name: 'sp-incursions.txt' }),
-          invoke('load_txt_file', { name: 'arbys.txt' }),
-          invoke('load_txt_file', { name: 'descendia.txt' }),
+          (async () => { const t = performance.now(); const r = await invoke('check_exports', { locale: localeRef.current, force: false }); invoke('log_terminal', { message: `[STARTUP] check_exports took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
+          (async () => { const t = performance.now(); const r = await invoke('load_all_exports_via_file', { locale: localeRef.current }); invoke('log_terminal', { message: `[STARTUP] load_all_exports took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
+          (async () => { const t = performance.now(); const r = await loadLocale(localeRef.current); invoke('log_terminal', { message: `[STARTUP] loadLocale took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
+          (async () => { const t = performance.now(); const r = await invoke('check_media_assets'); invoke('log_terminal', { message: `[STARTUP] check_media_assets took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
+          (async () => { const t = performance.now(); const r = await invoke('check_pricer_models'); invoke('log_terminal', { message: `[STARTUP] check_pricer_models took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
+          (async () => { const t = performance.now(); const r = await invoke('load_txt_file', { name: 'sp-incursions.txt' }); invoke('log_terminal', { message: `[STARTUP] load_txt_file sp-incursions took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
+          (async () => { const t = performance.now(); const r = await invoke('load_txt_file', { name: 'arbys.txt' }); invoke('log_terminal', { message: `[STARTUP] load_txt_file arbys took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
+          (async () => { const t = performance.now(); const r = await invoke('load_txt_file', { name: 'descendia.txt' }); invoke('log_terminal', { message: `[STARTUP] load_txt_file descendia took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
         ])
         invoke('log_terminal', { message: `[STARTUP] allSettled resolved in ${(performance.now() - startupT0).toFixed(0)}ms` }).catch(() => {})
         const parseT0 = performance.now()
         i18nRef.current = localeRes.status === 'fulfilled' ? localeRes.value : null
-        const rawExports = exportsRes.status === 'fulfilled' ? exportsRes.value : null
-        const exports = rawExports
-          ? rawExports.reduce((acc, [key, text]) => {
-              try { acc[key] = JSON.parse(text) } catch { acc[key] = {} }
-              return acc
-            }, {})
+        // load_all_exports_via_file returns a file path to exports_concat.json
+        // (a pre-serialized JSON array of [key, text] pairs). We fetch it via
+        // the Tauri asset protocol instead of passing ~34MB of JSON strings
+        // through IPC (which adds ~900ms overhead per round-trip).
+        const exportsFilePath = exportsRes.status === 'fulfilled' && exportsRes.value?.[0]
+          ? convertFileSrc(exportsRes.value[0])
           : null
-        invoke('log_terminal', { message: `[STARTUP] exports JSON.parsed in ${(performance.now() - parseT0).toFixed(0)}ms for ${rawExports?.length || 0} files` }).catch(() => {})
+        let exports = null
+        if (exportsFilePath) {
+          try {
+            const resp = await fetch(exportsFilePath)
+            const text = await resp.text()
+            // The file is \x00-delimited: key\x00text\x00key\x00text...
+            // No inner JSON escaping means the file is ~34MB, not ~84MB.
+            exports = {}
+            let pos = 0
+            while (pos < text.length) {
+              const keyEnd = text.indexOf('\x00', pos)
+              if (keyEnd === -1) break
+              const key = text.slice(pos, keyEnd)
+              const textEnd = text.indexOf('\x00', keyEnd + 1)
+              if (textEnd === -1) break
+              const raw = text.slice(keyEnd + 1, textEnd)
+              try { exports[key] = JSON.parse(raw) } catch { exports[key] = {} }
+              pos = textEnd + 1
+            }
+          } catch (e) {
+            console.error('[STARTUP] Failed to fetch merged exports:', e)
+            exports = null
+          }
+        }
+        invoke('log_terminal', { message: `[STARTUP] exports JSON.parsed in ${(performance.now() - parseT0).toFixed(0)}ms for ${exports ? Object.keys(exports).length + ' files' : 0}` }).catch(() => {})
 
         const spiText = spiRes.status === 'fulfilled' ? spiRes.value : null
         const arbText = arbRes.status === 'fulfilled' ? arbRes.value : null

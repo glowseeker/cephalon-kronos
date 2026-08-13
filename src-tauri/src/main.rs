@@ -278,6 +278,8 @@ fn decompress_lzma(bytes: &[u8]) -> Result<String, String> {
 /// Pass `force: true` to skip the age check and re-download all.
 #[tauri::command]
 async fn check_exports(locale: String, force: Option<bool>) -> Result<String, String> {
+    let _t0 = std::time::Instant::now();
+    eprintln!("[RUST][STARTUP] check_exports start, locale={}", locale);
     let force = force.unwrap_or(false);
     let export_dir = resolve_path("data/export");
     if !export_dir.exists() {
@@ -369,6 +371,7 @@ async fn check_exports(locale: String, force: Option<bool>) -> Result<String, St
         }
     }
 
+    eprintln!("[RUST][STARTUP] check_exports end after {}ms, {} files updated", _t0.elapsed().as_millis(), updated_count);
     Ok(format!("Updated {} files", updated_count))
 }
 
@@ -378,6 +381,8 @@ async fn check_exports(locale: String, force: Option<bool>) -> Result<String, St
 /// on first run like we do for OCR.
 #[tauri::command]
 async fn check_pricer_models() -> Result<String, String> {
+    let _t0 = std::time::Instant::now();
+    eprintln!("[RUST][STARTUP] check_pricer_models start");
     let models_dir = crate::pricer::get_models_dir();
     if !models_dir.exists() {
         std::fs::create_dir_all(&models_dir).map_err(|e| e.to_string())?;
@@ -405,6 +410,7 @@ async fn check_pricer_models() -> Result<String, String> {
             downloaded += 1;
         }
     }
+    eprintln!("[RUST][STARTUP] check_pricer_models end after {}ms", _t0.elapsed().as_millis());
     Ok(format!("Downloaded {} pricer model files", downloaded))
 }
 
@@ -582,6 +588,8 @@ async fn call_api_helper(_app_handle: tauri::AppHandle) -> Result<Value, String>
 /// per file in the WebKit engine, which is far faster than debug Rust serde_json.
 #[tauri::command]
 async fn load_all_exports(app_handle: tauri::AppHandle, locale: String) -> Result<Vec<(String, String)>, String> {
+    let _t0 = std::time::Instant::now();
+    eprintln!("[RUST][STARTUP] load_all_exports start, locale={}", locale);
     let export_dir = resolve_path("data/export");
 
     // Pre-resolve all paths (fast metadata ops, non-blocking)
@@ -599,7 +607,9 @@ async fn load_all_exports(app_handle: tauri::AppHandle, locale: String) -> Resul
         })
         .collect();
 
-    // Concurrent I/O via tokio blocking thread pool - raw file read only (no parse)
+    // Read all files concurrently via spawn_blocking (no JSON parsing in Rust
+    // - raw strings go to JS where V8's JSON.parse is much faster, especially
+    // in debug builds where serde_json is 20x slower).
     let handles: Vec<_> = entries.into_iter().map(|(key, path)| {
         tokio::task::spawn_blocking(move || -> Result<(String, String), String> {
             let bytes = fs::read(&path).map_err(|e| e.to_string())?;
@@ -646,8 +656,102 @@ async fn load_all_exports(app_handle: tauri::AppHandle, locale: String) -> Resul
         result.push(("ExportUpgradesLocalized".to_string(), text));
     }
 
-    eprintln!("[STARTUP-TIMING] load_all_exports: {} files", result.len());
+    eprintln!("[STARTUP-TIMING] load_all_exports: {} files in {}ms", result.len(), _t0.elapsed().as_millis());
+    eprintln!("[RUST][STARTUP] load_all_exports end after {}ms", _t0.elapsed().as_millis());
     Ok(result)
+}
+
+/// Like load_all_exports but writes a single concatenated file to disk and returns
+/// its path, so the frontend can fetch it via the asset protocol instead of paying
+/// Tauri IPC serialization cost for ~34MB of JSON strings.
+/// Returns (file_path, file_count) so the caller can log the file count.
+#[tauri::command]
+async fn load_all_exports_via_file(app_handle: tauri::AppHandle, locale: String) -> Result<(String, usize), String> {
+    let t0 = std::time::Instant::now();
+    eprintln!("[RUST][STARTUP] load_all_exports_via_file start, locale={}", locale);
+    let export_dir = resolve_path("data/export");
+
+    // Pre-resolve all paths
+    let entries: Vec<(String, PathBuf)> = EXPORT_FILES.iter()
+        .filter_map(|file_name| {
+            let path = export_dir.join(file_name);
+            let resolved = if path.exists() {
+                path
+            } else if let Some(bundled) = resolve_bundled_path(&app_handle, &format!("data/export/{}", file_name)) {
+                if bundled.exists() { bundled } else { return None }
+            } else {
+                return None
+            };
+            Some((file_name.trim_end_matches(".json").to_string(), resolved))
+        })
+        .collect();
+
+    // Read all files concurrently
+    let handles: Vec<_> = entries.into_iter().map(|(key, path)| {
+        tokio::task::spawn_blocking(move || -> Result<(String, String), String> {
+            let bytes = fs::read(&path).map_err(|e| e.to_string())?;
+            let text = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+            Ok((key, text))
+        })
+    }).collect();
+
+    let mut result: Vec<(String, String)> = Vec::new();
+    for handle in handles {
+        let (key, text) = handle.await.map_err(|e| e.to_string())??;
+        result.push((key, text));
+    }
+
+    // Drop data files
+    let drop_entries: Vec<(String, PathBuf)> = DROPDATA_FILES.iter()
+        .filter_map(|(file_name, _url)| {
+            let path = export_dir.join(file_name);
+            if !path.exists() { return None; }
+            Some((file_name.trim_end_matches(".json").to_string(), path))
+        })
+        .collect();
+
+    let drop_handles: Vec<_> = drop_entries.into_iter().map(|(key, path)| {
+        tokio::task::spawn_blocking(move || -> Result<(String, String), String> {
+            let bytes = fs::read(&path).map_err(|e| e.to_string())?;
+            let text = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+            Ok((key, text))
+        })
+    }).collect();
+
+    for handle in drop_handles {
+        let (key, text) = handle.await.map_err(|e| e.to_string())??;
+        result.push((key, text));
+    }
+
+    // Locale-specific ExportUpgrades
+    let locale_file = format!("ExportUpgrades_{}.json", locale);
+    let locale_path = export_dir.join(&locale_file);
+    if locale_path.exists() {
+        let bytes = fs::read(&locale_path).map_err(|e| e.to_string())?;
+        let text = String::from_utf8(bytes).map_err(|e| e.to_string())?;
+        result.push(("ExportUpgradesLocalized".to_string(), text));
+    }
+
+    let file_count = result.len();
+
+    // Write all file contents to a temp file using a simple key-delimited
+    // format (NOT JSON, to avoid escaping the ~34MB of inner JSON strings
+    // which would double the size to ~84MB and slow down fetch+parse).
+    //
+    // Format: \x00-separated records of "key\x00text"
+    // This avoids passing ~34MB through Taura IPC.
+    let mut concatenated = String::with_capacity(40_000_000);
+    for (key, text) in &result {
+        concatenated.push_str(key);
+        concatenated.push('\x00');
+        concatenated.push_str(text);
+        concatenated.push('\x00');
+    }
+    let temp_path = export_dir.join("exports_concat.dat");
+    fs::write(&temp_path, concatenated.as_bytes()).map_err(|e| format!("Failed to write concatenated exports: {}", e))?;
+
+    eprintln!("[RUST][STARTUP] load_all_exports_via_file end after {}ms, {} files, temp file {} bytes", t0.elapsed().as_millis(), file_count, concatenated.len());
+    Ok((temp_path.to_string_lossy().to_string(), file_count))
 }
 
 // --- Notes Management ---
@@ -896,6 +1000,8 @@ fn extract_bundled_assets(app_handle: &tauri::AppHandle) {
 /// Called by MonitoringContext on startup.  Failures are non-fatal per asset.
 #[tauri::command]
 async fn check_media_assets() -> Result<String, String> {
+    let _t0 = std::time::Instant::now();
+    eprintln!("[RUST][STARTUP] check_media_assets start");
     let client = reqwest::Client::new();
     let mut downloaded = 0u32;
     let base_url = "https://raw.githubusercontent.com/glowseeker/cephalon-kronos/master/src-tauri/data/export";
@@ -937,6 +1043,7 @@ async fn check_media_assets() -> Result<String, String> {
         }
     }
 
+    eprintln!("[RUST][STARTUP] check_media_assets end after {}ms, {} downloaded", _t0.elapsed().as_millis(), downloaded);
     Ok(format!("Downloaded {} media assets", downloaded))
 }
 
@@ -3365,6 +3472,7 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
             check_pricer_models,
             check_media_assets,
             load_all_exports,
+            load_all_exports_via_file,
             load_txt_file,
             // --- notes ---
             list_notes,
