@@ -382,7 +382,8 @@ function _resolveNameInternal(un, dict, locale = 'en', depth, ...tables) {
     // Try to find the associated item name by checking without "Blueprint"
     for (const tbl of tables) {
       if (!tbl) continue;
-      const match = Object.keys(tbl).find(k => k.endsWith('/' + leaf));
+      const suffixIndex = getSuffixIndex(tbl);
+      const match = suffixIndex.get(leaf);
       if (match && tbl[match].name) return cleanName(tbl[match].name);
     }
   }
@@ -423,7 +424,7 @@ function _resolveNameInternal(un, dict, locale = 'en', depth, ...tables) {
   if (ciLeaf) {
     for (const tbl of tables) {
       if (!tbl) continue;
-      const hit = Object.keys(tbl).find(k => k.split('/').pop().toUpperCase() === ciLeaf);
+      const hit = getNameSuffixIndex(tbl).get(ciLeaf);
       if (hit) {
         const entry = tbl[hit];
         const locKey = entry?.name ?? entry?.displayName ?? '';
@@ -469,6 +470,8 @@ function _resolveNameInternal(un, dict, locale = 'en', depth, ...tables) {
 
 const suffixIndexCache = new WeakMap()
 
+/** Build (and cache) a Map from a table's key leaf to the full key.
+ * Used by resolveImage for recipe-leaf lookups. Cached per-table via WeakMap. */
 function getSuffixIndex(tbl) {
   if (!suffixIndexCache.has(tbl)) {
     const index = new Map()
@@ -478,6 +481,23 @@ function getSuffixIndex(tbl) {
     suffixIndexCache.set(tbl, index)
   }
   return suffixIndexCache.get(tbl)
+}
+
+/** Cached case-insensitive name suffix index (uppercased leaf → full key).
+ * Replaces the O(n) Object.keys(tbl).find(...) scan that was called for
+ * every resolveName in the case-insensitive fallback branch. Cached per-table
+ * via WeakMap so the index is built once and reused across all parseInventory
+ * createItem calls (~6k items). */
+const nameSuffixIndexCache = new WeakMap()
+function getNameSuffixIndex(tbl) {
+  if (!nameSuffixIndexCache.has(tbl)) {
+    const index = new Map()
+    for (const key of Object.keys(tbl)) {
+      index.set(key.split('/').pop().toUpperCase(), key)
+    }
+    nameSuffixIndexCache.set(tbl, index)
+  }
+  return nameSuffixIndexCache.get(tbl)
 }
 
 function resolveImage(un, ...tables) {
