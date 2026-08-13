@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 use tract_onnx::prelude::*;
 
-static PRICER: OnceLock<RivenPricer> = OnceLock::new();
+static PRICER: OnceLock<Option<RivenPricer>> = OnceLock::new();
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RivenInput {
@@ -260,12 +260,13 @@ fn init_pricer_inner() -> Option<RivenPricer> {
     })
 }
 
+// The ONNX model load + optimization is expensive (~10-20s in a debug
+// build). Use get_or_init FIRST so concurrent callers (e.g. the
+// RivenOverlay's get_localized_weapon_names + get_known_weapon_names
+// firing in parallel on mount) block on the OnceLock rather than each
+// running init_pricer_inner() and thrashing the blocking pool.
 fn get_pricer() -> Option<&'static RivenPricer> {
-    if let Some(p) = PRICER.get() {
-        return Some(p);
-    }
-    let pricer = init_pricer_inner()?;
-    Some(PRICER.get_or_init(|| pricer))
+    PRICER.get_or_init(|| init_pricer_inner()).as_ref()
 }
 
 pub fn estimate_price(input: &RivenInput) -> Option<f32> {
