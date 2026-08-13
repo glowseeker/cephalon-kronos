@@ -516,6 +516,7 @@ export function MonitoringProvider({ children }) {
         // before them (free 10-20% on non-en locales where the bundle is
         // uncached). loadSettings runs first so gameLocale is resolved.
         setStatusText('Checking updates & assets…')
+        const startupT0 = performance.now()
         const [updatesRes, exportsRes, localeRes, mediaRes, pricerRes, spiRes, arbRes, descRes] = await Promise.allSettled([
           invoke('check_exports', { locale: localeRef.current, force: false }),
           invoke('load_all_exports', { locale: localeRef.current }),
@@ -526,26 +527,20 @@ export function MonitoringProvider({ children }) {
           invoke('load_txt_file', { name: 'arbys.txt' }),
           invoke('load_txt_file', { name: 'descendia.txt' }),
         ])
-
+        invoke('log_terminal', { message: `[STARTUP] allSettled resolved in ${(performance.now() - startupT0).toFixed(0)}ms` }).catch(() => {})
+        const parseT0 = performance.now()
         i18nRef.current = localeRes.status === 'fulfilled' ? localeRes.value : null
         const rawExports = exportsRes.status === 'fulfilled' ? exportsRes.value : null
-        // load_all_exports now returns Vec<(String, String)> (key + raw JSON text)
-        // to avoid the 34MB serde_json::Value re-serialization bottleneck.
-        // Parse each file's JSON in JS (WebKit JSON.parse is faster than debug Rust).
         const exports = rawExports
           ? rawExports.reduce((acc, [key, text]) => {
               try { acc[key] = JSON.parse(text) } catch { acc[key] = {} }
               return acc
             }, {})
           : null
+        invoke('log_terminal', { message: `[STARTUP] exports JSON.parsed in ${(performance.now() - parseT0).toFixed(0)}ms for ${rawExports?.length || 0} files` }).catch(() => {})
 
         const spiText = spiRes.status === 'fulfilled' ? spiRes.value : null
         const arbText = arbRes.status === 'fulfilled' ? arbRes.value : null
-        // Retired in v0.8: ExportUpgrades_fixed.json patched file - the DE
-        // manifest now ships levelStats for every locale including English
-        // (downloaded as ExportUpgrades_{locale}.json by check_exports).
-        // These four reads don't depend on each other, so run them in parallel
-        // via Promise.all instead of one-await-per-iteration.
         if (exports) {
           try {
             const extraFiles = [
@@ -567,27 +562,22 @@ export function MonitoringProvider({ children }) {
             })
           } catch { }
         }
-        // Await the wfcd enhancement before the first render so the shell
-        // never paints against partial (raw) exports. This collapses the
-        // second setExportData pass that previously drove all useMemo
-        // derivables (globalRewardPool, dropIndex, EI, …) to recompute twice,
-        // and fixes the "inventory cached but shows no inventory until
-        // reload" race: cachedInventory now parses against the enhanced data.
+        const wfcdT0 = performance.now()
         let enhanced = exports
         if (exports) {
           const { maps: wiMaps, supplement: wiSupplement } = await loadWarframeItemsMaps()
+          invoke('log_terminal', { message: `[STARTUP] loadWarframeItemsMaps took ${(performance.now() - wfcdT0).toFixed(0)}ms` }).catch(() => {})
           enhanced = { ...exports, ...wiMaps }
           enhanced.uniqueNameToName = { ...enhanced.uniqueNameToName, ...wiSupplement.uniqueNameToName }
           enhanced.nameToImage = { ...enhanced.nameToImage, ...wiSupplement.nameToImage }
           enhanced.WI_Supplement = wiSupplement
         }
-        // Set exports once (after wfcd enhancement) - the entire shell now
-        // renders against the complete, enhanced export bundle in a single
-        // pass.
+        const setExportT0 = performance.now()
         setExportData(enhanced)
         exportDataRef.current = enhanced
         setSpIncursions(spiText || '')
         setArbys(arbText || '')
+        invoke('log_terminal', { message: `[STARTUP] setExportData + derivables triggered at ${setExportT0 - startupT0}` }).catch(() => {})
         // Parse descendia descriptions
         const descText = descRes.status === 'fulfilled' ? descRes.value : null
         if (descText) {
