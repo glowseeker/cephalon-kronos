@@ -1018,7 +1018,7 @@ export default function Inventory() {
                           const partSources = partSourcesRaw.filter((s) => {const k = partDedupKey(s);if (partSeen[k]) return false;partSeen[k] = true;return true;});
                           const hasPartSources = partSources.length > 0;
                           const partCell =
-                          <div className={`flex flex-col items-center justify-center gap-1.5 p-3 h-full ${isWarframeComponent ? (hasBlueprint ? 'bg-yellow-500/5' : met ? 'bg-green-500/5' : 'bg-red-500/5') : (met ? 'bg-green-500/5' : 'bg-black/20')} relative`}>
+                          <div className={`flex flex-col items-center justify-center gap-1.5 p-3 h-full ${isWarframeComponent ? (hasBlueprint ? 'bg-yellow-400/15' : met ? 'bg-green-400/10' : 'bg-red-400/15') : (met ? 'bg-green-500/5' : 'bg-black/20')} relative`}>
                                   {part.need > 1 &&
                             <span className="absolute top-1 left-1 text-[14px] font-black text-kronos-accent px-1.5 py-0.5 rounded leading-none z-10">×{part.need}</span>
                             }
