@@ -1002,11 +1002,10 @@ export default function Inventory() {
                       <div className="grid gap-px border-t border-white/5" style={{ gridTemplateColumns: `repeat(${Math.min(set.parts.length, 6)}, 1fr)` }}>
                             {set.parts.map((part, pi) => {
                           const need = part.need ?? 1;
-                          const met = (part.crafted ?? 0) + (part.quantity ?? 0) >= need;
-                          const hasBlueprint = !part.isBlueprint && (part.quantity ?? 0) > 0;
-                          const hasCrafted = (part.crafted ?? 0) > 0;
-                          const isBlueprint = part.isBlueprint;
-                          const halfMet = hasBlueprint && !hasCrafted;
+                          const isWarframeComponent = part.crafted !== undefined;
+                          const totalOwned = (part.crafted ?? 0) + (part.quantity ?? 0);
+                          const met = totalOwned >= need;
+                          const hasBlueprint = isWarframeComponent && (part.quantity ?? 0) > 0 && (part.crafted ?? 0) === 0;
                           const partPrice = primePrices?.[part.unique_name] ?? 0;
                           const partNorm = part.unique_name ? part.unique_name.replace('/StoreItems/', '/') : '';
                           const partSourcesRaw = dropIndex?.[partNorm] || dropIndex?.['display:' + (part.name || '').toLowerCase().trim()] || [];
@@ -1019,10 +1018,7 @@ export default function Inventory() {
                           const partSources = partSourcesRaw.filter((s) => {const k = partDedupKey(s);if (partSeen[k]) return false;partSeen[k] = true;return true;});
                           const hasPartSources = partSources.length > 0;
                           const partCell =
-                          <div className={`flex flex-col items-center justify-center gap-1.5 p-3 h-full ${met ? 'bg-green-500/5' : 'bg-black/20'} relative`}>
-                                  {halfMet &&
-                            <div className="absolute inset-0 pointer-events-none z-5" style={{ background: 'repeating-linear-gradient(45deg, rgba(34,197,94,0.15) 0px, rgba(34,197,94,0.15) 3px, transparent 3px, transparent 6px)' }}></div>
-                            }
+                          <div className={`flex flex-col items-center justify-center gap-1.5 p-3 h-full ${isWarframeComponent ? (hasBlueprint ? 'bg-yellow-500/5' : met ? 'bg-green-500/5' : 'bg-red-500/5') : (met ? 'bg-green-500/5' : 'bg-black/20')} relative`}>
                                   {part.need > 1 &&
                             <span className="absolute top-1 left-1 text-[14px] font-black text-kronos-accent px-1.5 py-0.5 rounded leading-none z-10">×{part.need}</span>
                             }
@@ -1036,15 +1032,11 @@ export default function Inventory() {
                               <img src={part.image} alt="" className="max-w-full max-h-full object-contain" onError={handleImgError} /> :
                               <div className="w-7 h-7 rounded bg-white/5" />
                               }
-                                    {isBlueprint && <img src={uiPath ? convertFileSrc(`${uiPath}/BlueprintOverlay.png`) : ''} alt="" className="absolute inset-0 w-full h-full object-contain" />}
+                                    {part.isBlueprint && <img src={uiPath ? convertFileSrc(`${uiPath}/BlueprintOverlay.png`) : ''} alt="" className="absolute inset-0 w-full h-full object-contain" />}
                                   </div>
                                   <p className="text-[12px] font-medium text-kronos-dim text-center leading-tight w-full px-1 truncate">{part.name.split(' ').slice(-1)[0]}</p>
-                                  {part.crafted !== undefined ?
-                            (part.crafted > 0 || part.quantity > 0) &&
-                            <span className={`text-[10px] font-black ${met ? 'text-green-400' : 'text-red-400'}`}>{part.crafted} crafted ({part.quantity}{t('ui.relic_reward.bp')}{part.quantity > 1 ? 's' : ''})</span> :
-
-                            part.quantity > 0 &&
-                            <span className={`text-[10px] font-black ${met ? 'text-green-400' : 'text-red-400'}`}>{part.quantity}</span>
+                                    {(part.crafted !== undefined ? (part.crafted > 0 || part.quantity > 0) : part.quantity > 0) &&
+                            <span className={`text-[10px] font-black ${met ? 'text-green-400' : 'text-red-400'}`}>{part.crafted !== undefined ? `${part.crafted} crafted (${part.quantity}${t('ui.relic_reward.bp')}${part.quantity > 1 ? 's' : ''})` : part.quantity}</span>
                             }
                                   {hasPartSources &&
                             <Tooltip
