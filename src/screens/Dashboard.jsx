@@ -343,6 +343,41 @@ export default function Dashboard() {
   { id: 'vallis', label: dict?.['/Lotus/Language/Syndicates/SolarisSecretName'] || 'Vallis', icon: iconSrc('MiniMapHubFortuna') }],
   [iconsPath, locale, dict]);
 
+  // ── Owned-item lookup for the market sales card ─────────────────────────────
+  // A shop item counts as owned when its resolved display name matches an item
+  // the account owns. Two cheap O(1) sets:
+  //   names  - normalized names of owned items from the parsed inventory.
+  //   leaves - normalized path leaves of every /Lotus path in the raw inventory
+  //            dump (decorations, cosmetics, emotes, song items, syandanas,
+  //            ship decos, ...). Just string ops - no dict resolution.
+  const ownedMarketNames = useMemo(() => {
+    const names = new Set()
+    const leaves = new Set()
+    const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
+    const leaf = (p) => (p || '').split('/').pop()
+    for (const it of (inventoryData?.all ?? [])) {
+      if (it.owned) {
+        names.add(norm(it.name))
+        leaves.add(norm(leaf(it.unique_name)))
+      }
+    }
+    if (rawInventory) {
+      const walk = (node) => {
+        if (Array.isArray(node)) { for (const v of node) walk(v) }
+        else if (node && typeof node === 'object') { for (const v of Object.values(node)) walk(v) }
+        else if (typeof node === 'string' && node.startsWith('/Lotus')) leaves.add(norm(leaf(node)))
+      }
+      walk(rawInventory)
+    }
+    return { names, leaves }
+  }, [rawInventory, inventoryData]);
+
+  const isMarketSaleOwned = (sale) => {
+    const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
+    if (ownedMarketNames.names.has(norm(sale?.item))) return true
+    return ownedMarketNames.leaves.has(norm((sale?.uniqueName || '').split('/').pop()))
+  };
+
   const renderBounties = () => {
     if (!locationBounties || !bountyCycle) {
       return <div className="min-h-[80px] flex items-center justify-center"><p className="text-xs text-kronos-dim italic">{t('ui.dashboard.loading_bounties')}</p></div>;
@@ -1607,13 +1642,22 @@ export default function Dashboard() {
               </button>
               </div>
               <div className="space-y-1.5">
-                {worldstate.flashSales.map((sale, idx) =>
-              <div key={idx} className="flex items-center gap-3 bg-kronos-panel/40 rounded p-2.5">
+                {worldstate.flashSales.map((sale, idx) => {
+                const saleOwned = isMarketSaleOwned(sale)
+                return (
+              <div key={idx} className={`flex items-center gap-3 bg-kronos-panel/40 rounded p-2.5 ${saleOwned ? 'opacity-80' : ''}`}>
                     <div className="w-14 h-14 bg-black/40 rounded flex items-center justify-center p-1 flex-shrink-0">
                       <img src={resolveAnyImage(sale, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-kronos-text uppercase" title={sale.item}>{sale.item}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-bold text-kronos-text uppercase truncate" title={sale.item}>{sale.item}</p>
+                        {saleOwned &&
+                          <span className="flex items-center gap-0.5 text-[9px] font-black uppercase text-green-400 bg-green-500/10 border border-green-500/30 rounded px-1 py-0.5 flex-shrink-0">
+                            <Check size={9} />{t('ui.inventory.badge_owned')}
+                          </span>
+                        }
+                      </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-sm text-kronos-dim line-through decoration-red-500/50">{sale.originalPrice}</span>
                         <span className="flex items-center gap-1 text-sm text-kronos-accent font-black">
@@ -1623,7 +1667,8 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-              )}
+              )
+            })}
               </div>
             </Card>
           }
