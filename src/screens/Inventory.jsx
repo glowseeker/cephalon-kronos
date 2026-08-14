@@ -8,7 +8,7 @@
 import { useState, useCallback, useMemo, useEffect, Fragment } from 'react';
 import { useUi } from '../contexts/UiContext'
 import { resolveGameTerm } from '../lib/gameTerm'
-import { Search, Filter, ArrowUpDown, Check, Box, Zap, Gem, X, Layers } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, Check, Box, Zap, Gem, X, Layers, Eye } from 'lucide-react';
 import { PageLayout, Card, Input, Button, Tabs, MonitorState, Tooltip } from '../components/UI';
 import { useMonitoring } from '../contexts/MonitoringContext';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
@@ -566,7 +566,7 @@ export default function Inventory() {
     resources: [{ id: 'name', label: t('ui.inventory.sort_name') }, { id: 'quantity', label: t('ui.inventory.sort_count') }],
     ayatan: [{ id: 'name', label: t('ui.inventory.sort_name') }, { id: 'quantity', label: t('ui.inventory.sort_count') }]
   };
-  const { inventoryData, isInventoryLoading, allPrices, isPriceLoading, priceFetchProgress, dropIndex, ExportImages } = useMonitoring();
+  const { inventoryData, isInventoryLoading, allPrices, isPriceLoading, priceFetchProgress, dropIndex, ExportImages, exportData } = useMonitoring();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterSortPanel, setShowFilterSortPanel] = useState(false);
@@ -574,6 +574,8 @@ export default function Inventory() {
   const [sortCriteria, setSortCriteria] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+  const [primeViewMode, setPrimeViewMode] = useState('sets');
+  const [valueMetric, setValueMetric] = useState('plat');
   const [showFoundry, setShowFoundry] = useState(false);
   const [foundryFilters, setFoundryFilters] = useState({ crafting: true, ready: false, owned: false, unmastered: false });
   const [framesPath, setFramesPath] = useState('');
@@ -583,7 +585,7 @@ export default function Inventory() {
   useEffect(() => { invoke('get_ui_path').then((p) => setUiPath(p)).catch(() => { }); }, []);
   useEffect(() => { invoke('get_icons_path').then((p) => setIconsPath(p)).catch(() => { }); }, []);
 
-  useEffect(() => { setVisibleCount(ITEMS_PER_PAGE); }, [activeTab, searchQuery, currentFilters]);
+  useEffect(() => { setVisibleCount(ITEMS_PER_PAGE); }, [activeTab, searchQuery, currentFilters, primeViewMode]);
 
   const handleImgError = useCallback((e) => {
     if (e.target.dataset.wfFallback === 'true') return;
@@ -598,6 +600,28 @@ export default function Inventory() {
   }, [ExportImages]);
 
   const primePrices = activeTab === 'prime_parts' ? allPrices : null;
+
+  const ducatPrices = useMemo(() => {
+    const map = new Map();
+    const add = (tbl) => {
+      for (const [k, v] of Object.entries(tbl ?? {})) {
+        const d = v?.primeSellingPrice;
+        if (d && !map.has(k)) map.set(k, d);
+      }
+    };
+    add(exportData?.ExportRecipes);
+    add(exportData?.ExportResources);
+    add(exportData?.ExportWeapons);
+    add(exportData?.ExportWarframes);
+    add(exportData?.ExportSentinels);
+    add(exportData?.ExportArchwing);
+    return map;
+  }, [exportData]);
+  const ducatsFor = useCallback((un) => {
+    if (!un) return 0;
+    return ducatPrices.get(un) ?? ducatPrices.get(un.replace('/StoreItems/', '/')) ?? 0;
+  }, [ducatPrices]);
+  const iconSrc = useCallback((name) => iconsPath ? convertFileSrc(`${iconsPath}/${name}.png`) : null, [iconsPath]);
 
   const tabItems = useMemo(() => {
     if (!inventoryData) return [];
@@ -614,13 +638,36 @@ export default function Inventory() {
           nameToEquipment.set(item.name, item);
         }
       }
-      return Object.values(inventoryData.primeSets ?? {}).filter((set) =>
+      const sets = Object.values(inventoryData.primeSets ?? {}).filter((set) =>
         set.parts.some((p) => p.quantity > 0)
       ).map((set) => {
         const parent = nameToEquipment.get(set.name) ?? nameToEquipment.get(set.name + ' Prime') ?? {};
         const _value = primePrices?.[set.setPath] ?? (set.parts ?? []).reduce((s, p) => s + (primePrices?.[p.unique_name] ?? 0), 0);
-        return { ...set, owned: parent.owned ?? false, mastered: parent.mastered ?? false, _value };
+        const _ducats = (set.parts ?? []).reduce((s, p) => s + ducatsFor(p.unique_name), 0);
+        return { ...set, owned: parent.owned ?? false, mastered: parent.mastered ?? false, _value, _ducats };
       });
+      if (primeViewMode === 'parts') {
+        const parts = [];
+        for (const set of Object.values(inventoryData.primeSets ?? {})) {
+          const parent = nameToEquipment.get(set.name) ?? nameToEquipment.get(set.name + ' Prime') ?? {};
+          const setMastered = parent.mastered ?? false;
+          for (const p of set.parts) {
+            if ((p.quantity ?? 0) <= 0 && (p.crafted ?? 0) <= 0) continue;
+            parts.push({
+              ...p,
+              setName: set.name,
+              category: 'prime_parts',
+              owned: (p.crafted ?? 0) > 0 || (parent.owned ?? false),
+              mastered: setMastered,
+              quantity: (p.crafted ?? 0) + (p.quantity ?? 0),
+              _value: primePrices?.[p.unique_name] ?? 0,
+              _ducats: ducatsFor(p.unique_name)
+            });
+          }
+        }
+        return parts;
+      }
+      return sets;
     }
     if (activeTab === 'vehicles') {
       const vehicles = inventoryData.vehicles ?? [];
@@ -708,7 +755,7 @@ export default function Inventory() {
     }
     if (activeTab === 'all') return (inventoryData.all ?? []).filter((i) => i.category !== 'rivens' && i.category !== 'Arcanes');
     return inventoryData[activeTab] ?? [];
-  }, [inventoryData, activeTab, uiPath, primePrices]);
+  }, [inventoryData, activeTab, uiPath, primePrices, primeViewMode, ducatsFor]);
 
   const filteredItems = useMemo(() => {
     let items = tabItems;
@@ -760,14 +807,14 @@ export default function Inventory() {
       if (a.isStars) return -1;
       if (b.isStars) return 1;
       // Special handling for prime_parts completion sort
-      if (activeTab === 'prime_parts' && sortCriteria === 'completion') {
+      if (activeTab === 'prime_parts' && primeViewMode === 'sets' && sortCriteria === 'completion') {
         const aComplete = (a.ownedCount ?? 0) / (a.totalCount ?? 1);
         const bComplete = (b.ownedCount ?? 0) / (b.totalCount ?? 1);
         return sortDirection === 'asc' ? aComplete - bComplete : bComplete - aComplete;
       }
       if (activeTab === 'prime_parts' && sortCriteria === 'value') {
-        const aVal = a._value ?? 0;
-        const bVal = b._value ?? 0;
+        const aVal = valueMetric === 'ducat' ? (a._ducats ?? 0) : (a._value ?? 0);
+        const bVal = valueMetric === 'ducat' ? (b._ducats ?? 0) : (b._value ?? 0);
         return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
       }
       let av = a[sortCriteria] ?? ''; let bv = b[sortCriteria] ?? '';
@@ -778,9 +825,22 @@ export default function Inventory() {
       return sortDirection === 'asc' ? av < bv ? -1 : av > bv ? 1 : 0 : av < bv ? 1 : av > bv ? -1 : 0;
     });
     return items;
-  }, [tabItems, searchQuery, currentFilters, activeTab, sortCriteria, sortDirection]);
+  }, [tabItems, searchQuery, currentFilters, activeTab, sortCriteria, sortDirection, primeViewMode, valueMetric]);
 
   const visibleItems = useMemo(() => filteredItems.slice(0, visibleCount), [filteredItems, visibleCount]);
+
+  const sortOptions = activeTab === 'prime_parts' && primeViewMode === 'parts'
+    ? [{ id: 'name', label: t('ui.inventory.sort_name') }, { id: 'quantity', label: t('ui.inventory.sort_count') }, { id: 'value', label: t('ui.inventory.sort_value') }]
+    : (SORT_CONFIG[activeTab] ?? []);
+
+  const switchPrimeView = (mode) => {
+    const keepCriteria = mode === 'parts' ? ['name', 'quantity', 'value'] : ['name', 'completion', 'value'];
+    setPrimeViewMode(mode);
+    if (!keepCriteria.includes(sortCriteria)) {
+      setSortCriteria('name');
+      setSortDirection('asc');
+    }
+  };
 
   const modBg = useCallback((mf, item) => {
     if (!framesPath) return '';
@@ -856,8 +916,38 @@ export default function Inventory() {
         <div className="flex items-center gap-1.5 p-1 bg-black/20 rounded-xl border border-white/5 h-[42px] px-2">
           <ArrowUpDown size={12} className="text-kronos-accent mx-1" />
           <div className="flex gap-1">
-            {(SORT_CONFIG[activeTab] ?? []).map((c) => {
+            {(sortOptions ?? []).map((c) => {
               const isActive = sortCriteria === c.id;
+              if (c.id === 'value') {
+                const valueActive = sortCriteria === 'value';
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      if (!valueActive) {
+                        setSortCriteria('value');
+                        setValueMetric('plat');
+                        setSortDirection('asc');
+                        return;
+                      }
+                      // cycle: plat asc -> plat desc -> ducat asc -> ducat desc -> plat asc ...
+                      if (valueMetric === 'plat' && sortDirection === 'asc') setSortDirection('desc');
+                      else if (valueMetric === 'plat' && sortDirection === 'desc') { setValueMetric('ducat'); setSortDirection('asc'); }
+                      else if (valueMetric === 'ducat' && sortDirection === 'asc') setSortDirection('desc');
+                      else { setValueMetric('plat'); setSortDirection('asc'); }
+                    }}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${valueActive ? 'bg-kronos-accent text-kronos-bg shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' : 'text-kronos-dim hover:text-white hover:bg-white/5'}`}>
+
+                    {valueActive ? (valueMetric === 'plat' ? t('ui.inventory.sort_plat') : t('ui.inventory.sort_ducat')) : c.label}
+                    {valueActive &&
+                      <img src={iconSrc(valueMetric === 'plat' ? 'Platinum' : 'Ducats') ?? ''} className="w-3 h-3 object-contain" alt="" />
+                    }
+                    {valueActive && (sortDirection === 'desc'
+                      ? <ArrowDown size={10} />
+                      : <ArrowUp size={10} />
+                    )}
+                  </button>);
+              }
               return (
                 <button
                   key={c.id}
@@ -872,12 +962,24 @@ export default function Inventory() {
                   className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${isActive ? 'bg-kronos-accent text-kronos-bg shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' : 'text-kronos-dim hover:text-white hover:bg-white/5'}`}>
 
                   {c.label}
-                  {isActive && <ArrowUpDown size={10} className={sortDirection === 'desc' ? 'rotate-180' : ''} />}
                 </button>);
 
             })}
           </div>
         </div>
+
+        {/* Prime parts view toggle: sets vs individual parts */}
+        {activeTab === 'prime_parts' &&
+          <div className="flex items-center gap-1.5 p-1 bg-black/20 rounded-xl border border-white/5 h-[42px] px-2">
+            <Eye size={14} className="text-kronos-dim mx-1" />
+            <button
+              onClick={() => switchPrimeView(primeViewMode === 'sets' ? 'parts' : 'sets')}
+              className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${primeViewMode === 'parts' ? 'bg-kronos-accent text-kronos-bg shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' : 'text-kronos-dim hover:text-white hover:bg-white/5'}`}>
+
+              {primeViewMode === 'sets' ? t('ui.inventory.view_sets') : t('ui.inventory.view_parts')}
+            </button>
+          </div>
+        }
 
         {/* Foundry Button */}
         <Button
@@ -919,8 +1021,8 @@ export default function Inventory() {
             <MonitorState className="py-20" /> :
 
             filteredItems.length === 0 ?
-              <div className="text-center py-20 text-kronos-dim">{t('inventory.no_items_found')}{tabLabel.toLowerCase()}.</div> :
-              activeTab === 'prime_parts' ?
+              <div className="text-center py-20 text-kronos-dim">{t('inventory.no_items_found')} {tabLabel.toLowerCase()}.</div> :
+              activeTab === 'prime_parts' && primeViewMode === 'sets' ?
                 <>
                   {priceFetchProgress &&
                     <div className="flex items-center gap-2 pb-2 px-1">
@@ -958,8 +1060,21 @@ export default function Inventory() {
                         <div key={set.name + idx} className={`relative rounded-xl border border-white/5 overflow-hidden flex flex-col bg-kronos-panel/20 ${isComplete ? 'border-green-500/30' : ''}`}>
                           {isPriceLoading ?
                             <span className="absolute top-4 right-4 z-10 inline-block w-6 h-3 bg-white/10 rounded animate-pulse" /> :
-                            setValue > 0 &&
-                            <span className="absolute top-4 right-4 z-10 text-[11px] font-bold px-2 py-0.5 rounded bg-zinc-800 border border-zinc-600 text-zinc-300">{setValue}p</span>
+                            (setValue > 0 || (set._ducats ?? 0) > 0) &&
+                            <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 bg-zinc-800/90 border border-zinc-600 rounded px-1.5 py-0.5">
+                              {(set._ducats ?? 0) > 0 &&
+                                <span className="flex items-center gap-1 text-[11px] font-bold text-amber-400">
+                                  <img src={iconSrc('Ducats')} className="w-3.5 h-3.5 object-contain" alt="" />
+                                  {set._ducats}
+                                </span>
+                              }
+                              {setValue > 0 &&
+                                <span className="flex items-center gap-1 text-[11px] font-bold text-zinc-300">
+                                  <img src={iconSrc('Platinum')} className="w-3.5 h-3.5 object-contain" alt="" />
+                                  {setValue}
+                                </span>
+                              }
+                            </div>
                           }
                           {/* Header: image + name + badges */}
                           <div className={`flex items-center gap-4 px-4 py-5 border-b border-white/5 relative ${isComplete ? 'bg-green-500/5' : ''}`}>
@@ -1006,6 +1121,7 @@ export default function Inventory() {
                                   const met = totalOwned >= need;
                                   const hasBlueprint = isWarframeComponent && (part.quantity ?? 0) > 0 && (part.crafted ?? 0) === 0;
                                   const partPrice = primePrices?.[part.unique_name] ?? 0;
+                                  const partDucats = ducatsFor(part.unique_name);
                                   const partNorm = part.unique_name ? part.unique_name.replace('/StoreItems/', '/') : '';
                                   const partSourcesRaw = dropIndex?.[partNorm] || dropIndex?.['display:' + (part.name || '').toLowerCase().trim()] || [];
                                   const partDedupKey = (s) => {
@@ -1023,8 +1139,21 @@ export default function Inventory() {
                                       }
                                       {isPriceLoading ?
                                         <span className="absolute top-2 right-2 z-10 animate-pulse bg-white/10 rounded w-4 h-2" /> :
-                                        partPrice > 0 &&
-                                        <span className="absolute top-2 right-2 z-10 text-[9px] font-bold px-1 py-0.5 rounded bg-zinc-800 border border-zinc-600 text-zinc-300">{partPrice}p</span>
+                                        (partPrice > 0 || partDucats > 0) &&
+                                        <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-zinc-800/90 border border-zinc-600 rounded px-1 py-0.5">
+                                          {partDucats > 0 &&
+                                            <span className="flex items-center gap-0.5 text-[9px] font-bold text-amber-400">
+                                              <img src={iconSrc('Ducats')} className="w-2.5 h-2.5 object-contain" alt="" />
+                                              {partDucats}
+                                            </span>
+                                          }
+                                          {partPrice > 0 &&
+                                            <span className="flex items-center gap-0.5 text-[9px] font-bold text-zinc-300">
+                                              <img src={iconSrc('Platinum')} className="w-2.5 h-2.5 object-contain" alt="" />
+                                              {partPrice}
+                                            </span>
+                                          }
+                                        </div>
                                       }
                                       <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 relative">
                                         {part.image ?
@@ -1142,6 +1271,26 @@ export default function Inventory() {
                       const isModOrResource = ['mods', 'resources', 'arcanes'].includes(item.category);
                       return (
                         <Card key={item.unique_name + idx} glow={!isUnowned} className={`relative p-0 overflow-hidden flex min-h-40 group transition-all duration-300 ${isUnowned ? 'bg-kronos-panel/10 border-2 border-dashed border-kronos-accent' : 'border-kronos-panel/40'}`}>
+
+                          {/* Platinum + Ducat prices (prime parts) */}
+                          {isPrimePart && (((item._value ?? 0) > 0 || (item._ducats ?? 0) > 0) || (primeViewMode === 'parts' && isPriceLoading)) &&
+                            (primeViewMode === 'parts' && isPriceLoading ?
+                              <span className="absolute top-4 right-4 z-20 inline-block w-6 h-3 bg-white/10 rounded animate-pulse" /> :
+                              <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 bg-zinc-800/90 border border-zinc-600 rounded px-1.5 py-0.5">
+                                {(item._ducats ?? 0) > 0 &&
+                                  <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400">
+                                    <img src={iconSrc('Ducats') ?? ''} className="w-3.5 h-3.5 object-contain" alt="" />
+                                    {item._ducats}
+                                  </span>
+                                }
+                                {(item._value ?? 0) > 0 &&
+                                  <span className="flex items-center gap-1 text-[10px] font-bold text-zinc-300">
+                                    <img src={iconSrc('Platinum') ?? ''} className="w-3.5 h-3.5 object-contain" alt="" />
+                                    {item._value}
+                                  </span>
+                                }
+                              </div>)
+                          }
 
                           {/* Image column */}
                           <div className={`w-32 flex-shrink-0 relative overflow-hidden border-r border-white/5 flex items-center justify-center ${isModFrame(item) ? '' : 'bg-kronos-panel/30 p-3'}`}>

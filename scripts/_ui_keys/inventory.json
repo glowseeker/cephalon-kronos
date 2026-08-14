@@ -72,7 +72,9 @@
     "ui.inventory.sockets_endo": "{sockets} filled · {endo} endo",
     "ui.inventory.sort_completion": "Completion",
     "ui.inventory.sort_count": "Count",
+    "ui.inventory.sort_ducat": "Ducat",
     "ui.inventory.sort_name": "Name",
+    "ui.inventory.sort_plat": "Plat",
     "ui.inventory.sort_rank": "Rank",
     "ui.inventory.sort_value": "Value",
     "ui.inventory.sort_xp": "XP",
@@ -90,6 +92,8 @@
     "ui.inventory.tab_warframes": "Warframes",
     "ui.inventory.tab_weapons": "Weapons",
     "ui.inventory.unmastered": "Unmastered",
-    "ui.inventory.unowned": "Unowned"
+    "ui.inventory.unowned": "Unowned",
+    "ui.inventory.view_parts": "Parts",
+    "ui.inventory.view_sets": "Sets"
   }
 }
