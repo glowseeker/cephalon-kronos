@@ -3338,12 +3338,12 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
         .setup(|app| {
             crate::log_scanner::log_app_start(&app.handle());
             let ah = app.handle().clone();
-            // Register the frontend-ready listener BEFORE the blocking
-            // extract_bundled_assets call, so we never miss the event if
-            // the webview loads fast and JS emits while Rust is busy.
+            let ready_fired = Arc::new(AtomicBool::new(false));
             if let Some(main_win) = app.get_webview_window("main") {
                 let win = main_win.clone();
+                let ready_fired_clone = ready_fired.clone();
                 main_win.once("frontend-ready", move |_| {
+                    ready_fired_clone.store(true, Ordering::SeqCst);
                     let _ = win.show();
                     let _ = win.set_focus();
                     #[cfg(target_os = "linux")]
@@ -3368,9 +3368,14 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
             // Fallback: if the frontend never fires frontend-ready (e.g.
             // WebView2 navigation failure or a very slow disk), force-show
             // the window after 5s so the user can see what happened.
+            // Cancelled if frontend-ready fires first (ready_fired flag checked).
             let ah3 = ah.clone();
+            let ready_fired_fallback = ready_fired.clone();
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_secs(5));
+                if ready_fired_fallback.load(Ordering::SeqCst) {
+                    return;
+                }
                 if let Some(main_win) = ah3.get_webview_window("main") {
                     if !main_win.is_visible().unwrap_or(false) {
                         let _ = main_win.show();
