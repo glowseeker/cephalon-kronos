@@ -196,14 +196,14 @@ export function PageLayout({ title, titleKey, subtitle, children, extra, headerP
       
       {/* Scrollable Content Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-8 pb-8 pt-0 min-h-0 flex flex-col custom-scrollbar">
-        <div className="relative flex-1 min-h-0 flex flex-col">
-          {headerPanel &&
-          <div className="sticky top-0 z-30 py-4 bg-kronos-bg -mx-8 px-8 border-b border-white/5 mb-6">
+        {headerPanel &&
+        <div className="sticky top-0 z-30 py-4 bg-kronos-bg -mx-8 px-8 border-b border-white/5 mb-6 flex-shrink-0">
               {headerPanel}
             </div>
           }
-          {children}
-        </div>
+          <div className="relative min-h-full flex flex-col">
+            {children}
+          </div>
       </div>
       <BackToTopButton scrollRef={scrollRef} />
     </div>);
