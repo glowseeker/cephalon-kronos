@@ -1003,7 +1003,10 @@ export default function Inventory() {
                             {set.parts.map((part, pi) => {
                           const need = part.need ?? 1;
                           const met = (part.crafted ?? 0) + (part.quantity ?? 0) >= need;
+                          const hasBlueprint = !part.isBlueprint && (part.quantity ?? 0) > 0;
+                          const hasCrafted = (part.crafted ?? 0) > 0;
                           const isBlueprint = part.isBlueprint;
+                          const halfMet = hasBlueprint && !hasCrafted;
                           const partPrice = primePrices?.[part.unique_name] ?? 0;
                           const partNorm = part.unique_name ? part.unique_name.replace('/StoreItems/', '/') : '';
                           const partSourcesRaw = dropIndex?.[partNorm] || dropIndex?.['display:' + (part.name || '').toLowerCase().trim()] || [];
@@ -1017,6 +1020,9 @@ export default function Inventory() {
                           const hasPartSources = partSources.length > 0;
                           const partCell =
                           <div className={`flex flex-col items-center justify-center gap-1.5 p-3 h-full ${met ? 'bg-green-500/5' : 'bg-black/20'} relative`}>
+                                  {halfMet &&
+                            <div className="absolute inset-0 pointer-events-none z-5" style={{ background: 'repeating-linear-gradient(45deg, rgba(34,197,94,0.15) 0px, rgba(34,197,94,0.15) 3px, transparent 3px, transparent 6px)' }}></div>
+                            }
                                   {part.need > 1 &&
                             <span className="absolute top-1 left-1 text-[14px] font-black text-kronos-accent px-1.5 py-0.5 rounded leading-none z-10">×{part.need}</span>
                             }
