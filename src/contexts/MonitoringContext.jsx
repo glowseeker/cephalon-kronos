@@ -1000,8 +1000,11 @@ export function MonitoringProvider({ children }) {
     }))
 
     subs.push(listen('relic-picker-opened', (e) => {
-      if (!inventoryData?.relics) return
       const voidTier = e.payload?.void_tier
+      // Only populate the reward-picker overlay once the fissure mission is actually
+      // running. Pre-mission picker opens (orbiter relic menu) have no era to read,
+      // and carrying over the previous run's era made a new run show stale top picks.
+      if (!e.payload?.in_mission || !voidTier || !inventoryData?.relics) return
       let relics = inventoryData.relics
       if (voidTier && voidTier !== 'Omnia') {
         relics = relics.filter(r => r.era === voidTier)

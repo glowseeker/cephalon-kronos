@@ -155,11 +155,14 @@ impl LogScanner {
                     self.is_fissure = true;
                     set_poll_interval(150);
 
-                    // Detect void tier from the first relic (only if not already set from mission JSON)
-                    if is_first && self.void_tier.is_none() {
+                    // Detect void tier from the first relic (only if not already set from mission JSON,
+                    // and only once the mission is actually running - pre-mission pool loads (e.g. the
+                    // orbiter relic picker) have no fissure era to infer, and reading one from there
+                    // leaks the previous run's era into the reward picker overlay).
+                    if is_first && self.void_tier.is_none() && self.in_mission {
                         self.void_tier = Some(detect_void_tier(path));
                     }
-                    if is_first && self.relic_picker_open {
+                    if is_first && self.relic_picker_open && self.in_mission {
                         app.emit("relic-picker-tier",
                             serde_json::json!({ "tier": self.void_tier })
                         ).unwrap_or_default();
@@ -224,13 +227,13 @@ impl LogScanner {
                 self.relic_picker_open = true;
                 self.relic_picker_opened_at = ts;
                 crate::logger::log_to_disk(app, &format!("[LOG SCANNER] RELIC PICKER OPENED (pre-mission) void_tier={:?} (LogTS: {}s)", self.void_tier, ts));
-                app.emit("relic-picker-opened", serde_json::json!({ "void_tier": self.void_tier })).unwrap_or_default();
+                app.emit("relic-picker-opened", serde_json::json!({ "void_tier": None::<String>, "in_mission": false })).unwrap_or_default();
                 return;
             }
             self.relic_picker_open = true;
             self.relic_picker_opened_at = ts;
             crate::logger::log_to_disk(app, &format!("[LOG SCANNER] RELIC PICKER OPENED (endless) void_tier={:?} (LogTS: {}s)", self.void_tier, ts));
-            app.emit("relic-picker-opened", serde_json::json!({ "void_tier": self.void_tier })).unwrap_or_default();
+            app.emit("relic-picker-opened", serde_json::json!({ "void_tier": self.void_tier, "in_mission": true })).unwrap_or_default();
             return;
         }
 
