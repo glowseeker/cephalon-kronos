@@ -292,7 +292,28 @@ function resolveBoosterName(leaf, dict) {
 // localized builds), e.g. .../WeaponParts/AfurisPrimeBarrel.  Used to separate
 // prime parts from resources and to build prime-set component lists  -  matching
 // the localized display name instead (e.g. "Afuris Prime: Lauf") would miss them.
-const PRIME_PART_PATH_RE = /Prime.*?(Barrel|Receiver|Stock|Blade|Handle|Link|Gauntlet|Head|Disc|Grip|Boot|Chain|String|UpperLimb|LowerLimb|Carapace|Cerebrum|Systems|Chassis|Neuroptics|Guard|Hilt|Ornament|Stars|Holster|Pouch|Band|Blueprint)$/i;
+// We check the leaf (last path segment) which always contains "Prime" for prime
+// components, and ends with a known part-word. No regex needed  -  we have the
+// full internal path.
+const PRIME_COMPONENT_SUFFIXES = new Set([
+  'Barrel', 'Receiver', 'Stock', 'Blade', 'Handle', 'Link', 'Gauntlet',
+  'Head', 'Helmet', 'Disc', 'Grip', 'Boot', 'Chain', 'String',
+  'UpperLimb', 'LowerLimb', 'Carapace', 'Cerebrum', 'Systems', 'Chassis',
+  'Neuroptics', 'Guard', 'Hilt', 'Ornament', 'Stars', 'Holster', 'Pouch',
+  'Band', 'Component', 'Blueprint'
+]);
+
+/** Check whether an internal ItemType path refers to a prime weapon/warframe
+ *  component by examining the leaf (last path segment). The leaf always contains
+ *  "Prime" and ends with one of the known component suffix names above. No regex. */
+function isPrimeComponentPath(itemType) {
+  const leaf = itemType.split('/').pop();
+  if (!leaf || !leaf.includes('Prime')) return false;
+  for (const suffix of PRIME_COMPONENT_SUFFIXES) {
+    if (leaf.endsWith(suffix)) return true;
+  }
+  return false;
+}
 
 function nameFromPath(path = '') {
   const parts = path.split('/').filter(Boolean);
@@ -1939,12 +1960,11 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
     totalCount += 1;
 
     // Add prime components from recipe ingredients (exclude resources like orokin cells).
-    // PRIME_PART_PATH_RE is module-scoped (see top of file).
-    const isPrimeComponent = (itemType) => PRIME_PART_PATH_RE.test(itemType.split('/').pop());
+    // Uses isPrimeComponentPath to check the ItemType path directly. No regex.
     const ingredientMap = new Map();
     for (const ing of (recipe.ingredients ?? [])) {
       const ingName = resolveName(ing.ItemType, dict, locale, EW, ES, ER, EWf, EA, EM, ECust, EGear, ERecipe);
-      if (!isPrimeComponent(ing.ItemType)) continue;
+      if (!isPrimeComponentPath(ing.ItemType)) continue;
       const key = ing.ItemType;
       if (ingredientMap.has(key)) {
         ingredientMap.get(key).need += ing.ItemCount ?? 1;
@@ -1965,11 +1985,11 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
           }
         }
         setParts.push({ unique_name: data.ItemType, name: data.name, image: data.image, quantity: bpQty, crafted: craftedQty, owned: bpQty > 0 || craftedQty > 0, need: data.need });
-        if (bpQty > 0 || craftedQty > 0) ownedCount += 1;
+        if (bpQty > 0 || craftedQty > 0) ownedCount += bpQty + craftedQty;
       } else {
         bpQty = primeItemCounts.get(data.ItemType) ?? 0;
         setParts.push({ unique_name: data.ItemType, name: data.name, image: data.image, quantity: bpQty, owned: bpQty > 0, need: data.need });
-        if (bpQty > 0) ownedCount += 1;
+        if (bpQty > 0) ownedCount += bpQty;
       }
       totalCount += 1;
     }
@@ -1997,7 +2017,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
     // Prime parts are shown in the prime-sets tab, not as resources. Match the
     // ItemType path (always English)  -  localized names like "Afuris Prime: Lauf"
     // don't contain the English component words.
-    const isPrimePart = PRIME_PART_PATH_RE.test(un.split('/').pop());
+    const isPrimePart = isPrimeComponentPath(un);
     if (!isPrimePart) {
       const entry = ER[un];
       const resDescLoctag = entry?.description ?? '';

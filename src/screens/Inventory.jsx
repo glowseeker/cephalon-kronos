@@ -946,12 +946,13 @@ export default function Inventory() {
               const isParentOwned = set.owned;
               const isParentMastered = set.mastered;
 
-              const partsMet = set.parts.filter((p) => (p.crafted ?? 0) + p.quantity >= (p.need ?? 1)).length;
-              const completion = Math.min(100, partsMet / set.parts.length * 100);
-              const isComplete = partsMet >= set.parts.length;
+              const totalOwned = set.parts.reduce((s, p) => s + Math.min((p.crafted ?? 0) + p.quantity, p.need ?? 1), 0);
+              const totalNeed = set.parts.reduce((s, p) => s + (p.need ?? 1), 0);
+              const completion = Math.min(100, totalOwned / totalNeed * 100);
+              const isComplete = totalOwned >= totalNeed;
               const bpPart = set.parts.find((p) => p.isBlueprint);
               const bpCount = bpPart?.quantity ?? 0;
-              const setsPossible = bpCount > 0 && isComplete ? bpCount : 0;
+              const setsPossible = bpCount > 0 ? Math.min(bpCount, ...set.parts.map((p) => Math.floor(((p.crafted ?? 0) + p.quantity) / (p.need ?? 1)))) : 0;
               const setValue = primePrices?.[set.setPath] ?? set.parts.reduce((sum, p) => sum + (primePrices?.[p.unique_name] ?? 0) * (p.need ?? 1), 0);
 
               return (
@@ -972,10 +973,10 @@ export default function Inventory() {
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start">
                             <div className="min-w-0 flex-1">
-                              <p className="text-xl font-black text-kronos-text uppercase whitespace-normal leading-tight">{set.name}{t('inventory.set')}</p>
+                              <p className="text-xl font-black text-kronos-text uppercase whitespace-normal leading-tight">{set.name} {t('inventory.set')}</p>
                               <div className="flex items-center gap-2 mt-2">
                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded inline-block ${isComplete ? 'bg-green-500/20 text-green-400' : 'bg-kronos-accent/20 text-kronos-accent'}`}>
-                                  {setsPossible > 0 ? `${setsPossible} Set${setsPossible > 1 ? 's' : ''}` : `${partsMet}/${set.parts.length} (${Math.round(completion)}%)`}
+                                  {setsPossible > 0 ? `${setsPossible} Set${setsPossible > 1 ? 's' : ''}` : `${totalOwned}/${totalNeed} (${Math.round(completion)}%)`}
                                 </span>
                               </div>
                             </div>

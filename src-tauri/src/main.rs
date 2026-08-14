@@ -739,7 +739,7 @@ async fn load_all_exports_via_file(app_handle: tauri::AppHandle, locale: String)
     // which would double the size to ~84MB and slow down fetch+parse).
     //
     // Format: \x00-separated records of "key\x00text"
-    // This avoids passing ~34MB through Taura IPC.
+    // This avoids passing ~34MB through Tauri IPC.
     let mut concatenated = String::with_capacity(40_000_000);
     for (key, text) in &result {
         concatenated.push_str(key);

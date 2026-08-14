@@ -141,6 +141,19 @@ export async function getPricesBatch(items, onProgress) {
     if (!price && item.uniqueName?.includes('/StoreItems/')) {
       price = priceMap.get(item.uniqueName.replace('/StoreItems/', '/'));
     }
+    // WFM catalog keys use Blueprint paths and standard warframe component names
+    // (Neuroptics/Chassis/Systems), but the game export uses alternate names for
+    // some warframe prime parts (e.g. GaussPrimeHelmetComponent). Try path
+    // transformations if the raw lookup misses.
+    if (!price && typeof item.uniqueName === 'string') {
+      if (item.uniqueName.endsWith('Component')) {
+        price = priceMap.get(item.uniqueName.slice(0, -9) + 'Blueprint');
+      }
+      if (!price) {
+        const neuroptics = item.uniqueName.replace('HelmetComponent', 'NeuropticsComponent');
+        if (neuroptics !== item.uniqueName) price = priceMap.get(neuroptics);
+      }
+    }
     if (!price) price = priceMap.get(item.name) ?? 0;
     results[item.uniqueName] = price;
     if (onProgress) onProgress({ current: ++done, total, label: item.name });
@@ -152,6 +165,18 @@ export async function getPricesBatch(items, onProgress) {
 export async function getPrice(uniqueName, itemName, _ducatValue = 0) {
   const priceMap = await ensurePriceMap();
   let price = priceMap.get(uniqueName);
+  // WFM catalog keys use Blueprint paths and standard warframe component names
+  // (Neuroptics/Chassis/Systems), but the game export uses alternate names for
+  // some warframe prime parts (e.g. GaussPrimeHelmetComponent). Try path
+  // transformations if the raw lookup misses.
+  if (!price && typeof uniqueName === 'string' && uniqueName.endsWith('Component')) {
+    price = priceMap.get(uniqueName.slice(0, -9) + 'Blueprint');
+  }
+  if (!price && typeof uniqueName === 'string') {
+    // Helmet → Neuroptics (Gauss Prime Neuroptics is exported as HelmetComponent)
+    const neuroptics = uniqueName.replace('HelmetComponent', 'NeuropticsComponent');
+    if (neuroptics !== uniqueName) price = priceMap.get(neuroptics);
+  }
   if (!price) price = priceMap.get(itemName) ?? 0;
   return price;
 }
