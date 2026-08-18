@@ -347,6 +347,11 @@
     "relics.squad": "Escouade",
     "relics.target": "Cible",
     "relics.void_traces": "Traces du Vide",
+    "relics.vault_all": "Tout",
+    "relics.vault_unvaulted": "Disponibles",
+    "relics.vault_vaulted": "Coffrés",
+    "relics.vaulted": "Coffre :",
+    "relics.vaulted_badge": "Coffré",
     "reloading": "Rechargement des données du jeu",
     "riven_card.rolls": "lancers",
     "riven_card.tier_weapon": "arme",
@@ -1310,7 +1315,12 @@
     "sort_ducat_gain": "Gain de Ducats",
     "sort_name": "Nom",
     "sort_plat": "Trier par Platinum",
-    "sort_plat_gain": "Gain de Platinum"
+    "sort_plat_gain": "Gain de Platinum",
+    "vault_all": "Tout",
+    "vault_unvaulted": "Disponibles",
+    "vault_vaulted": "Coffrés",
+    "vaulted": "Coffre :",
+    "vaulted_badge": "Coffré"
   },
   "riven_card": {
     "na": "N/D",

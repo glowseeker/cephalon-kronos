@@ -1197,6 +1197,11 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "근접 무기",
     "relics.void_traces": "보이드 흔적",
+    "relics.vault_all": "전체",
+    "relics.vault_unvaulted": "해금됨",
+    "relics.vault_vaulted": "볼트 처리됨",
+    "relics.vaulted": "볼트:",
+    "relics.vaulted_badge": "볼트 처리됨",
     "ui.comp.forma": "포마",
     "ui.dashboard.baro_kiteer": "바로 키테르",
     "ui.dashboard.roathe_oblivion": "로스의 황평화",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "전체",
+    "vault_unvaulted": "해금됨",
+    "vault_vaulted": "볼트 처리됨",
+    "vaulted": "볼트:",
+    "vaulted_badge": "볼트 처리됨"
   },
   "riven_card": {
     "na": "N/A",

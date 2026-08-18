@@ -40,6 +40,7 @@ export default function Relics() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEra, setActiveEra] = useState('All');
   const [activeQuality, setActiveQuality] = useState('All');
+  const [vaultFilter, setVaultFilter] = useState('All'); // 'All' | 'Unvaulted' | 'Vaulted'
   const [squadSize, setSquadSize] = useState(1);
   const [sortMode, setSortMode] = useState('name'); // 'name' | 'ducat' | 'plat'
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
@@ -58,6 +59,9 @@ export default function Relics() {
 
     const matchQuality = activeQuality === 'All' || r.refinements && r.refinements[activeQuality] > 0;
     if (!matchQuality) return false;
+
+    const matchVault = vaultFilter === 'All' || (vaultFilter === 'Vaulted' ? !!r.vaulted : !r.vaulted);
+    if (!matchVault) return false;
 
     const search = searchQuery.toLowerCase().split(/\s+/).filter((w) => w.length > 0);
     if (search.length === 0) return true;
@@ -211,6 +215,15 @@ export default function Relics() {
           <Tabs tabs={qualityTabs} activeTab={activeQuality} onChange={setActiveQuality} />
         </div>
 
+        {/* Vaulted Filter */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest px-1">{t('relics.vaulted')}</span>
+          <Tabs
+            tabs={['All', 'Unvaulted', 'Vaulted'].map((v) => ({ id: v, label: t('relics.vault_' + v.toLowerCase()) }))}
+            activeTab={vaultFilter}
+            onChange={setVaultFilter} />
+        </div>
+
         {/* Sort Controls */}
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest px-1">{t('relics.sort')}</span>
@@ -351,6 +364,11 @@ export default function Relics() {
                             <p className="font-black text-[9px] uppercase text-kronos-dim mt-1 whitespace-nowrap">
                               {countLabel}
                             </p>
+                            {item.vaulted &&
+                        <p className="font-black text-[9px] uppercase text-amber-500/80 mt-0.5 whitespace-nowrap tracking-wider">
+                                {t('relics.vaulted_badge')}
+                              </p>
+                        }
                             {relicPlat > 0 &&
                         <p className="font-black text-[9px] text-kronos-accent mt-0.5 whitespace-nowrap">
                                 {t('relics.platinum', { plat: relicPlat })}

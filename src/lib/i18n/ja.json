@@ -1197,6 +1197,11 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "近接武器",
     "relics.void_traces": "ヴォイドトレース",
+    "relics.vault_all": "すべて",
+    "relics.vault_unvaulted": "アンヴォールト",
+    "relics.vault_vaulted": "ヴォールト済み",
+    "relics.vaulted": "ヴォールト:",
+    "relics.vaulted_badge": "ヴォールト済み",
     "ui.comp.forma": "フォーマ",
     "ui.dashboard.baro_kiteer": "バロ・キーテér",
     "ui.dashboard.roathe_oblivion": "ロースの虚無",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "すべて",
+    "vault_unvaulted": "アンヴォールト",
+    "vault_vaulted": "ヴォールト済み",
+    "vaulted": "ヴォールト:",
+    "vaulted_badge": "ヴォールト済み"
   },
   "riven_card": {
     "na": "N/A",

@@ -1197,6 +1197,11 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Yakın silah",
     "relics.void_traces": "Void İzleri",
+    "relics.vault_all": "Tümü",
+    "relics.vault_unvaulted": "Açıkta",
+    "relics.vault_vaulted": "Kasadan",
+    "relics.vaulted": "Kasa:",
+    "relics.vaulted_badge": "Kasadan",
     "ui.comp.forma": "Forma",
     "ui.dashboard.baro_kiteer": "Baro Ki'Teer",
     "ui.dashboard.roathe_oblivion": "Roathe's Oblivion",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "Tümü",
+    "vault_unvaulted": "Açıkta",
+    "vault_vaulted": "Kasadan",
+    "vaulted": "Kasa:",
+    "vaulted_badge": "Kasadan"
   },
   "riven_card": {
     "na": "N/A",

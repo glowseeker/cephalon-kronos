@@ -1197,6 +1197,11 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Armi da mischia",
     "relics.void_traces": "Tracce del Vuoto",
+    "relics.vault_all": "Tutti",
+    "relics.vault_unvaulted": "Disponibili",
+    "relics.vault_vaulted": "In volta",
+    "relics.vaulted": "Volta:",
+    "relics.vaulted_badge": "In volta",
     "ui.comp.forma": "Forma",
     "ui.dashboard.baro_kiteer": "Baro Ki'Teer",
     "ui.dashboard.roathe_oblivion": "Roathe's Oblivion",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "Tutti",
+    "vault_unvaulted": "Disponibili",
+    "vault_vaulted": "In volta",
+    "vaulted": "Volta:",
+    "vaulted_badge": "In volta"
   },
   "riven_card": {
     "na": "N/A",

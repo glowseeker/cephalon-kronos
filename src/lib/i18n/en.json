@@ -348,6 +348,11 @@
     "relics.squad": "Squad",
     "relics.target": "Target",
     "relics.void_traces": "Void Traces",
+    "relics.vault_all": "All",
+    "relics.vault_unvaulted": "Unvaulted",
+    "relics.vault_vaulted": "Vaulted",
+    "relics.vaulted": "Vault:",
+    "relics.vaulted_badge": "Vaulted",
     "reloading": "Reloading game data",
     "riven_card.rolls": "rolls",
     "riven_card.tier_weapon": "Weapon",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "All",
+    "vault_unvaulted": "Unvaulted",
+    "vault_vaulted": "Vaulted",
+    "vaulted": "Vault:",
+    "vaulted_badge": "Vaulted"
   },
   "riven_card": {
     "na": "N/A",

@@ -1197,6 +1197,11 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Arma cuerpo a cuerpo",
     "relics.void_traces": "Rastros del Vacío",
+    "relics.vault_all": "Todos",
+    "relics.vault_unvaulted": "Disponibles",
+    "relics.vault_vaulted": "En la bóveda",
+    "relics.vaulted": "Bóveda:",
+    "relics.vaulted_badge": "En bóveda",
     "ui.comp.forma": "Forma",
     "ui.dashboard.baro_kiteer": "Baro Ki'Teer",
     "ui.dashboard.roathe_oblivion": "Roathe's Oblivion",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "Todos",
+    "vault_unvaulted": "Disponibles",
+    "vault_vaulted": "En la bóveda",
+    "vaulted": "Bóveda:",
+    "vaulted_badge": "En bóveda"
   },
   "riven_card": {
     "na": "N/A",

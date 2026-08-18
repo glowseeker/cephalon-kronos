@@ -1197,6 +1197,11 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "近戰武器",
     "relics.void_traces": "空洞痕跡",
+    "relics.vault_all": "全部",
+    "relics.vault_unvaulted": "未入庫",
+    "relics.vault_vaulted": "已入庫",
+    "relics.vaulted": "庫藏:",
+    "relics.vaulted_badge": "已入庫",
     "ui.comp.forma": "Forma",
     "ui.dashboard.baro_kiteer": "巴羅基特",
     "ui.dashboard.roathe_oblivion": "羅思的虛無",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "全部",
+    "vault_unvaulted": "未入庫",
+    "vault_vaulted": "已入庫",
+    "vaulted": "庫藏:",
+    "vaulted_badge": "已入庫"
   },
   "riven_card": {
     "na": "N/A",

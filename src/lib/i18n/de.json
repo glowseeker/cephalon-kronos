@@ -1197,6 +1197,11 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Nahkampf",
     "relics.void_traces": "Void-Spuren",
+    "relics.vault_all": "Alle",
+    "relics.vault_unvaulted": "Aus dem Tresor",
+    "relics.vault_vaulted": "Im Tresor",
+    "relics.vaulted": "Tresor:",
+    "relics.vaulted_badge": "Eingelagert",
     "ui.comp.forma": "Forma",
     "ui.dashboard.baro_kiteer": "Baro Ki'Teer",
     "ui.dashboard.roathe_oblivion": "Roathe's Oblivion",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "Alle",
+    "vault_unvaulted": "Aus dem Tresor",
+    "vault_vaulted": "Im Tresor",
+    "vaulted": "Tresor:",
+    "vaulted_badge": "Eingelagert"
   },
   "riven_card": {
     "na": "N/A",

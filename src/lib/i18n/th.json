@@ -1197,6 +1197,11 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "อาวุธประชาน",
     "relics.void_traces": "ร่องรอยวอยด์",
+    "relics.vault_all": "ทั้งหมด",
+    "relics.vault_unvaulted": "พร้อมใช้งาน",
+    "relics.vault_vaulted": "อยู่ในห้องนิรภัย",
+    "relics.vaulted": "ห้องนิรภัย:",
+    "relics.vaulted_badge": "ในห้องนิรภัย",
     "ui.comp.forma": "Forma",
     "ui.dashboard.baro_kiteer": "Baro Ki'Teer",
     "ui.dashboard.roathe_oblivion": "Roathe's Oblivion",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "ทั้งหมด",
+    "vault_unvaulted": "พร้อมใช้งาน",
+    "vault_vaulted": "อยู่ในห้องนิรภัย",
+    "vaulted": "ห้องนิรภัย:",
+    "vaulted_badge": "ในห้องนิรภัย"
   },
   "riven_card": {
     "na": "N/A",

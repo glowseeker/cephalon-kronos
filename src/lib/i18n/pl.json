@@ -1197,6 +1197,11 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Broń przystająca",
     "relics.void_traces": "Ślady Pustki",
+    "relics.vault_all": "Wszystkie",
+    "relics.vault_unvaulted": "Dostępne",
+    "relics.vault_vaulted": "W skarbcu",
+    "relics.vaulted": "Skarbiec:",
+    "relics.vaulted_badge": "W skarbcu",
     "ui.comp.forma": "Forma",
     "ui.dashboard.baro_kiteer": "Baro Ki'Teer",
     "ui.dashboard.roathe_oblivion": "Roathe's Oblivion",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "Wszystkie",
+    "vault_unvaulted": "Dostępne",
+    "vault_vaulted": "W skarbcu",
+    "vaulted": "Skarbiec:",
+    "vaulted_badge": "W skarbcu"
   },
   "riven_card": {
     "na": "N/A",

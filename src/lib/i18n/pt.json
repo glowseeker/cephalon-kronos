@@ -1197,6 +1197,11 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Arma corpo a corpo",
     "relics.void_traces": "Rastros do Vazio",
+    "relics.vault_all": "Todos",
+    "relics.vault_unvaulted": "Disponíveis",
+    "relics.vault_vaulted": "Cofrados",
+    "relics.vaulted": "Cofre:",
+    "relics.vaulted_badge": "Cofrado",
     "ui.comp.forma": "Forma",
     "ui.dashboard.baro_kiteer": "Baro Ki'Teer",
     "ui.dashboard.roathe_oblivion": "Roathe's Oblivion",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "Todos",
+    "vault_unvaulted": "Disponíveis",
+    "vault_vaulted": "Cofrados",
+    "vaulted": "Cofre:",
+    "vaulted_badge": "Cofrado"
   },
   "riven_card": {
     "na": "N/A",

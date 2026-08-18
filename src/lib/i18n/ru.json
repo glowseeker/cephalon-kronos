@@ -1197,6 +1197,11 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Ближнее оружие",
     "relics.void_traces": "Призрачные следы",
+    "relics.vault_all": "Все",
+    "relics.vault_unvaulted": "Доступные",
+    "relics.vault_vaulted": "В хранилище",
+    "relics.vaulted": "Хранилище:",
+    "relics.vaulted_badge": "В хранилище",
     "ui.comp.forma": "Форма",
     "ui.dashboard.baro_kiteer": "Баро КиТир",
     "ui.dashboard.roathe_oblivion": "Пустота Роате",
@@ -1311,7 +1316,12 @@
     "sort_ducat_gain": "Ducat Gain",
     "sort_name": "Name",
     "sort_plat": "Sort by Platinum",
-    "sort_plat_gain": "Platinum Gain"
+    "sort_plat_gain": "Platinum Gain",
+    "vault_all": "Все",
+    "vault_unvaulted": "Доступные",
+    "vault_vaulted": "В хранилище",
+    "vaulted": "Хранилище:",
+    "vaulted_badge": "В хранилище"
   },
   "riven_card": {
     "na": "N/A",
