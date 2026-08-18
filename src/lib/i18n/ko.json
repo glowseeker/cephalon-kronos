@@ -384,6 +384,7 @@
     "settings.last_fetched": "마지막 가져옴:",
     "settings.log_scanner": "로그 스캐너",
     "settings.log_scanner_desc": "오버레이 트리거를 읽는 데 필요",
+    "settings.relic_picker_vaulted": "릴릭 선택기에 볼트 처리된 성유물 포함",
     "settings.manual_refresh": "수동 새로고침",
     "settings.market_prices": "마켓 가격",
     "settings.not_fetched": "아직 가져오지 않음.",

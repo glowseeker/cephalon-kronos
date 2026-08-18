@@ -384,6 +384,7 @@
     "settings.last_fetched": "上次获取：",
     "settings.log_scanner": "日志扫描器",
     "settings.log_scanner_desc": "读取覆盖层触发条件所必需",
+    "settings.relic_picker_vaulted": "在遗物选择器中包含已入库遗物",
     "settings.manual_refresh": "手动刷新",
     "settings.market_prices": "市场价格",
     "settings.not_fetched": "尚未获取。",

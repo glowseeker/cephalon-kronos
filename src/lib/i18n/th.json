@@ -384,6 +384,7 @@
     "settings.last_fetched": "ดึงล่าสุด:",
     "settings.log_scanner": "สแกนเนอร์บันทึก",
     "settings.log_scanner_desc": "จำเป็นสำหรับการอ่านทริกเกอร์ของโอเวอร์เลย์",
+    "settings.relic_picker_vaulted": "รวม relic ในห้องนิรภัยในตัวเลือกรีลิก",
     "settings.manual_refresh": "รีเฟรชด้วยตนเอง",
     "settings.market_prices": "ราคาตลาด",
     "settings.not_fetched": "ยังไม่ได้ดึง",

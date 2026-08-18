@@ -384,6 +384,7 @@
     "settings.last_fetched": "Última busca:",
     "settings.log_scanner": "Scanner de logs",
     "settings.log_scanner_desc": "Necessário para ler gatilhos das sobreposições",
+    "settings.relic_picker_vaulted": "Incluir relíquias cofradas no seletor de relíquias",
     "settings.manual_refresh": "Atualização manual",
     "settings.market_prices": "Preços de mercado",
     "settings.not_fetched": "Ainda não buscado.",

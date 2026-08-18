@@ -384,6 +384,7 @@
     "settings.last_fetched": "Última obtención:",
     "settings.log_scanner": "Escáner de registros",
     "settings.log_scanner_desc": "Necesario para leer los disparadores de las superposiciones",
+    "settings.relic_picker_vaulted": "Incluir reliquias de la bóveda en el selector de reliquias",
     "settings.manual_refresh": "Actualización manual",
     "settings.market_prices": "Precios del mercado",
     "settings.not_fetched": "Aún no obtenido.",

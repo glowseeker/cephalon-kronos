@@ -384,6 +384,7 @@
     "settings.last_fetched": "Последнее получение:",
     "settings.log_scanner": "Сканер журналов",
     "settings.log_scanner_desc": "Необходимо для чтения триггеров оверлеев",
+    "settings.relic_picker_vaulted": "Включать реликвии из хранилища в выбор реликвий",
     "settings.manual_refresh": "Ручное обновление",
     "settings.market_prices": "Рыночные цены",
     "settings.not_fetched": "Ещё не получено.",

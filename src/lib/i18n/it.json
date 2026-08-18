@@ -384,6 +384,7 @@
     "settings.last_fetched": "Ultimo recupero:",
     "settings.log_scanner": "Scanner dei log",
     "settings.log_scanner_desc": "Necessario per leggere i trigger degli overlay",
+    "settings.relic_picker_vaulted": "Includi i reliquiari in volta nel selettore",
     "settings.manual_refresh": "Aggiornamento manuale",
     "settings.market_prices": "Prezzi di mercato",
     "settings.not_fetched": "Non ancora recuperato.",

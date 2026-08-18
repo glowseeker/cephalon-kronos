@@ -1009,6 +1009,9 @@ export function MonitoringProvider({ children }) {
       if (voidTier && voidTier !== 'Omnia') {
         relics = relics.filter(r => r.era === voidTier)
       }
+      if (!getSetting('relic_picker_include_vaulted', true)) {
+        relics = relics.filter(r => !r.vaulted)
+      }
       const enriched = relics.map(r => {
         const sortedRewards = (r.rewards || []).map(rw => ({
           ...rw,
@@ -1031,6 +1034,9 @@ export function MonitoringProvider({ children }) {
       let relics = inventoryData.relics
       if (voidTier && voidTier !== 'Omnia') {
         relics = relics.filter(r => r.era === voidTier)
+      }
+      if (!getSetting('relic_picker_include_vaulted', true)) {
+        relics = relics.filter(r => !r.vaulted)
       }
       const enriched = relics.map(r => {
         const sortedRewards = (r.rewards || []).map(rw => ({

@@ -395,6 +395,7 @@
     "settings.last_fetched": "Last fetched:",
     "settings.log_scanner": "Log Scanner",
     "settings.log_scanner_desc": "Required to read triggers for overlays",
+    "settings.relic_picker_vaulted": "Include vaulted relics in the relic picker",
     "settings.manual_refresh": "Manual Refresh",
     "settings.market_prices": "Market Prices",
     "settings.not_fetched": "Not fetched yet.",

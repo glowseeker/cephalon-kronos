@@ -384,6 +384,7 @@
     "settings.last_fetched": "最終取得：",
     "settings.log_scanner": "ログスキャナー",
     "settings.log_scanner_desc": "オーバーレイのトリガーを読み取るために必要",
+    "settings.relic_picker_vaulted": "リリックピッカーにヴォールト済みの遺物を含める",
     "settings.manual_refresh": "手動更新",
     "settings.market_prices": "マーケット価格",
     "settings.not_fetched": "まだ取得されていません。",

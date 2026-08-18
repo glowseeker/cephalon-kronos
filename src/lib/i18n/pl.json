@@ -384,6 +384,7 @@
     "settings.last_fetched": "Ostatnio pobrano:",
     "settings.log_scanner": "Skaner dzienników",
     "settings.log_scanner_desc": "Wymagane do odczytu wyzwalaczy nakładek",
+    "settings.relic_picker_vaulted": "Uwzględnij relikty ze skarbca w wyborze reliktów",
     "settings.manual_refresh": "Ręczne odświeżanie",
     "settings.market_prices": "Ceny rynkowe",
     "settings.not_fetched": "Jeszcze nie pobrano.",

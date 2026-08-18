@@ -394,6 +394,7 @@
     "settings.last_fetched": "Dernière récupération :",
     "settings.log_scanner": "Scanner de journaux",
     "settings.log_scanner_desc": "Nécessaire pour lire les déclencheurs des overlays",
+    "settings.relic_picker_vaulted": "Inclure les reliques coffrées dans le sélecteur de reliques",
     "settings.manual_refresh": "Actualisation manuelle",
     "settings.market_prices": "Prix du marché",
     "settings.not_fetched": "Pas encore récupéré.",

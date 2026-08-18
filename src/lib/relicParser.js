@@ -411,6 +411,7 @@ export function getRewardInventoryContext(rewardUniqueName, inventoryData, expor
     isMastered: parentIsMastered,
     isForma,
     isResource,
+    vaulted: !!(inventoryData.primeSets?.[parentName]?.vaulted),
     subcomponents,
   };
 }

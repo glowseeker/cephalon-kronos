@@ -384,6 +384,7 @@
     "settings.last_fetched": "Son alınma:",
     "settings.log_scanner": "Günlük tarayıcısı",
     "settings.log_scanner_desc": "Kaplama tetikleyicilerini okumak için gerekli",
+    "settings.relic_picker_vaulted": "Relik seçicisine kasadan relicları dahil et",
     "settings.manual_refresh": "Manuel yenileme",
     "settings.market_prices": "Piyasa fiyatları",
     "settings.not_fetched": "Henüz alınmadı.",

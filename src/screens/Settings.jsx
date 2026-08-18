@@ -420,6 +420,15 @@ export default function SettingsScreen() {
     }
   };
 
+  const [relicPickerIncludeVaulted, setRelicPickerIncludeVaulted] = useState(
+    () => getSetting('relic_picker_include_vaulted', true)
+  );
+
+  const handleSetRelicPickerIncludeVaulted = async (val) => {
+    setRelicPickerIncludeVaulted(val);
+    await setSetting('relic_picker_include_vaulted', val);
+  };
+
   const handleSetUiScale = async (val) => {
     setFissureUiScale(val);
     await setSetting('fissure_ui_scale', val);
@@ -736,6 +745,10 @@ export default function SettingsScreen() {
                   </div>
                   <Toggle checked={fissureOverlayEnabled} onChange={handleSetFissureEnabled} />
                 </div>
+              </div>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-kronos-dim">{t('settings.relic_picker_vaulted')}</span>
+                <Toggle checked={relicPickerIncludeVaulted} onChange={handleSetRelicPickerIncludeVaulted} />
               </div>
             </div>
           </div>

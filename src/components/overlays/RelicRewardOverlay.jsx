@@ -379,6 +379,11 @@ function RewardSlot({ confirmed, isLocal, price }) {
         }>
             {inv.parentName || displayName}
           </span>
+          {inv.vaulted &&
+        <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[8px] font-black uppercase tracking-widest">
+                VAULTED
+              </span>
+        }
         </div>
       }
 

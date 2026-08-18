@@ -384,6 +384,7 @@
     "settings.last_fetched": "Zuletzt abgerufen:",
     "settings.log_scanner": "Protokoll-Scanner",
     "settings.log_scanner_desc": "Erforderlich zum Lesen von Triggern für Overlays",
+    "settings.relic_picker_vaulted": "Eingelagerte Relikte in der Reliktauswahl einbeziehen",
     "settings.manual_refresh": "Manuelle Aktualisierung",
     "settings.market_prices": "Marktpreise",
     "settings.not_fetched": "Noch nicht abgerufen.",
