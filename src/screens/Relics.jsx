@@ -24,7 +24,7 @@ import { useMonitoring } from '../contexts/MonitoringContext';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { getRelicEV } from '../lib/relicParser';
 
-const ERA_ORDER = ['Lith', 'Meso', 'Neo', 'Axi', 'Requiem'];
+const ERA_ORDER = ['Lith', 'Meso', 'Neo', 'Axi', 'Requiem', 'Omnia'];
 const QUALITY_ORDER = ['Intact', 'Exceptional', 'Flawless', 'Radiant'];
 const REFINEMENTS = ['Intact', 'Exceptional', 'Flawless', 'Radiant'];
 const REFINEMENT_LABELS = {
@@ -40,6 +40,7 @@ export default function Relics() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEra, setActiveEra] = useState('All');
   const [activeQuality, setActiveQuality] = useState('All');
+  const [refinementFilter, setRefinementFilter] = useState('All'); // 'All' | 'HasRefinements' | 'IntactOnly'
   const [vaultFilter, setVaultFilter] = useState('All'); // 'All' | 'Unvaulted' | 'Vaulted'
   const [squadSize, setSquadSize] = useState(1);
   const [sortMode, setSortMode] = useState('name'); // 'name' | 'ducat' | 'plat'
@@ -59,6 +60,15 @@ export default function Relics() {
 
     const matchQuality = activeQuality === 'All' || r.refinements && r.refinements[activeQuality] > 0;
     if (!matchQuality) return false;
+
+    // Refinement filter: 'HasRefinements' = at least one non-Intact refinement; 'IntactOnly' = only Intact count > 0
+    if (refinementFilter !== 'All') {
+      const refinements = r.refinements || {};
+      const nonIntactCount = (refinements.Exceptional || 0) + (refinements.Flawless || 0) + (refinements.Radiant || 0);
+      if (refinementFilter === 'HasRefinements' && nonIntactCount === 0) return false;
+      if (refinementFilter === 'IntactOnly' && nonIntactCount > 0) return false;
+    }
+
 
     const matchVault = vaultFilter === 'All' || (vaultFilter === 'Vaulted' ? !!r.vaulted : !r.vaulted);
     if (!matchVault) return false;
@@ -222,6 +232,19 @@ export default function Relics() {
             tabs={['All', 'Unvaulted', 'Vaulted'].map((v) => ({ id: v, label: t('relics.vault_' + v.toLowerCase()) }))}
             activeTab={vaultFilter}
             onChange={setVaultFilter} />
+        </div>
+
+        {/* Refinement Filter */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest px-1">{t('relics.refinement_filter')}</span>
+          <Tabs
+            tabs={[
+              { id: 'All', label: t('relics.all') },
+              { id: 'HasRefinements', label: t('relics.has_refinements') },
+              { id: 'IntactOnly', label: t('relics.intact_only') }
+            ]}
+            activeTab={refinementFilter}
+            onChange={setRefinementFilter} />
         </div>
 
         {/* Sort Controls */}
@@ -418,7 +441,7 @@ export default function Relics() {
                             {/* Expected Value Footer */}
                             <div className="mt-2 pt-2 border-t border-white/5 flex flex-col gap-1.5">
                               <div className="flex items-center justify-between">
-                                {era !== 'Requiem' &&
+                                {era !== 'Requiem' && era !== 'Omnia' &&
                             <div className="flex items-center gap-1.5" title={t("relics.ev_title", { label: t("relics.exp_ducats"), refinement: evRefinement, size: squadSize })}>
                                     {iconSrc('Ducats') && <img src={iconSrc('Ducats')} className="w-3.5 h-3.5 object-contain" alt="" />}
                                     <span className="text-[12px] font-black text-kronos-dim uppercase tracking-tighter">{t('relics.exp_ducats')}</span>

@@ -2507,6 +2507,18 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
     }
   }
 
+  // ── Nightwave Challenge Progress ──
+  // raw.ChallengeProgress is an array of { Challenge, Progress, Completed } entries
+  // from the player profile export. We build a Set of completed challenge UIDs
+  // (the leaf segment of the Challenge path, e.g. "Challenge_XYZ" → "XYZ").
+  const completedChallengeIds = new Set()
+  for (const cp of (raw.ChallengeProgress ?? [])) {
+    if (cp.Completed && cp.Challenge) {
+      const uid = cp.Challenge.replace(/.*\//, '')
+      completedChallengeIds.add(uid)
+    }
+  }
+
   // ── Reverse ingredient index ──
   // Maps each item's unique_name to the list of recipes that consume it as an
   // ingredient.  Used to surface a "Crafting Ingredient" badge in Inventory.jsx.
@@ -2562,6 +2574,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
       orokin_catalyst: catalystCount,
       nightwave_standing: nightwaveStanding,
       nightwave_title: nightwaveTitle,
+      completedChallengeIds: Array.from(completedChallengeIds),
       endo: raw.FusionPoints ?? 0,
     },
     wishlist,

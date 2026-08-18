@@ -28,6 +28,8 @@ import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 
 const tasks = [
 { id: 'baro', label: 'Baro Ki\'Teer', labelKey: 'ui.dashboard.baro_kiteer', reset: 'baro' },
+{ id: 'glast', label: 'Ergo Glast', labelKey: 'checklist.task_glast', reset: 'daily' },
+{ id: 'eleanor', label: 'Eleanor', labelKey: 'checklist.task_eleanor', reset: 'daily' },
 { id: 'sortie', label: 'Sortie', labelKey: 'ui.dashboard.sortie', reset: 'daily' },
 { id: 'foundry', label: 'Check Foundry', labelKey: 'checklist.task_foundry', reset: 'daily' },
 { id: 'syndicates', label: 'Syndicate Standing', labelKey: 'checklist.task_syndicates', reset: 'daily' },

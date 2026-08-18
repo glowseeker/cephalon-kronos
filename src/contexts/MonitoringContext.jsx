@@ -651,11 +651,11 @@ export function MonitoringProvider({ children }) {
       const wsStr = await invoke('fetch_url', { url: OFFICIAL_API }).catch(() => null) || await invoke('fetch_url', { url: ORACLE_API }).catch(() => null)
       const ws = wsStr ? JSON.parse(wsStr) : null
       if (ws && dict) {
-        const parsed = parseWorldstate(ws, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, ExportUpgrades: exportData?.ExportUpgrades, archimedeaMap, descendiaDesc, locale, i18nData: i18nRef.current })
+        const parsed = parseWorldstate(ws, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, ExportUpgrades: exportData?.ExportUpgrades, archimedeaMap, descendiaDesc, completedChallengeIds: new Set(inventoryData?.account?.completedChallengeIds || []), locale, i18nData: i18nRef.current })
         setWorldState(parsed)
       }
     } catch (err) { }
-  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, archimedeaMap, descendiaDesc])
+  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, archimedeaMap, descendiaDesc, inventoryData?.account?.completedChallengeIds])
 
   useEffect(() => {
     if (Object.keys(dict || {}).length > 0) {

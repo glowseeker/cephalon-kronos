@@ -518,12 +518,13 @@ export default function MirroredMonitoringProvider({ children }) {
           dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName,
           ES, ENWRawRewards, ExportImages, ExportUpgrades: exportData?.ExportUpgrades,
           archimedeaMap, descendiaDesc,
+          completedChallengeIds: new Set(inventoryData?.account?.completedChallengeIds || []),
           locale,
         })
         setWorldState(parsed)
       }
     } catch (err) { }
-  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, archimedeaMap, descendiaDesc])
+  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, archimedeaMap, descendiaDesc, inventoryData?.account?.completedChallengeIds])
 
   useEffect(() => {
     if (Object.keys(dict || {}).length > 0) {

@@ -792,7 +792,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
           {categories.flatMap((cat) =>
           (grouped[cat] || []).map((c, idx) =>
-          <div key={`${cat}-${idx}`} className="bg-kronos-panel/40 p-2 rounded border border-white/5 hover:border-kronos-accent/20 transition-all">
+          <div key={`${cat}-${idx}`} className={`bg-kronos-panel/40 p-2 rounded border border-white/5 hover:border-kronos-accent/20 transition-all ${c.completed ? 'opacity-60' : ''}`}>
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${cat === 'Elite Weekly' ? 'bg-yellow-500/20 text-yellow-400' : cat === 'Weekly' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
                     {categoryLabel(cat)}
@@ -805,6 +805,29 @@ export default function Dashboard() {
           )
           )}
         </div>
+
+        {/* Recovered Challenges - from previous weeks not yet completed */}
+        {nw.recovered && nw.recovered.length > 0 &&
+        <div className="mt-4">
+          <h4 className="text-[10px] font-black uppercase text-kronos-accent tracking-widest mb-2">
+            {t('ui.dashboard.nightwave_recovered', { count: nw.recovered.length })}
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {nw.recovered.map((c, idx) =>
+            <div key={`recovered-${idx}`} className="bg-kronos-panel/40 p-2 rounded border border-white/5 hover:border-kronos-accent/20 transition-all">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${c.isElite ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                  {c.isElite ? categoryLabel('Elite Weekly') : categoryLabel('Weekly')}
+                </span>
+                <span className="text-[10px] text-kronos-accent font-black">{c.xp.toLocaleString()}{t('ui.inventory.sort_xp')}</span>
+              </div>
+              <p className="text-sm font-bold text-kronos-text leading-tight mb-1.5">{c.name}</p>
+              <p className="text-xs text-kronos-dim/80 leading-relaxed">{c.desc}</p>
+            </div>
+            )}
+          </div>
+        </div>
+        }
       </div>);
 
   };
@@ -1315,6 +1338,39 @@ export default function Dashboard() {
 
   };
 
+  const renderVendor = (vendor) => {
+    if (!vendor) return null;
+
+    return (
+      <Card glow className="p-3">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <ShoppingBag size={16} className="text-kronos-accent flex-shrink-0" />
+            <p className="font-bold text-sm uppercase">{vendor.name}</p>
+          </div>
+        </div>
+        <div className="bg-kronos-panel/40 rounded p-2">
+          <p className="text-xs text-kronos-dim mt-0.5 font-mono">
+            {vendor.nextRefresh ? t('ui.dashboard.vendor_refreshes', { time: timeRemaining(vendor.nextRefresh, t) }) : t('ui.dashboard.vendor_loading')}
+          </p>
+          {vendor.cycleBatch &&
+          <p className="text-xs text-kronos-dim mt-0.5 font-mono">
+            {t('ui.dashboard.vendor_eleanor_batch', { current: vendor.cycleBatch, next: vendor.nextBatch })}
+          </p>
+          }
+          {vendor.items?.length > 0 &&
+          <div className="flex flex-wrap gap-1 mt-2">
+            {vendor.items.slice(0, 4).map((item, idx) => (
+              <span key={idx} className="text-[10px] font-bold text-kronos-text uppercase bg-black/20 px-1.5 py-0.5 rounded">
+                {item.item}
+              </span>
+            ))}
+          </div>
+          }
+        </div>
+      </Card>);
+  };
+
   const BaroModal = () => {
     const vt = worldstate?.voidTrader;
     const inventory = vt?.inventory;
@@ -1611,6 +1667,15 @@ export default function Dashboard() {
           }
 
           {isVisible('baro') && renderBaro()}
+
+          {/* Vendor Timers (Ergo Glast + Eleanor) */}
+          {worldState && (() => {
+            const vendors = worldState.vendors || []
+            if (vendors.length === 0) return null
+            return vendors.map((vendor) => (
+              <div key={vendor.id}>{renderVendor(vendor)}</div>
+            ))
+          })()}
 
           {/* Arbitration */}
           {isVisible('arb') &&

@@ -338,8 +338,9 @@ export function extractNightwaveSeason(credName, locale = 'en') {
  *   - ExportUpgrades  ExportUpgrades table
  *   - archimedeaMap   Archimedea localized name map
  *   - descendiaDesc   Descendia description map (key → description text)
+ *   - completedChallengeIds  Set of Nightwave challenge UIDs the player has completed (for recovered challenges)
  */
-export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ExportImages, ExportUpgrades, archimedeaMap, descendiaDesc, locale = 'en', i18nData = null }) {
+export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ExportImages, ExportUpgrades, archimedeaMap, descendiaDesc, completedChallengeIds, locale = 'en', i18nData = null }) {
 
   const nightwaveRewards = ENWRawRewards || []
   const imagesMap = ExportImages || {}
@@ -838,17 +839,51 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
       challenges: (raw.SeasonInfo.ActiveChallenges || []).map(c => {
         const challengeEntry = EC?.[c.Challenge] || {}
         const standing = challengeEntry.standing || c.xpAmount || c.XP || 0
+        const challengeId = c.Challenge.replace(/.*\//, '')
+        const completed = completedChallengeIds?.has(challengeId) || false
         return {
           id: c._id?.$oid || c._id,
+          uid: challengeId,
           name: resolveChallenge(c.Challenge, dict, EC),
           desc: resolveChallengeDesc(c.Challenge, dict, EC, ERg),
           expiry: c.Expiry,
           isDaily: !!c.Daily,
           xp: standing,
           isElite: standing >= 7000,
-          icon: challengeEntry.icon || null
+          icon: challengeEntry.icon || null,
+          completed
         }
-      })
+      }),
+      // Recovered challenges: active challenges from previous weeks that
+      // the player has NOT completed (can be recovered with credits).
+      recovered: (() => {
+        if (!completedChallengeIds) return []
+        const weekMs = 7 * 24 * 60 * 60 * 1000
+        return (raw.SeasonInfo.ActiveChallenges || [])
+          .filter(c => {
+            // Only consider non-daily challenges from previous weeks
+            if (c.Daily) return false
+            const expiryMs = c.Expiry?.$date?.$numberLong
+              ? parseInt(c.Expiry.$date.$numberLong, 10)
+              : (c.Expiry ? new Date(c.Expiry).getTime() : 0)
+            if (!expiryMs) return false
+            const challengeId = c.Challenge.replace(/.*\//, '')
+            return !completedChallengeIds.has(challengeId) && (Date.now() - expiryMs > weekMs)
+          })
+          .map(c => {
+            const challengeEntry = EC?.[c.Challenge] || {}
+            const standing = challengeEntry.standing || c.xpAmount || c.XP || 0
+            return {
+              id: c._id?.$oid || c._id,
+              uid: c.Challenge.replace(/.*\//, ''),
+              name: resolveChallenge(c.Challenge, dict, EC),
+              desc: resolveChallengeDesc(c.Challenge, dict, EC, ERg),
+              xp: standing,
+              isElite: standing >= 7000,
+              icon: challengeEntry.icon || null
+            }
+          })
+      })()
     } : null,
 
     archimedeas: (raw.Conquests || []).map(c => ({
@@ -1051,6 +1086,64 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
     cambionCycle: parseCambionCycle(raw),
     earthCycle: parseEarthCycle(raw),
     zarimanCycle: parseZarimanCycle(raw, bountyCycle),
-    duviriCycle: parseDuviriCycle(raw)
+    duviriCycle: parseDuviriCycle(raw),
+
+    // Vendor timers (not in worldstate - computed from fixed daily rotation schedules).
+    // Source: Warframe wiki vendor rotation pages. Ergo Glast's Tenet shop and
+    // Eleanor's Coda shop each reset daily at a known UTC time.
+    vendors: computeVendorTimers(raw, mergedDict, uniqueNameToName)
   }
+}
+
+/**
+ * Compute vendor rotation timers for vendors not exposed in the worldstate.
+ *
+ * Refresh schedules (sourced from Warframe wiki):
+ * - Ergo Glast: Tenet weapons, daily rotation at 11:00 UTC
+ * - Eleanor: Coda weapons, cycles between Batch A and Batch B every 4 days at 0:00 UTC
+ *
+ * Item pools are not available from the worldstate or any working API; we expose
+ * the cycle type so the UI can label which batch is upcoming.
+ */
+function computeVendorTimers(raw, dict, uniqueNameToName) {
+  const vendors = []
+
+  const now = Date.now()
+  const MS_PER_DAY = 86400000
+
+  // Ergo Glast - Tenet Weapon shop, daily rotation at 11:00 UTC
+  let glastNextRefresh = new Date(now)
+  glastNextRefresh.setUTCHours(11, 0, 0, 0)
+  if (glastNextRefresh.getTime() <= now) glastNextRefresh = new Date(glastNextRefresh.getTime() + MS_PER_DAY)
+
+  vendors.push({
+    id: 'glast',
+    name: dict?.['/Lotus/Language/Syndicates/ErgoGlastTitle'] || 'Ergo Glast',
+    type: 'tenet_weapons',
+    rotationIntervalHours: 24,
+    nextRefresh: glastNextRefresh,
+  })
+
+  // Eleanor - Coda weapon shop, cycles Batch A/B every 4 days at 0:00 UTC
+  // The wiki confirms the cycle started from March 18, 2025 00:00:00 UTC and
+  // repeats every 4 days. Each 4-day cycle: first 2 days = Batch A, second 2 days = Batch B.
+  const ELEANOR_EPOCH = new Date('2025-03-18T00:00:00Z').getTime()
+  const ELEANOR_CYCLE_MS = 4 * MS_PER_DAY
+  const elapsed = now - ELEANOR_EPOCH
+  const cycleIndex = Math.floor(elapsed / ELEANOR_CYCLE_MS)
+  const nextCycleStart = ELEANOR_EPOCH + (cycleIndex + 1) * ELEANOR_CYCLE_MS
+  eleanorNextRefresh = new Date(nextCycleStart)
+  const eleanorCyclePos = cycleIndex % 2
+
+  vendors.push({
+    id: 'eleanor',
+    name: 'Eleanor',
+    type: 'coda_weapons',
+    rotationIntervalHours: 96,
+    nextRefresh: eleanorNextRefresh,
+    cycleBatch: eleanorCyclePos === 0 ? 'A' : 'B',
+    nextBatch: eleanorCyclePos === 0 ? 'B' : 'A',
+  })
+
+  return vendors
 }
