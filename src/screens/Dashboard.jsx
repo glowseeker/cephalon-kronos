@@ -31,8 +31,9 @@ import {
   Package, DollarSign, RefreshCw,
   ShoppingBag,
   Calendar, ChevronDown, ChevronUp, X,
-  Settings, Check } from
-'lucide-react';
+  Settings, Check
+} from
+  'lucide-react';
 import { useMonitoring } from '../contexts/MonitoringContext';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import {
@@ -47,8 +48,9 @@ import {
   resolveBountyTitle,
   resolveItemName,
   timeRemaining,
-  timeSince } from
-'../lib/warframeUtils';
+  timeSince
+} from
+  '../lib/warframeUtils';
 
 const LOCATION_BOUNTIES_API = 'https://oracle.browse.wf/location-bounties';
 const BOUNTY_CYCLE_API = 'https://oracle.browse.wf/bounty-cycle';
@@ -77,8 +79,8 @@ function getCurrentArby(arbys, ERg, dict) {
     const entry = parseArbyLine(line, ERg, dict);
     if (!entry || isNaN(entry.ts)) continue;
     const GRACE_PERIOD = 300000; // 5 minutes
-    if (entry.ts <= now + GRACE_PERIOD) best = entry;else
-    break;
+    if (entry.ts <= now + GRACE_PERIOD) best = entry; else
+      break;
   }
   return best;
 }
@@ -194,8 +196,8 @@ function lookupMainReward(finalStageIdx, keyword, levelRange) {
 // against the live rotation: Zariman 50-55, EntratiLab 55-60, Hex 65-70.
 const BOUNTY_CYCLE_LEVELS = {
   holdfasts: { keyword: 'Zariman', level: '50-55' },
-  cavia:   { keyword: 'Entrati Lab', level: '55-60' },
-  hex:     { keyword: 'Hex', level: '65-70' },
+  cavia: { keyword: 'Entrati Lab', level: '55-60' },
+  hex: { keyword: 'Hex', level: '65-70' },
 };
 
 export default function Dashboard() {
@@ -228,14 +230,14 @@ export default function Dashboard() {
     try {
       const saved = localStorage.getItem('dashboard_hidden_cards');
       return saved ? JSON.parse(saved) : [];
-    } catch {return [];}
+    } catch { return []; }
   });
   const [descendiaTab, setDescendiaTab] = useState('normal');
 
   const iconSrc = (name) => iconsPath ? convertFileSrc(`${iconsPath}/${name}.png`) : null;
 
-  useEffect(() => {invoke('get_icons_path').then((p) => setIconsPath(p)).catch(() => {});}, []);
-  useEffect(() => {invoke('get_mod_frames_path').then((p) => setFramesPath(p)).catch(() => {});}, []);
+  useEffect(() => { invoke('get_icons_path').then((p) => setIconsPath(p)).catch(() => { }); }, []);
+  useEffect(() => { invoke('get_mod_frames_path').then((p) => setFramesPath(p)).catch(() => { }); }, []);
 
   useEffect(() => {
     localStorage.setItem('dashboard_hidden_cards', JSON.stringify(hiddenCards));
@@ -305,13 +307,13 @@ export default function Dashboard() {
   const fetchBounties = useCallback(async () => {
     try {
       const [loc, cycle] = await Promise.all([
-      fetch(LOCATION_BOUNTIES_API).then((r) => r.ok ? r.json() : null),
-      fetch(BOUNTY_CYCLE_API).then((r) => r.ok ? r.json() : null)]
+        fetch(LOCATION_BOUNTIES_API).then((r) => r.ok ? r.json() : null),
+        fetch(BOUNTY_CYCLE_API).then((r) => r.ok ? r.json() : null)]
       );
       if (loc) setLocationBounties(loc);
       if (cycle) setBountyCycle(cycle);
       setLastFetch(Date.now());
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -347,25 +349,25 @@ export default function Dashboard() {
   }
   const localizeTimerState = (raw) => timerStates[raw] ?? raw
   const timers = [
-  { label: resolveGameTerm('/Lotus/Language/Locations/CetusHub', locale), data: worldstate?.cetusCycle, getState: (d) => localizeTimerState(d.state) },
-  { label: resolveGameTerm('/Lotus/Language/Locations/VenusLandscape', locale), data: worldstate?.vallisCycle, getState: (d) => localizeTimerState(d.state) },
-  {
-    label: resolveGameTerm('/Lotus/Language/InfestedMicroplanet/SolarMapDeimosLandscapeName', locale), data: worldstate?.cambionCycle, getState: (d) =>
-    typeof d.active === 'boolean' ? (d.active ? localizeTimerState('Fass') : localizeTimerState('Vome')) : localizeTimerState(d.active || d.state || '?')
-  },
-  { label: resolveGameTerm('/Lotus/Language/Zariman/ZarimanRegionName', locale), data: worldstate?.zarimanCycle, getState: (d) => localizeTimerState(d.state) },
-  { label: resolveGameTerm('/Lotus/Language/Duviri/Duviri', locale), data: worldstate?.duviriCycle, getState: (d) => localizeTimerState(d.state) },
-  { label: t('ui.dashboard.timers_daily_reset'), data: { expiry: new Date(new Date().setUTCHours(24, 0, 0, 0)) }, getState: () => localizeTimerState('Reset') }].
-  filter((t) => t.data);
+    { label: resolveGameTerm('/Lotus/Language/Locations/CetusHub', locale), data: worldstate?.cetusCycle, getState: (d) => localizeTimerState(d.state) },
+    { label: resolveGameTerm('/Lotus/Language/Locations/VenusLandscape', locale), data: worldstate?.vallisCycle, getState: (d) => localizeTimerState(d.state) },
+    {
+      label: resolveGameTerm('/Lotus/Language/InfestedMicroplanet/SolarMapDeimosLandscapeName', locale), data: worldstate?.cambionCycle, getState: (d) =>
+        typeof d.active === 'boolean' ? (d.active ? localizeTimerState('Fass') : localizeTimerState('Vome')) : localizeTimerState(d.active || d.state || '?')
+    },
+    { label: resolveGameTerm('/Lotus/Language/Zariman/ZarimanRegionName', locale), data: worldstate?.zarimanCycle, getState: (d) => localizeTimerState(d.state) },
+    { label: resolveGameTerm('/Lotus/Language/Duviri/Duviri', locale), data: worldstate?.duviriCycle, getState: (d) => localizeTimerState(d.state) },
+    { label: t('ui.dashboard.timers_daily_reset'), data: { expiry: new Date(new Date().setUTCHours(24, 0, 0, 0)) }, getState: () => localizeTimerState('Reset') }].
+    filter((t) => t.data);
 
   const spIncursionNodes = useMemo(() => {
     return getSpIncursionNodes(spIncursions);
   }, [spIncursions]);
 
   const fissureTabs = [
-  { id: 'normal', label: t('ui.dashboard.fissure_normal') },
-  { id: 'steel', label: t('ui.dashboard.fissure_steel_path') },
-  { id: 'storm', label: t('ui.dashboard.fissure_void_storm') }];
+    { id: 'normal', label: t('ui.dashboard.fissure_normal') },
+    { id: 'steel', label: t('ui.dashboard.fissure_steel_path') },
+    { id: 'storm', label: t('ui.dashboard.fissure_void_storm') }];
 
 
   const visibleFissures = useMemo(() => {
@@ -373,32 +375,32 @@ export default function Dashboard() {
     const now = new Date();
     const all = [...(worldstate?.fissures || []), ...(worldstate?.voidStorms || [])];
     return all.
-    filter((f) => {
-      const exp = f.expiry?.$date?.$numberLong ?
-      new Date(parseInt(f.expiry.$date.$numberLong, 10)) :
-      new Date(f.expiry);
-      if (exp <= now) return false;
-      if (fissureTab === 'normal') return !f.isStorm && !f.isHard;
-      if (fissureTab === 'steel') return f.isHard && !f.isStorm;
-      if (fissureTab === 'storm') return f.isStorm;
-      return false;
-    }).
-    sort((a, b) => a.tierNum - b.tierNum);
+      filter((f) => {
+        const exp = f.expiry?.$date?.$numberLong ?
+          new Date(parseInt(f.expiry.$date.$numberLong, 10)) :
+          new Date(f.expiry);
+        if (exp <= now) return false;
+        if (fissureTab === 'normal') return !f.isStorm && !f.isHard;
+        if (fissureTab === 'steel') return f.isHard && !f.isStorm;
+        if (fissureTab === 'storm') return f.isStorm;
+        return false;
+      }).
+      sort((a, b) => a.tierNum - b.tierNum);
   }, [worldstate, fissureTab]);
 
   const archimedeaTabs = [
-  { id: 'deep', label: t('ui.dashboard.archimedea_deep') },
-  { id: 'temporal', label: t('ui.dashboard.archimedea_temporal') }];
+    { id: 'deep', label: t('ui.dashboard.archimedea_deep') },
+    { id: 'temporal', label: t('ui.dashboard.archimedea_temporal') }];
 
 
   const bountyTabs = useMemo(() => [
-  { id: 'holdfasts', label: dict?.['/Lotus/Language/Syndicates/ZarimanName'] || 'Holdfasts', icon: iconSrc('MiniMapZariman') },
-  { id: 'cavia', label: dict?.['/Lotus/Language/EntratiLab/EntratiGeneral/EntratiLabSyndicateName'] || 'Cavia', icon: iconSrc('MiniMapCaviaHubSyndicate') },
-  { id: 'hex', label: dict?.['/Lotus/Language/1999/MessengerHexName'] || 'Hex', icon: iconSrc('MiniMapMarkersJobBoard') },
-  { id: 'cetus', label: dict?.['/Lotus/Language/Syndicates/CetusName'] || 'Cetus', icon: iconSrc('MiniMapEidolonCetusElder') },
-  { id: 'deimos', label: dict?.['/Lotus/Language/InfestedMicroplanet/EntratiSyndicateName'] || 'Deimos', icon: iconSrc('MiniMapDeimosGrandmother') },
-  { id: 'vallis', label: dict?.['/Lotus/Language/Syndicates/SolarisSecretName'] || 'Vallis', icon: iconSrc('MiniMapHubFortuna') }],
-  [iconsPath, locale, dict]);
+    { id: 'holdfasts', label: dict?.['/Lotus/Language/Syndicates/ZarimanName'] || 'Holdfasts', icon: iconSrc('MiniMapZariman') },
+    { id: 'cavia', label: dict?.['/Lotus/Language/EntratiLab/EntratiGeneral/EntratiLabSyndicateName'] || 'Cavia', icon: iconSrc('MiniMapCaviaHubSyndicate') },
+    { id: 'hex', label: dict?.['/Lotus/Language/1999/MessengerHexName'] || 'Hex', icon: iconSrc('MiniMapMarkersJobBoard') },
+    { id: 'cetus', label: dict?.['/Lotus/Language/Syndicates/CetusName'] || 'Cetus', icon: iconSrc('MiniMapEidolonCetusElder') },
+    { id: 'deimos', label: dict?.['/Lotus/Language/InfestedMicroplanet/EntratiSyndicateName'] || 'Deimos', icon: iconSrc('MiniMapDeimosGrandmother') },
+    { id: 'vallis', label: dict?.['/Lotus/Language/Syndicates/SolarisSecretName'] || 'Vallis', icon: iconSrc('MiniMapHubFortuna') }],
+    [iconsPath, locale, dict]);
 
   // ── Bounty helper data ───────────────────────────────────────────────────────
   // Rotation C Final Stage rewards indexed by bountyLevel, used to show the
@@ -534,20 +536,20 @@ export default function Dashboard() {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
         {items.map((it, idx) =>
-        <div
-          key={`${it.name}-${idx}`}
-          className="relative rounded-lg border border-transparent hover:border-kronos-accent/30 transition-all group overflow-hidden min-h-[140px]">
-          
+          <div
+            key={`${it.name}-${idx}`}
+            className="relative rounded-lg border border-transparent hover:border-kronos-accent/30 transition-all group overflow-hidden min-h-[140px]">
+
             {/* Bounty art  -  character portrait sits on the right; the left ~40% is transparent whitespace */}
             {it.img && iconsPath &&
-          <img
-            src={convertFileSrc(`${iconsPath}/${it.img}.png`)}
-            alt={it.name}
-            className="absolute inset-0 w-full h-full object-contain"
-            style={{ objectPosition: 'right top' }}
-            onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} />
+              <img
+                src={convertFileSrc(`${iconsPath}/${it.img}.png`)}
+                alt={it.name}
+                className="absolute inset-0 w-full h-full object-contain"
+                style={{ objectPosition: 'right top' }}
+                onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
 
-          }
+            }
             {/* Darken the left transparent zone so overlaid text stays legible; the portrait is right/top anchored */}
             <div className="absolute inset-0 left-0 right-[10%] bg-gradient-to-r from-black/65 via-black/40 to-transparent" />
             {/* Text spans the transparent-left width; stops short of the portrait */}
@@ -561,14 +563,14 @@ export default function Dashboard() {
               </div>
               {it.desc && <p className="text-xs text-kronos-text/90 leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.desc}</p>}
               {it.obj &&
-            <p className="text-xs font-medium text-kronos-accent mt-auto leading-tight break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{t('dashboard.challenge')} {it.obj}
+                <p className="text-xs font-medium text-kronos-accent mt-auto leading-tight break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{t('dashboard.challenge')} {it.obj}
                 </p>
-            }
-            {it.mainReward &&
-            <p className="text-[10px] font-medium text-kronos-text/70 mt-auto leading-tight break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
-              {t('dashboard.main_reward')}: {it.mainReward}
-            </p>
-            }
+              }
+              {it.mainReward &&
+                <p className="text-[10px] font-medium text-kronos-text/70 mt-auto leading-tight break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+                  {t('dashboard.main_reward')}: {it.mainReward}
+                </p>
+              }
             </div>
           </div>
         )}
@@ -586,14 +588,14 @@ export default function Dashboard() {
       <div className="space-y-4 mt-2">
         <div className="space-y-1.5">
           {data.missions.map((m, idx) =>
-          <div key={idx} className="bg-kronos-panel/40 p-3 rounded-lg text-center w-full">
+            <div key={idx} className="bg-kronos-panel/40 p-3 rounded-lg text-center w-full">
               {/* Mission type + deviation single line */}
               <p className="text-[12px] font-black uppercase mb-2 leading-tight tracking-wide">
                 <span className="text-kronos-accent">
                   {m.missionType}
                 </span>
                 {m.deviation &&
-              <>
+                  <>
                     <span className="text-kronos-dim/50 font-normal mx-2">-</span>
                     <span className="relative group/devtip font-bold normal-case text-kronos-text cursor-help">
                       {m.deviation.name}
@@ -603,22 +605,22 @@ export default function Dashboard() {
                       </span>
                     </span>
                   </>
-              }
+                }
               </p>
               {/* Risks - 2-column grid for better space usage */}
               <div className="grid grid-cols-2 gap-1.5">
                 {m.risks?.map((r, ri) =>
-              <div
-                key={ri}
-                className={`relative group/risktip text-[12px] text-kronos-dim bg-black/30 px-3 py-1.5 rounded-md cursor-help border border-white/5 hover:border-kronos-accent/30 transition-colors ${m.risks.length === 3 && ri === 2 ? 'col-span-2' : ''}`}>
-                
+                  <div
+                    key={ri}
+                    className={`relative group/risktip text-[12px] text-kronos-dim bg-black/30 px-3 py-1.5 rounded-md cursor-help border border-white/5 hover:border-kronos-accent/30 transition-colors ${m.risks.length === 3 && ri === 2 ? 'col-span-2' : ''}`}>
+
                     <span className="font-bold text-kronos-text/90 uppercase tracking-tight">{r.name}</span>
                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-kronos-panel rounded-lg text-[12px] opacity-0 group-hover/risktip:opacity-100 transition-opacity z-50 shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-white/5 pointer-events-none block text-left">
                       <span className="font-bold text-kronos-accent uppercase block mb-1.5 border-b border-white/5 pb-1">{r.name}</span>
                       <span className="text-kronos-text leading-relaxed block">{r.description}</span>
                     </span>
                   </div>
-              )}
+                )}
               </div>
             </div>
           )}
@@ -626,18 +628,18 @@ export default function Dashboard() {
 
         {/* Personal Modifiers - 2-column grid */}
         {data.personalModifiers?.length > 0 &&
-        <div className="pt-2 border-t border-white/5">
+          <div className="pt-2 border-t border-white/5">
             <p className="text-[10px] text-kronos-dim uppercase font-bold mb-3 tracking-widest text-center">{t('ui.dashboard.personal_modifiers')}</p>
             <div className="grid grid-cols-2 gap-1.5">
               {data.personalModifiers.map((pm, pi) =>
-            <div key={pi} className="relative group/pmtip text-[11px] text-kronos-text text-center p-2.5 cursor-help block bg-black/20 rounded-lg border border-white/5 hover:border-kronos-accent/30 transition-colors">
+                <div key={pi} className="relative group/pmtip text-[11px] text-kronos-text text-center p-2.5 cursor-help block bg-black/20 rounded-lg border border-white/5 hover:border-kronos-accent/30 transition-colors">
                   <span className="font-bold uppercase tracking-wide">{pm.name}</span>
                   <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-kronos-panel rounded-lg text-[12px] opacity-0 group-hover/pmtip:opacity-100 transition-opacity z-50 shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-white/5 pointer-events-none block text-left font-normal">
                     <span className="font-bold text-kronos-accent uppercase block mb-1.5 border-b border-white/5 pb-1">{pm.name}</span>
                     <span className="text-kronos-text leading-relaxed block">{pm.description}</span>
                   </span>
                 </div>
-            )}
+              )}
             </div>
           </div>
         }
@@ -670,8 +672,8 @@ export default function Dashboard() {
     }[cat] || cat);
     const grouped = (nw.challenges || []).reduce((acc, c) => {
       let cat = 'Daily';
-      if (c.isElite || c.xp >= 7000) cat = 'Elite Weekly';else
-      if (c.xp >= 4500) cat = 'Weekly';
+      if (c.isElite || c.xp >= 7000) cat = 'Elite Weekly'; else
+        if (c.xp >= 4500) cat = 'Weekly';
       if (!acc[cat]) acc[cat] = [];
       acc[cat].push(c);
       return acc;
@@ -690,7 +692,7 @@ export default function Dashboard() {
             <p className="text-sm font-bold text-kronos-accent uppercase tracking-tight text-center mb-3">{nw.name}</p>
             <div className="flex-1 flex flex-col justify-between">
               {hasInventory ?
-              <>
+                <>
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] text-kronos-dim uppercase">{t('ui.dashboard.ends')}</span>
                     <span className="text-[14px] text-kronos-text">{timeRemaining(nw.expiry, t)}</span>
@@ -711,14 +713,14 @@ export default function Dashboard() {
                     <span className="text-[11px] font-black text-kronos-text">{currentRank}</span>
                     <div className="relative flex-1 h-3 bg-black/40 rounded overflow-hidden">
                       <div
-                      className="absolute top-0 left-0 bottom-0 bg-kronos-accent"
-                      style={{ width: `${progressPercent}%` }} />
+                        className="absolute top-0 left-0 bottom-0 bg-kronos-accent"
+                        style={{ width: `${progressPercent}%` }} />
                     </div>
                     <span className="text-[11px] font-black text-kronos-dim">{currentRank + 1}</span>
                   </div>
                 </> :
 
-              <div className="flex flex-col items-center justify-center flex-1">
+                <div className="flex flex-col items-center justify-center flex-1">
                   <p className="text-[12px] text-kronos-dim uppercase mb-1">{t('ui.dashboard.ends_in')}</p>
                   <p className="text-lg font-black text-kronos-text">{timeRemaining(nw.expiry, t)}</p>
                 </div>
@@ -728,60 +730,60 @@ export default function Dashboard() {
 
           {/* Right: Rewards scrollable */}
           {rewardTiers.length > 0 &&
-          <div className="flex-1 bg-kronos-panel/20 p-3 rounded-lg border border-white/5 overflow-hidden">
+            <div className="flex-1 bg-kronos-panel/20 p-3 rounded-lg border border-white/5 overflow-hidden">
               <div
-              className="h-[220px] overflow-x-auto custom-scrollbar"
-              onWheel={(e) => {
-                e.stopPropagation();
-                e.currentTarget.scrollLeft += e.deltaY;
-              }}>
-              
+                className="h-[220px] overflow-x-auto custom-scrollbar"
+                onWheel={(e) => {
+                  e.stopPropagation();
+                  e.currentTarget.scrollLeft += e.deltaY;
+                }}>
+
                 <div className="flex gap-6 items-stretch pb-2 h-full">
                   {rewardTiers.map((r, ri) => {
-                  const isUnlocked = ri < rankToDisplay;
-                  const isCurrent = ri === rankToDisplay;
-                  return (
-                    <div
-                      key={ri}
-                      className={`relative flex-shrink-0 transition-all flex flex-col items-center ${isCurrent ? 'ring-2 ring-kronos-accent rounded p-1 m-1' : ''}`}>
-                      
+                    const isUnlocked = ri < rankToDisplay;
+                    const isCurrent = ri === rankToDisplay;
+                    return (
+                      <div
+                        key={ri}
+                        className={`relative flex-shrink-0 transition-all flex flex-col items-center ${isCurrent ? 'ring-2 ring-kronos-accent rounded p-1 m-1' : ''}`}>
+
                         <span className={`text-[9px] font-black uppercase mb-1 ${isCurrent ? 'text-kronos-accent' : 'text-kronos-dim/60'}`}>{ri + 1}</span>
                         <div className={`w-36 h-full flex items-center justify-center ${isUnlocked ? 'grayscale opacity-60' : ''}`}>
                           {r.modFrame ?
-                        <ModCard
-                          mod={{
-                            name: r.name,
-                            modFrame: r.modFrame,
-                            icon: r.iconPath,
-                            image: r.image,
-                            description: r.description,
-                            levelStats: r.levelStats,
-                            category: r.modFrame,
-                            max_rank: 3,
-                            baseDrain: r.baseDrain,
-                          }}
-                          framesPath={framesPath}
-                          cardImagesPath={cardImagesPath}
-                          iconsPath={iconsPath}
-                          exportTextIcons={ExportTextIcons}
-                          width={136}
-                          hideCategory /> :
+                            <ModCard
+                              mod={{
+                                name: r.name,
+                                modFrame: r.modFrame,
+                                icon: r.iconPath,
+                                image: r.image,
+                                description: r.description,
+                                levelStats: r.levelStats,
+                                category: r.modFrame,
+                                max_rank: 3,
+                                baseDrain: r.baseDrain,
+                              }}
+                              framesPath={framesPath}
+                              cardImagesPath={cardImagesPath}
+                              iconsPath={iconsPath}
+                              exportTextIcons={ExportTextIcons}
+                              width={136}
+                              hideCategory /> :
 
 
-                        <img
-                          src={r.image}
-                          alt={r.name}
-                          className="max-w-full max-h-full object-contain"
-                          onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} />
+                            <img
+                              src={r.image}
+                              alt={r.name}
+                              className="max-w-full max-h-full object-contain"
+                              onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
 
-                        }
+                          }
                         </div>
                         {!r.modFrame &&
-                      <p className="text-[9px] font-bold text-kronos-text uppercase leading-tight text-center mt-2 max-w-[120px] whitespace-normal break-words">{r.name}</p>
-                      }
+                          <p className="text-[9px] font-bold text-kronos-text uppercase leading-tight text-center mt-2 max-w-[120px] whitespace-normal break-words">{r.name}</p>
+                        }
                       </div>);
 
-                })}
+                  })}
                 </div>
               </div>
             </div>
@@ -791,8 +793,8 @@ export default function Dashboard() {
         {/* Challenges Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
           {categories.flatMap((cat) =>
-          (grouped[cat] || []).map((c, idx) =>
-          <div key={`${cat}-${idx}`} className={`bg-kronos-panel/40 p-2 rounded border border-white/5 hover:border-kronos-accent/20 transition-all ${c.completed ? 'opacity-60' : ''}`}>
+            (grouped[cat] || []).map((c, idx) =>
+              <div key={`${cat}-${idx}`} className={`bg-kronos-panel/40 p-2 rounded border border-white/5 hover:border-kronos-accent/20 transition-all ${c.completed ? 'opacity-60' : ''}`}>
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${cat === 'Elite Weekly' ? 'bg-yellow-500/20 text-yellow-400' : cat === 'Weekly' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
                     {categoryLabel(cat)}
@@ -802,31 +804,31 @@ export default function Dashboard() {
                 <p className="text-sm font-bold text-kronos-text leading-tight mb-1.5">{c.name}</p>
                 <p className="text-xs text-kronos-dim/80 leading-relaxed">{c.desc}</p>
               </div>
-          )
+            )
           )}
         </div>
 
         {/* Recovered Challenges - from previous weeks not yet completed */}
         {nw.recovered && nw.recovered.length > 0 &&
-        <div className="mt-4">
-          <h4 className="text-[10px] font-black uppercase text-kronos-accent tracking-widest mb-2">
-            {t('ui.dashboard.nightwave_recovered', { count: nw.recovered.length })}
-          </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            {nw.recovered.map((c, idx) =>
-            <div key={`recovered-${idx}`} className="bg-kronos-panel/40 p-2 rounded border border-white/5 hover:border-kronos-accent/20 transition-all">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${c.isElite ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                  {c.isElite ? categoryLabel('Elite Weekly') : categoryLabel('Weekly')}
-                </span>
-                <span className="text-[10px] text-kronos-accent font-black">{c.xp.toLocaleString()}{t('ui.inventory.sort_xp')}</span>
-              </div>
-              <p className="text-sm font-bold text-kronos-text leading-tight mb-1.5">{c.name}</p>
-              <p className="text-xs text-kronos-dim/80 leading-relaxed">{c.desc}</p>
+          <div className="mt-4">
+            <h4 className="text-[10px] font-black uppercase text-kronos-accent tracking-widest mb-2">
+              {t('ui.dashboard.nightwave_recovered', { count: nw.recovered.length })}
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {nw.recovered.map((c, idx) =>
+                <div key={`recovered-${idx}`} className="bg-kronos-panel/40 p-2 rounded border border-white/5 hover:border-kronos-accent/20 transition-all">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${c.isElite ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                      {c.isElite ? categoryLabel('Elite Weekly') : categoryLabel('Weekly')}
+                    </span>
+                    <span className="text-[10px] text-kronos-accent font-black">{c.xp.toLocaleString()}{t('ui.inventory.sort_xp')}</span>
+                  </div>
+                  <p className="text-sm font-bold text-kronos-text leading-tight mb-1.5">{c.name}</p>
+                  <p className="text-xs text-kronos-dim/80 leading-relaxed">{c.desc}</p>
+                </div>
+              )}
             </div>
-            )}
           </div>
-        </div>
         }
       </div>);
 
@@ -869,14 +871,14 @@ export default function Dashboard() {
 
       if (cat === 'Normal') {
         return (inventoryData.warframes || []).some((wf) =>
-        wf.owned && isSameFamily(wf.name, choiceName)
+          wf.owned && isSameFamily(wf.name, choiceName)
         );
       }
 
       if (cat === 'Steel Path') {
         // Owned if the weapon in inventory has the incarnon adapter installed
         return (inventoryData.all || []).some((item) =>
-        item.is_incarnon && item.owned && isSameFamily(item.name, choiceName)
+          item.is_incarnon && item.owned && isSameFamily(item.name, choiceName)
         );
       }
       return false;
@@ -885,37 +887,37 @@ export default function Dashboard() {
     return (
       <div className="space-y-4 mt-2">
         {Object.entries(groups).map(([cat, choices], idx) =>
-        <div key={idx} className="bg-kronos-panel/40 p-2.5 rounded border border-transparent hover:border-kronos-accent/20 transition-all">
+          <div key={idx} className="bg-kronos-panel/40 p-2.5 rounded border border-transparent hover:border-kronos-accent/20 transition-all">
             <p className="text-[11px] font-black text-kronos-accent uppercase mb-2 tracking-widest text-center">{cat === 'Steel Path' ? t('ui.dashboard.fissure_steel_path') : t('ui.dashboard.fissure_normal')}</p>
             <div className="flex flex-wrap justify-center gap-2">
               {choices.map((ch, ci) => {
-              const img = getCircuitImage(ch);
-              const owned = isRewardOwned(ch, cat);
-              return (
-                <div key={ci} className="bg-black/20 p-3 rounded flex flex-col items-center gap-2 text-center min-h-[90px] w-full sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)] relative overflow-hidden group">
+                const img = getCircuitImage(ch);
+                const owned = isRewardOwned(ch, cat);
+                return (
+                  <div key={ci} className="bg-black/20 p-3 rounded flex flex-col items-center gap-2 text-center min-h-[90px] w-full sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)] relative overflow-hidden group">
                     {owned &&
-                  <div className="absolute top-1 right-1 z-20 bg-blue-500 text-kronos-bg rounded-full p-0.5 shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                      <div className="absolute top-1 right-1 z-20 bg-blue-500 text-kronos-bg rounded-full p-0.5 shadow-[0_0_10px_rgba(59,130,246,0.5)]">
                         <Check size={10} strokeWidth={4} />
                       </div>
-                  }
+                    }
                     <div className="w-14 h-14 flex items-center justify-center">
                       {img ?
-                    <img
-                      src={img}
-                      alt=""
-                      className="max-w-full max-h-full object-contain"
-                      onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} /> :
+                        <img
+                          src={img}
+                          alt=""
+                          className="max-w-full max-h-full object-contain"
+                          onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} /> :
 
 
-                    <div className="w-full h-full bg-kronos-panel/40 rounded flex items-center justify-center">
+                        <div className="w-full h-full bg-kronos-panel/40 rounded flex items-center justify-center">
                           <Package size={20} className="text-kronos-dim/30" />
                         </div>
-                    }
+                      }
                     </div>
                     <span className="text-xs text-kronos-text font-medium leading-tight">{ch.name}</span>
                   </div>);
 
-            })}
+              })}
             </div>
           </div>
         )}
@@ -1021,14 +1023,14 @@ export default function Dashboard() {
         {/* Month tabs */}
         <div className="flex gap-1.5">
           {seasonMonths.map((m, idx) =>
-          <button
-            key={m}
-            onClick={() => goToMonth(idx)}
-            className={`flex-1 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${selected1999Month === idx ?
-            'bg-kronos-accent text-kronos-bg' :
-            'text-kronos-dim hover:text-kronos-text bg-kronos-panel/40 hover:bg-kronos-panel/70'}`
-            }>
-            
+            <button
+              key={m}
+              onClick={() => goToMonth(idx)}
+              className={`flex-1 py-1.5 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${selected1999Month === idx ?
+                'bg-kronos-accent text-kronos-bg' :
+                'text-kronos-dim hover:text-kronos-text bg-kronos-panel/40 hover:bg-kronos-panel/70'}`
+              }>
+
               {t(`ui.dashboard.month_${m.toLowerCase()}`)}
             </button>
           )}
@@ -1040,12 +1042,12 @@ export default function Dashboard() {
           <div className="flex-1 min-w-0">
             <div className="grid grid-cols-7 mb-2 bg-zinc-800/50 rounded px-1 py-2">
               {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((d, i) =>
-              <div key={i} className="text-center text-[9px] font-black uppercase text-kronos-dim/50 py-1">{t(`ui.dashboard.weekday_short_${d}`).substring(0, 1)}</div>
+                <div key={i} className="text-center text-[9px] font-black uppercase text-kronos-dim/50 py-1">{t(`ui.dashboard.weekday_short_${d}`).substring(0, 1)}</div>
               )}
             </div>
             <div className="grid grid-cols-7 gap-1">
               {Array.from({ length: startOffset }).map((_, i) =>
-              <div key={`blank-${i}`} />
+                <div key={`blank-${i}`} />
               )}
               {Array.from({ length: daysInMonth }).map((_, i) => {
                 const dom = i + 1;
@@ -1058,17 +1060,17 @@ export default function Dashboard() {
                 const bc = borderColors[eventType] || 'border-kronos-dim/40 text-kronos-text';
                 const fc = fillColors[eventType] || 'bg-kronos-accent border-kronos-accent text-kronos-bg';
                 return hasEvents ?
-                <button
-                  key={dom}
-                  onClick={() => setSelected1999Day(allDays.indexOf(dayData))}
-                  className="aspect-square flex items-center justify-center cursor-pointer">
-                  
+                  <button
+                    key={dom}
+                    onClick={() => setSelected1999Day(allDays.indexOf(dayData))}
+                    className="aspect-square flex items-center justify-center cursor-pointer">
+
                     <div className={`w-4 h-4 flex items-center justify-center rounded text-[11px] font-bold transition-all border ${isSelected ? fc : bc}`}>
                       {dom}
                     </div>
                   </button> :
 
-                <div key={dom} className="aspect-square flex items-center justify-center text-kronos-dim/30 text-[11px] font-bold">{dom}</div>;
+                  <div key={dom} className="aspect-square flex items-center justify-center text-kronos-dim/30 text-[11px] font-bold">{dom}</div>;
 
               })}
             </div>
@@ -1096,20 +1098,20 @@ export default function Dashboard() {
                   </div>
                   <div className="space-y-2">
                     {Object.entries(grouped).map(([type, events]) =>
-                    <div key={type} className="bg-kronos-panel/40 rounded-lg p-2 border border-white/5">
+                      <div key={type} className="bg-kronos-panel/40 rounded-lg p-2 border border-white/5">
                         <div className="flex items-center gap-1.5 mb-1.5">
                           <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${typeColors[type] || 'bg-kronos-accent'}`} />
                           <span className="text-[9px] font-black uppercase tracking-wider text-kronos-dim">{typeLabels[type] || type}</span>
                         </div>
                         <div className="space-y-1 pl-1">
                           {events.map((ev, ei) =>
-                        <div key={ei} className="min-w-0">
+                            <div key={ei} className="min-w-0">
                               <p className="text-[12px] font-bold text-kronos-text leading-tight">{ev.name}</p>
                               {ev.description &&
-                          <p className="text-[12px] text-kronos-dim/70 leading-tight mt-0.5">{ev.description}</p>
-                          }
+                                <p className="text-[12px] text-kronos-dim/70 leading-tight mt-0.5">{ev.description}</p>
+                              }
                             </div>
-                        )}
+                          )}
                         </div>
                       </div>
                     )}
@@ -1117,7 +1119,7 @@ export default function Dashboard() {
                 </div>);
 
             })() :
-            <div className="h-full flex items-center justify-center">
+              <div className="h-full flex items-center justify-center">
                 <p className="text-[10px] text-kronos-dim/40 italic text-center">{t('ui.dashboard.select_a')}<br />{t('ui.dashboard.day')}</p>
               </div>
             }
@@ -1127,7 +1129,7 @@ export default function Dashboard() {
         {/* Legend */}
         <div className="flex flex-wrap gap-3 px-1 pt-1 border-t border-white/5">
           {Object.entries(typeLabels).map(([k, label]) =>
-          <div key={k} className="flex items-center gap-1">
+            <div key={k} className="flex items-center gap-1">
               <div className={`w-1.5 h-1.5 rounded-full ${typeColors[k]}`} />
               <span className="text-[9px] text-kronos-dim uppercase tracking-wider">{label}</span>
             </div>
@@ -1230,7 +1232,7 @@ export default function Dashboard() {
         onClose={() => setShowDescendiaModal(false)}
         title={t('ui.dashboard.upcoming_rotations')}
         maxWidth="max-w-md">
-        
+
         <div className="space-y-2">
           {upcoming.map((set, setIdx) => {
             const isExpanded = expandedWeek === setIdx;
@@ -1241,7 +1243,7 @@ export default function Dashboard() {
                 <button
                   onClick={() => setExpandedWeek(isExpanded ? -1 : setIdx)}
                   className="w-full flex items-center justify-between p-3 transition-colors hover:bg-kronos-accent/5">
-                  
+
                   <div className="text-left">
                     <p className="text-[10px] font-black text-kronos-accent uppercase tracking-widest">{label}</p>
                   </div>
@@ -1249,9 +1251,9 @@ export default function Dashboard() {
                 </button>
 
                 {isExpanded &&
-                <div className="px-3 pb-3 space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+                  <div className="px-3 pb-3 space-y-1.5 animate-in slide-in-from-top-2 duration-200">
                     {set.stages.map((s) =>
-                  <div key={s.index} className={`p-2 rounded flex justify-between items-center gap-2 ${s.isCheckpoint ? 'bg-kronos-accent/10 border border-kronos-accent/20' : 'bg-black/20'}`}>
+                      <div key={s.index} className={`p-2 rounded flex justify-between items-center gap-2 ${s.isCheckpoint ? 'bg-kronos-accent/10 border border-kronos-accent/20' : 'bg-black/20'}`}>
                         <div className="min-w-0">
                           <Tooltip content={missionTypeDesc(s)} position="top">
                             <p className="text-[10px] font-bold text-kronos-text uppercase truncate">{s.missionTypeI18nKey ? t(`ui.dashboard.${s.missionTypeI18nKey}`) : s.missionType}{s.isBoss ? ` - ${resolveGameTerm('/Lotus/Language/CircleOfHell/CoHProtoframeDevil', locale)}` : ''}</p>
@@ -1264,7 +1266,7 @@ export default function Dashboard() {
                           {s.isCheckpoint ? `${t('ui.dashboard.checkpoint')} ${s.index}` : `${t('ui.dashboard.inf')} ${s.index}`}
                         </span>
                       </div>
-                  )}
+                    )}
                   </div>
                 }
               </div>);
@@ -1290,7 +1292,7 @@ export default function Dashboard() {
         <CardHeader imageSrc={iconSrc('Alert')} title={t('ui.dashboard.alerts')} />
         <div className="space-y-1.5">
           {worldstate.alerts.map((a, idx) =>
-          <div key={idx} className="bg-kronos-panel/40 rounded p-2 border border-transparent hover:border-kronos-accent/20 transition-all">
+            <div key={idx} className="bg-kronos-panel/40 rounded p-2 border border-transparent hover:border-kronos-accent/20 transition-all">
               <div className="flex justify-between items-start mb-1">
                 <span className="text-[10px] font-black text-kronos-accent uppercase tracking-wider">{a.missionType}</span>
                 <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(a.expiry, t)}</span>
@@ -1320,13 +1322,13 @@ export default function Dashboard() {
             <p className="font-bold text-sm uppercase">{resolveGameTerm('/Lotus/Language/G1Quests/VoidTraderName', locale)}</p>
           </div>
           {vt.active && vt.inventory?.length > 0 ?
-          <button
-            onClick={() => setShowBaroModal(true)}
-            className="text-[10px] bg-kronos-accent/20 text-kronos-accent font-bold px-2 py-0.5 rounded uppercase hover:bg-kronos-accent/30 transition-colors">{t('nav.inventory')}
+            <button
+              onClick={() => setShowBaroModal(true)}
+              className="text-[10px] bg-kronos-accent/20 text-kronos-accent font-bold px-2 py-0.5 rounded uppercase hover:bg-kronos-accent/30 transition-colors">{t('nav.inventory')}
 
 
-          </button> :
-          null}
+            </button> :
+            null}
         </div>
         <div className="bg-kronos-panel/40 rounded p-2">
           <p className="text-sm font-bold text-kronos-text uppercase">{vt.node}</p>
@@ -1347,12 +1349,12 @@ export default function Dashboard() {
         isOpen={showBaroModal}
         onClose={() => setShowBaroModal(false)}
         title={t('ui.dashboard.baro_inventory')}>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {inventory?.map((item, idx) =>
-          <div key={idx} className="bg-kronos-panel/40 p-2 rounded flex items-center gap-3 border border-transparent hover:border-kronos-accent/20 transition-all">
+            <div key={idx} className="bg-kronos-panel/40 p-2 rounded flex items-center gap-3 border border-transparent hover:border-kronos-accent/20 transition-all">
               <div className="w-12 h-12 bg-black/40 rounded flex items-center justify-center p-1 flex-shrink-0">
-                <img src={resolveAnyImage(item, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} />
+                <img src={resolveAnyImage(item, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-bold text-kronos-text uppercase truncate" title={item.item}>{item.item}</p>
@@ -1381,21 +1383,21 @@ export default function Dashboard() {
         isOpen={showWishlistModal}
         onClose={() => setShowWishlistModal(false)}
         title={t('ui.dashboard.wishlist')}>
-        
-        {wishlist.length === 0 ?
-        <p className="text-xs text-kronos-dim italic text-center py-8">{t('ui.dashboard.no_wishlist_items')}</p> :
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {wishlist.length === 0 ?
+          <p className="text-xs text-kronos-dim italic text-center py-8">{t('ui.dashboard.no_wishlist_items')}</p> :
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {wishlist.map((item, idx) =>
-          <div key={idx} className="bg-kronos-panel/40 p-3 rounded flex items-center gap-4 border border-transparent hover:border-kronos-accent/20 transition-all">
+              <div key={idx} className="bg-kronos-panel/40 p-3 rounded flex items-center gap-4 border border-transparent hover:border-kronos-accent/20 transition-all">
                 <div className="w-16 h-16 bg-black/40 rounded flex items-center justify-center p-1 flex-shrink-0">
-                  <img src={resolveAnyImage(item, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} />
+                  <img src={resolveAnyImage(item, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-kronos-text uppercase" title={item.name}>{item.name}</p>
                 </div>
               </div>
-          )}
+            )}
           </div>
         }
       </Modal>);
@@ -1410,7 +1412,7 @@ export default function Dashboard() {
         <div className="space-y-2.5">
           {/* Global Boosters */}
           {worldstate?.globalBoosters?.map((b, idx) =>
-          <div key={`booster-${idx}`} className="space-y-1 pb-2 border-kronos-panel/40 last:border-0">
+            <div key={`booster-${idx}`} className="space-y-1 pb-2 border-kronos-panel/40 last:border-0">
               <div className="flex justify-between items-start">
                 <p className="text-xs font-black text-kronos-accent uppercase tracking-widest">{b.nameI18nKey ? t(b.nameI18nKey) : b.name}</p>
                 <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(b.expiry, t)}{t('ui.dashboard.darvo_left')}</span>
@@ -1420,22 +1422,22 @@ export default function Dashboard() {
 
           {/* Regular Events */}
           {worldstate.events.map((e, idx) =>
-          <div key={idx} className="space-y-1 pb-2 border-b border-kronos-panel/40 last:border-0">
+            <div key={idx} className="space-y-1 pb-2 border-b border-kronos-panel/40 last:border-0">
               <div className="flex justify-between items-start">
                 <p className="text-xs font-black text-kronos-accent uppercase tracking-widest">{e.name}</p>
                 <span className="text-[10px] text-kronos-dim font-mono">{timeRemaining(e.expiry, t)}{t('ui.dashboard.darvo_left')}</span>
               </div>
 
               {(e.rewards?.length > 0 || e.mainReward) &&
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
                   {e.rewards?.map((r, ri) =>
-              <span key={ri} className="text-[9px] text-kronos-accent font-bold uppercase">{r}</span>
-              )}
+                    <span key={ri} className="text-[9px] text-kronos-accent font-bold uppercase">{r}</span>
+                  )}
                   {e.mainReward &&
-              <span className="text-[9px] text-blue-400 font-bold uppercase">{e.mainReward}</span>
-              }
+                    <span className="text-[9px] text-blue-400 font-bold uppercase">{e.mainReward}</span>
+                  }
                 </div>
-            }
+              }
             </div>
           )}
         </div>
@@ -1488,7 +1490,7 @@ export default function Dashboard() {
 
         })}
         {expiry &&
-        <p className="text-[10px] text-kronos-dim mt-2 text-right font-mono tracking-tighter">{t('ui.dashboard.rotates_in').replace('{time}', timeRemaining(expiry, t).toUpperCase())}
+          <p className="text-[10px] text-kronos-dim mt-2 text-right font-mono tracking-tighter">{t('ui.dashboard.rotates_in').replace('{time}', timeRemaining(expiry, t).toUpperCase())}
           </p>
         }
       </div>);
@@ -1500,11 +1502,11 @@ export default function Dashboard() {
       <PageLayout
         titleKey="screen.dashboard"
         extra={
-        <Button variant="ghost" onClick={fetchBounties} disabled={loading} className="h-12 w-12 !p-0 !px-0 !py-0">
+          <Button variant="ghost" onClick={fetchBounties} disabled={loading} className="h-12 w-12 !p-0 !px-0 !py-0">
             <RefreshCw size={28} strokeWidth={3} className="animate-spin text-kronos-accent" />
           </Button>
         }>
-        
+
         <div className="flex flex-col items-center justify-center h-64 gap-4">
           <RefreshCw size={64} strokeWidth={2} className="text-kronos-accent animate-spin" />
           <p className="text-kronos-dim font-medium">{t('ui.dashboard.loading_worldstate')}</p>
@@ -1517,84 +1519,84 @@ export default function Dashboard() {
     <PageLayout
       titleKey="screen.dashboard"
       extra={
-      <div className="flex items-center gap-3 relative">
+        <div className="flex items-center gap-3 relative">
           <button
-          onClick={() => setShowSettings(!showSettings)}
-          className={`p-2 rounded-full transition-all border ${showSettings ?
-          'bg-kronos-accent/20 border-kronos-accent text-kronos-accent shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' :
-          'bg-kronos-panel/40 border-white/5 text-kronos-text hover:border-kronos-accent/30'}`
-          }
-          title={t('ui.dashboard.settings_title')}>
-          
+            onClick={() => setShowSettings(!showSettings)}
+            className={`p-2 rounded-full transition-all border ${showSettings ?
+              'bg-kronos-accent/20 border-kronos-accent text-kronos-accent shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' :
+              'bg-kronos-panel/40 border-white/5 text-kronos-text hover:border-kronos-accent/30'}`
+            }
+            title={t('ui.dashboard.settings_title')}>
+
             <Settings size={18} className={showSettings ? 'animate-spin-slow' : ''} />
           </button>
 
           {showSettings &&
-        <div className="absolute top-full right-0 mt-2 w-64 glass-panel border border-kronos-accent/20 rounded-lg p-4 z-[110] shadow-2xl">
+            <div className="absolute top-full right-0 mt-2 w-64 glass-panel border border-kronos-accent/20 rounded-lg p-4 z-[110] shadow-2xl">
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-kronos-accent/10">
                 <span className="text-xs font-bold uppercase tracking-wider text-kronos-accent">{t('ui.dashboard.visible_cards')}</span>
                 <button onClick={() => setShowSettings(false)} className="text-kronos-dim hover:text-white"><X size={14} /></button>
               </div>
               <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 {[
-            { id: 'bounty', label: t('ui.dashboard.card_bounties') },
-            { id: 'news', label: t('ui.dashboard.card_news') },
-            { id: 'timers', label: t('ui.dashboard.card_world_timers') },
-            { id: 'arb', label: t('ui.dashboard.card_arbitration') },
-            { id: 'nightwave', label: t('ui.dashboard.card_nightwave') },
-            { id: 'inv', label: t('ui.dashboard.card_invasions') },
-            { id: 'fiss', label: t('ui.dashboard.card_fissures') },
-            { id: 'baro', label: t('ui.dashboard.card_baro') },
-            { id: 'arch', label: t('ui.dashboard.card_archimedea') },
-            { id: '1999', label: t('ui.dashboard.card_1999') },
-            { id: 'inf', label: t('ui.dashboard.card_sp_incursions') },
-            { id: 'desc', label: t('ui.dashboard.card_descendia') },
-            { id: 'sortie', label: t('ui.dashboard.card_sorties') },
-            { id: 'hunt', label: t('ui.dashboard.card_archon_hunts') },
-            { id: 'circuit', label: t('ui.dashboard.card_circuit') },
-            { id: 'deal', label: t('ui.dashboard.card_daily_deals') },
-            { id: 'sales', label: t('ui.dashboard.card_market_sales') },
-            { id: 'alerts', label: t('ui.dashboard.card_alerts') },
-            { id: 'event', label: t('ui.dashboard.card_events') }].
-            map((card) =>
-            <label key={card.id} className="flex items-center justify-between group cursor-pointer">
-                    <span className="text-xs text-kronos-dim group-hover:text-kronos-text transition-colors">{card.label}</span>
-                    <input
-                type="checkbox"
-                checked={isVisible(card.id)}
-                onChange={() => toggleCard(card.id)}
-                className="accent-kronos-accent w-3 h-3 cursor-pointer" />
-              
-                  </label>
-            )}
+                  { id: 'bounty', label: t('ui.dashboard.card_bounties') },
+                  { id: 'news', label: t('ui.dashboard.card_news') },
+                  { id: 'timers', label: t('ui.dashboard.card_world_timers') },
+                  { id: 'arb', label: t('ui.dashboard.card_arbitration') },
+                  { id: 'nightwave', label: t('ui.dashboard.card_nightwave') },
+                  { id: 'inv', label: t('ui.dashboard.card_invasions') },
+                  { id: 'fiss', label: t('ui.dashboard.card_fissures') },
+                  { id: 'baro', label: t('ui.dashboard.card_baro') },
+                  { id: 'arch', label: t('ui.dashboard.card_archimedea') },
+                  { id: '1999', label: t('ui.dashboard.card_1999') },
+                  { id: 'inf', label: t('ui.dashboard.card_sp_incursions') },
+                  { id: 'desc', label: t('ui.dashboard.card_descendia') },
+                  { id: 'sortie', label: t('ui.dashboard.card_sorties') },
+                  { id: 'hunt', label: t('ui.dashboard.card_archon_hunts') },
+                  { id: 'circuit', label: t('ui.dashboard.card_circuit') },
+                  { id: 'deal', label: t('ui.dashboard.card_daily_deals') },
+                  { id: 'sales', label: t('ui.dashboard.card_market_sales') },
+                  { id: 'alerts', label: t('ui.dashboard.card_alerts') },
+                  { id: 'event', label: t('ui.dashboard.card_events') }].
+                  map((card) =>
+                    <label key={card.id} className="flex items-center justify-between group cursor-pointer">
+                      <span className="text-xs text-kronos-dim group-hover:text-kronos-text transition-colors">{card.label}</span>
+                      <input
+                        type="checkbox"
+                        checked={isVisible(card.id)}
+                        onChange={() => toggleCard(card.id)}
+                        className="accent-kronos-accent w-3 h-3 cursor-pointer" />
+
+                    </label>
+                  )}
               </div>
             </div>
-        }
+          }
 
           {lastFetch &&
-        <span className="text-[10px] text-kronos-dim uppercase font-bold tracking-tighter">{t('dashboard.synced')}
-          {new Date(lastFetch).toLocaleTimeString()}
+            <span className="text-[10px] text-kronos-dim uppercase font-bold tracking-tighter">{t('dashboard.synced')}
+              {new Date(lastFetch).toLocaleTimeString()}
             </span>
-        }
+          }
           <Button
-          variant="ghost"
-          onClick={fetchBounties}
-          disabled={loading}
-          className="h-9 w-9 !p-0 hover:bg-kronos-accent/10 transition-colors">
-          
+            variant="ghost"
+            onClick={fetchBounties}
+            disabled={loading}
+            className="h-9 w-9 !p-0 hover:bg-kronos-accent/10 transition-colors">
+
             <RefreshCw
-            size={18}
-            strokeWidth={3}
-            className={`${loading ? 'animate-spin' : ''} text-kronos-accent`} />
-          
+              size={18}
+              strokeWidth={3}
+              className={`${loading ? 'animate-spin' : ''} text-kronos-accent`} />
+
           </Button>
         </div>
       }>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pb-4">
         {/* Bounties - Full Width */}
         {isVisible('bounty') &&
-        <div className="lg:col-span-3">
+          <div className="lg:col-span-3">
             <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('MiniMapBountySource')} title={t('ui.dashboard.bounties')} />
               <Tabs tabs={bountyTabs} activeTab={bountyTab} onChange={setBountyTab} className="mb-2" fullWidth />
@@ -1605,7 +1607,7 @@ export default function Dashboard() {
 
         {/* Nightwave - Spans Full Width */}
         {isVisible('nightwave') &&
-        <div className="lg:col-span-3">
+          <div className="lg:col-span-3">
             <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('NightwaveIconSimple')} title={t('ui.dashboard.nightwave')} />
               {renderNightwave()}
@@ -1619,16 +1621,16 @@ export default function Dashboard() {
 
           {/* World Timers */}
           {isVisible('timers') && timers.length > 0 &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('DailyTimerIcon')} title={t('ui.dashboard.world_timers')} />
               <div className="grid grid-cols-2 gap-2">
                 {timers.map(({ label, data, getState }) =>
-              <div key={label} className="bg-kronos-panel/40 rounded p-2 flex flex-col gap-0.5">
+                  <div key={label} className="bg-kronos-panel/40 rounded p-2 flex flex-col gap-0.5">
                     <p className="text-[10px] text-kronos-dim uppercase tracking-wider leading-none">{label}</p>
                     <p className="text-sm font-bold uppercase text-kronos-accent leading-tight">{getState(data)}</p>
                     <p className="text-xs text-kronos-dim font-mono">{timeRemaining(data.expiry, t)}</p>
                   </div>
-              )}
+                )}
               </div>
             </Card>
           }
@@ -1637,10 +1639,10 @@ export default function Dashboard() {
 
           {/* Arbitration */}
           {isVisible('arb') &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('EliteAlertIconSimple')} title={t('ui.dashboard.arbitration')} />
               {currentArby ?
-            <div className="space-y-2">
+                <div className="space-y-2">
                   <div className="bg-kronos-panel/40 rounded p-2 flex justify-between items-start gap-4">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-kronos-dim uppercase mb-0.5">{t('ui.dashboard.current')}</p>
@@ -1655,11 +1657,11 @@ export default function Dashboard() {
                     </div>
                   </div>
                   {upcomingArbies.length > 0 &&
-              <div>
+                    <div>
                       <p className="text-[10px] text-kronos-dim uppercase font-bold mb-1">{t('ui.dashboard.upcoming')}</p>
                       <div className="space-y-1">
                         {upcomingArbies.map((a, i) =>
-                  <div key={i} className="bg-kronos-panel/40 rounded p-1.5 flex justify-between items-center text-xs uppercase">
+                          <div key={i} className="bg-kronos-panel/40 rounded p-1.5 flex justify-between items-center text-xs uppercase">
                             <span className="font-bold truncate">{resolveNode(a.type, dict, ERg, locale)} - {resolveNode(a.node, dict, ERg, locale)}</span>
                             <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                               <span className="text-kronos-dim font-mono">
@@ -1668,33 +1670,33 @@ export default function Dashboard() {
                               <GradeBadge grade={a.grade} />
                             </div>
                           </div>
-                  )}
+                        )}
                       </div>
                     </div>
-              }
+                  }
                   {arbitrationModifiers &&
-              <div className="pt-2 border-t border-kronos-divider/30">
+                    <div className="pt-2 border-t border-kronos-divider/30">
                       <p className="text-xs font-bold text-kronos-accent mb-1 uppercase tracking-wide">{t('ui.dashboard.personal_bonuses')}</p>
                       <div className="grid grid-cols-2 gap-1.5">
                         <div className="flex items-center gap-2 bg-kronos-panel/40 rounded px-2 py-1.5">
                           <div className="w-14 h-14 flex items-center justify-center flex-shrink-0">
-                            <img src={resolveAnyImage(arbitrationModifiers.suitType, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} />
+                            <img src={resolveAnyImage(arbitrationModifiers.suitType, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
                           </div>
                           <span className="text-xs text-kronos-text leading-tight ">{resolveItemName(arbitrationModifiers.suitType, dict, uniqueNameToName)}</span>
                         </div>
                         {(arbitrationModifiers.wepTypes || []).map((w, i) =>
-                  <div key={i} className="flex items-center gap-2 bg-kronos-panel/40 rounded px-2 py-1.5">
+                          <div key={i} className="flex items-center gap-2 bg-kronos-panel/40 rounded px-2 py-1.5">
                             <div className="w-14 h-14 flex items-center justify-center flex-shrink-0">
-                              <img src={resolveAnyImage(w, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} />
+                              <img src={resolveAnyImage(w, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
                             </div>
                             <span className="text-xs text-kronos-text leading-tight ">{resolveItemName(w, dict, uniqueNameToName)}</span>
                           </div>
-                  )}
+                        )}
                       </div>
                     </div>
-              }
+                  }
                 </div> :
-            <p className="text-xs text-kronos-dim italic">{t('ui.dashboard.loading_data')}</p>}
+                <p className="text-xs text-kronos-dim italic">{t('ui.dashboard.loading_data')}</p>}
             </Card>
           }
 
@@ -1715,8 +1717,8 @@ export default function Dashboard() {
                       src={resolveAnyImage(deal, EI, nameToImage)}
                       alt=""
                       className="max-w-full max-h-full object-contain"
-                      onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} />
-                    
+                      onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
+
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold leading-tight text-sm text-kronos-text truncate" title={deal.item}>
@@ -1747,47 +1749,47 @@ export default function Dashboard() {
 
           {/* Market Sales */}
           {isVisible('sales') && worldstate?.flashSales?.length > 0 &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <DollarSign size={16} className="text-kronos-accent flex-shrink-0" />
                   <p className="font-bold text-sm uppercase">{t('ui.dashboard.market_sales')}</p>
                 </div>
                 <button
-                onClick={() => setShowWishlistModal(true)}
-                className="text-[10px] bg-kronos-accent/20 text-kronos-accent font-bold px-2 py-0.5 rounded uppercase hover:bg-kronos-accent/30 transition-colors">{t('ui.dashboard.wishlist')}
+                  onClick={() => setShowWishlistModal(true)}
+                  className="text-[10px] bg-kronos-accent/20 text-kronos-accent font-bold px-2 py-0.5 rounded uppercase hover:bg-kronos-accent/30 transition-colors">{t('ui.dashboard.wishlist')}
 
 
-              </button>
+                </button>
               </div>
               <div className="space-y-1.5">
                 {worldstate.flashSales.map((sale, idx) => {
-                const saleOwned = isMarketSaleOwned(sale)
-                return (
-              <div key={idx} className={`flex items-center gap-3 bg-kronos-panel/40 rounded p-2.5 ${saleOwned ? 'opacity-80' : ''}`}>
-                    <div className="w-14 h-14 bg-black/40 rounded flex items-center justify-center p-1 flex-shrink-0">
-                      <img src={resolveAnyImage(sale, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-sm font-bold text-kronos-text uppercase truncate" title={sale.item}>{sale.item}</p>
-                        {saleOwned &&
-                          <span className="flex items-center gap-0.5 text-[9px] font-black uppercase text-green-400 bg-green-500/10 border border-green-500/30 rounded px-1 py-0.5 flex-shrink-0">
-                            <Check size={9} />{t('ui.inventory.badge_owned')}
+                  const saleOwned = isMarketSaleOwned(sale)
+                  return (
+                    <div key={idx} className={`flex items-center gap-3 bg-kronos-panel/40 rounded p-2.5 ${saleOwned ? 'opacity-80' : ''}`}>
+                      <div className="w-14 h-14 bg-black/40 rounded flex items-center justify-center p-1 flex-shrink-0">
+                        <img src={resolveAnyImage(sale, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-bold text-kronos-text uppercase" title={sale.item}>{sale.item}</p>
+                          {saleOwned &&
+                            <span className="flex items-center gap-0.5 text-[9px] font-black uppercase text-green-400 bg-green-500/10 border border-green-500/30 rounded px-1 py-0.5 flex-shrink-0">
+                              <Check size={9} />{t('ui.inventory.badge_owned')}
+                            </span>
+                          }
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-sm text-kronos-dim line-through decoration-red-500/50">{sale.originalPrice}</span>
+                          <span className="flex items-center gap-1 text-sm text-kronos-accent font-black">
+                            {iconSrc('Platinum') && <img src={iconSrc('Platinum')} className="w-4 h-4 object-contain" alt="" />}
+                            {sale.salePrice}
                           </span>
-                        }
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-sm text-kronos-dim line-through decoration-red-500/50">{sale.originalPrice}</span>
-                        <span className="flex items-center gap-1 text-sm text-kronos-accent font-black">
-                          {iconSrc('Platinum') && <img src={iconSrc('Platinum')} className="w-4 h-4 object-contain" alt="" />}
-                          {sale.salePrice}
-                        </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-              )
-            })}
+                  )
+                })}
               </div>
             </Card>
           }
@@ -1798,7 +1800,7 @@ export default function Dashboard() {
           {isVisible('event') && renderEvents()}
           {/* SP Incursions */}
           {isVisible('inf') &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('Difficulty2')} title={t('ui.dashboard.sp_incursions')} />
               {isVisible('inf') && renderSPIncursions()}
             </Card>
@@ -1806,16 +1808,16 @@ export default function Dashboard() {
 
           {/* Sortie */}
           {isVisible('sortie') && worldstate?.sortie &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('Sortie')} title={t('ui.dashboard.sortie')} />
               <p className="text-sm font-bold text-kronos-accent mb-2 uppercase">{worldstate.sortie.boss}</p>
               <div className="space-y-1.5">
                 {worldstate.sortie.variants.map((v, idx) =>
-              <div key={idx} className="bg-kronos-panel/40 rounded p-2">
+                  <div key={idx} className="bg-kronos-panel/40 rounded p-2">
                     <p className="text-sm font-bold text-kronos-text uppercase">{v.node}</p>
                     <p className="text-xs text-kronos-dim mt-0.5">{v.missionType} - {v.modifier}</p>
                   </div>
-              )}
+                )}
               </div>
               <p className="text-xs text-kronos-dim mt-2 text-right">{timeRemaining(worldstate.sortie.expiry, t)}</p>
             </Card>
@@ -1823,50 +1825,50 @@ export default function Dashboard() {
 
           {/* Archon Hunt */}
           {isVisible('hunt') && worldstate?.archonHunt &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('FactionNarmer')} title={t('ui.dashboard.archon_hunt')} />
               <div className="flex items-center gap-2 mb-2">
                 {iconSrc(`Archon${worldstate.archonHunt.bossKey?.split('/').pop()?.replace('SORTIE_BOSS_', '').replace(/^Archon/, '').replace(/^(\w)(\w+)/, (m, f, r) => f + r.toLowerCase())}Icon`) &&
-              <img src={iconSrc(`Archon${worldstate.archonHunt.bossKey?.split('/').pop()?.replace('SORTIE_BOSS_', '').replace(/^Archon/, '').replace(/^(\w)(\w+)/, (m, f, r) => f + r.toLowerCase())}Icon`)} className="w-5 h-5 object-contain" alt="" />
-              }
+                  <img src={iconSrc(`Archon${worldstate.archonHunt.bossKey?.split('/').pop()?.replace('SORTIE_BOSS_', '').replace(/^Archon/, '').replace(/^(\w)(\w+)/, (m, f, r) => f + r.toLowerCase())}Icon`)} className="w-5 h-5 object-contain" alt="" />
+                }
                 <p className="text-sm font-bold text-red-400 uppercase">{worldstate.archonHunt.boss}</p>
               </div>
               <div className="space-y-1.5">
                 {worldstate.archonHunt.missions.map((m, idx) =>
-              <div key={idx} className="bg-kronos-panel/40 rounded p-2">
+                  <div key={idx} className="bg-kronos-panel/40 rounded p-2">
                     <p className="text-sm font-bold text-kronos-text uppercase">{m.node}</p>
                     <p className="text-xs text-kronos-dim mt-0.5">{m.type}</p>
                   </div>
-              )}
+                )}
               </div>
               {archonModifiers &&
-            <div className="mt-2 pt-2 border-t border-kronos-divider/30">
+                <div className="mt-2 pt-2 border-t border-kronos-divider/30">
                   <p className="text-xs font-bold text-kronos-accent mb-1 uppercase tracking-wide">{t('ui.dashboard.personal_bonuses')}</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     <div className="flex items-center gap-2 bg-kronos-panel/40 rounded px-2 py-1.5">
                       <div className="w-14 h-14 flex items-center justify-center flex-shrink-0">
-                        <img src={resolveAnyImage(archonModifiers.suitType, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} />
+                        <img src={resolveAnyImage(archonModifiers.suitType, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
                       </div>
                       <span className="text-xs text-kronos-text leading-tight ">{resolveItemName(archonModifiers.suitType, dict, uniqueNameToName)}</span>
                     </div>
                     {(archonModifiers.wepTypes || []).map((w, i) =>
-                <div key={i} className="flex items-center gap-2 bg-kronos-panel/40 rounded px-2 py-1.5">
+                      <div key={i} className="flex items-center gap-2 bg-kronos-panel/40 rounded px-2 py-1.5">
                         <div className="w-14 h-14 flex items-center justify-center flex-shrink-0">
-                          <img src={resolveAnyImage(w, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {e.target.style.display = 'none';e.target.onerror = null;}} />
+                          <img src={resolveAnyImage(w, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
                         </div>
                         <span className="text-xs text-kronos-text leading-tight ">{resolveItemName(w, dict, uniqueNameToName)}</span>
                       </div>
-                )}
+                    )}
                   </div>
                 </div>
-            }
+              }
               <p className="text-xs text-kronos-dim mt-2 text-right">{timeRemaining(worldstate.archonHunt.expiry, t)}</p>
             </Card>
           }
 
           {/* Archimedea */}
           {isVisible('arch') &&
-          <Card glow className="p-3 border-kronos-accent/30">
+            <Card glow className="p-3 border-kronos-accent/30">
               <CardHeader imageSrc={iconSrc('ConquestHardModeIcon')} title={t('ui.dashboard.archimedea')} />
               <Tabs tabs={archimedeaTabs} activeTab={archimedeaTab} onChange={setArchimedeaTab} className="mb-2" fullWidth />
               {renderArchimedea()}
@@ -1875,20 +1877,20 @@ export default function Dashboard() {
 
           {/* Descendia */}
           {isVisible('desc') &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <CardHeader
-              imageSrc={iconSrc('MiniMapRoathe')}
-              title={t('ui.dashboard.descendia')}
-              action={
-              <button
-                onClick={() => setShowDescendiaModal(true)}
-                className="p-1 hover:bg-kronos-accent/10 rounded transition-colors text-kronos-dim hover:text-kronos-accent"
-                title={t('ui.dashboard.preview_upcoming_rotations')}>
-                
+                imageSrc={iconSrc('MiniMapRoathe')}
+                title={t('ui.dashboard.descendia')}
+                action={
+                  <button
+                    onClick={() => setShowDescendiaModal(true)}
+                    className="p-1 hover:bg-kronos-accent/10 rounded transition-colors text-kronos-dim hover:text-kronos-accent"
+                    title={t('ui.dashboard.preview_upcoming_rotations')}>
+
                     <Calendar size={16} />
                   </button>
-              } />
-            
+                } />
+
               {renderDescendia()}
             </Card>
           }
@@ -1898,7 +1900,7 @@ export default function Dashboard() {
         <div className="space-y-4">
           {/* Duviri Circuit */}
           {isVisible('circuit') &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('DuviriMiniMapThrax')} title={resolveGameTerm('/Lotus/Language/Duviri/MapNodeEndless', locale)} />
               {renderCircuit()}
             </Card>
@@ -1906,7 +1908,7 @@ export default function Dashboard() {
 
           {/* 1999 Calendar */}
           {isVisible('1999') &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('RetroTaskbarCalendarLg')} title={t('ui.dashboard.calendar_1999')} />
               {render1999()}
             </Card>
@@ -1914,33 +1916,33 @@ export default function Dashboard() {
 
           {/* Void Fissures */}
           {isVisible('fiss') &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('VoidTearIcon')} title={t('ui.dashboard.void_fissures')} />
               <Tabs tabs={fissureTabs} activeTab={fissureTab} onChange={setFissureTab} className="mb-2" fullWidth />
               <div className="space-y-1">
                 {visibleFissures.map((f, idx) =>
-              <div key={idx} className="bg-kronos-panel/40 rounded p-1.5 flex justify-between items-center uppercase">
+                  <div key={idx} className="bg-kronos-panel/40 rounded p-1.5 flex justify-between items-center uppercase">
                     <div className="flex flex-col">
                       <span className="text-xs font-bold">{f.tier} - {f.missionType}</span>
                       <span className="text-[10px] text-kronos-dim leading-none mt-0.5">{f.node}</span>
                     </div>
                     <span className="text-xs text-kronos-dim font-mono">{timeRemaining(f.expiry, t)}</span>
                   </div>
-              )}
+                )}
               </div>
             </Card>
           }
 
           {/* Invasions */}
           {isVisible('inv') && worldstate?.invasions?.length > 0 &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('Invasion')} title={t('ui.dashboard.invasions')} />
               <div className="space-y-4 mt-4">
                 {worldstate.invasions.filter((i) => !i.completed).slice(0, 5).map((inv, idx) => {
-                const completionPercentage = Math.max(0, Math.min(100, inv.completion));
+                  const completionPercentage = Math.max(0, Math.min(100, inv.completion));
 
-                return (
-                  <div key={idx} className="relative group/inv">
+                  return (
+                    <div key={idx} className="relative group/inv">
 
                       {/* Line 1: Factions & Node */}
                       <div className="flex justify-between items-center mb-1">
@@ -1971,33 +1973,33 @@ export default function Dashboard() {
                         {/* Attacker Icon */}
                         <div className="w-11 h-11 flex-shrink-0 flex items-center justify-center">
                           {inv.attacker.reward &&
-                        <img
-                          src={resolveAnyImage(inv.attacker.reward, EI, nameToImage)}
-                          alt="" />
+                            <img
+                              src={resolveAnyImage(inv.attacker.reward, EI, nameToImage)}
+                              alt="" />
 
-                        }
+                          }
                         </div>
 
                         {/* Progress Bar */}
                         <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden flex border border-white/10 shadow-inner">
                           <div
-                          className="h-full bg-blue-500 transition-all duration-500"
-                          style={{ width: `${completionPercentage}%` }} />
-                        
+                            className="h-full bg-blue-500 transition-all duration-500"
+                            style={{ width: `${completionPercentage}%` }} />
+
                           <div
-                          className="h-full bg-red-500 transition-all duration-500"
-                          style={{ width: `${100 - completionPercentage}%` }} />
-                        
+                            className="h-full bg-red-500 transition-all duration-500"
+                            style={{ width: `${100 - completionPercentage}%` }} />
+
                         </div>
 
                         {/* Defender Icon */}
                         <div className="w-11 h-11 flex-shrink-0 flex items-center justify-center">
                           {inv.defender.reward &&
-                        <img
-                          src={resolveAnyImage(inv.defender.reward, EI, nameToImage)}
-                          alt="" />
+                            <img
+                              src={resolveAnyImage(inv.defender.reward, EI, nameToImage)}
+                              alt="" />
 
-                        }
+                          }
                         </div>
                       </div>
 
@@ -2005,31 +2007,31 @@ export default function Dashboard() {
                       {idx < 4 && <div className="mt-3 h-px bg-white/5 w-full" />}
                     </div>);
 
-              })}
+                })}
               </div>
             </Card>
           }
 
           {/* Latest News */}
           {isVisible('news') && worldstate?.news &&
-          <Card glow className="p-3">
+            <Card glow className="p-3">
               <CardHeader imageSrc={iconSrc('News')} title={t('ui.dashboard.latest_news')} />
               <div className="space-y-2">
                 {worldstate.news.slice(0, 3).map((item, idx) =>
-              <div key={idx} className="text-xs">
+                  <div key={idx} className="text-xs">
                     {item.link ?
-                <button
-                  onClick={() => {invoke('open_url', { url: item.link }).catch(console.error);}}
-                  className="font-bold hover:text-kronos-accent transition-colors block leading-tight text-left w-full cursor-pointer">
-                  
+                      <button
+                        onClick={() => { invoke('open_url', { url: item.link }).catch(console.error); }}
+                        className="font-bold hover:text-kronos-accent transition-colors block leading-tight text-left w-full cursor-pointer">
+
                         {item.message}
                       </button> :
 
-                <p className="font-bold leading-tight">{item.message}</p>
-                }
+                      <p className="font-bold leading-tight">{item.message}</p>
+                    }
                     <p className="text-[10px] text-kronos-dim mt-0.5 font-mono">{timeSince(item.date, t)}</p>
                   </div>
-              )}
+                )}
               </div>
             </Card>
           }
