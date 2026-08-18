@@ -383,6 +383,14 @@ export default function Dashboard() {
       return <div className="min-h-[80px] flex items-center justify-center"><p className="text-xs text-kronos-dim italic">{t('ui.dashboard.loading_bounties')}</p></div>;
     }
 
+    // Build a lookup from jobType path → level range + reward text from worldstate
+    // SyndicateMissions jobs. Used for Cetus/Vallis/Deimos to show enemy levels.
+    const wsBountyMap = new Map();
+    for (const b of (worldstate?.bounties || [])) {
+      if (b.jobType) wsBountyMap.set(b.jobType, b);
+    }
+    const lookupWsBounty = (jobPath) => wsBountyMap.get(jobPath) || null;
+
     let items = [];
 
     if (bountyTab === 'holdfasts' || bountyTab === 'cavia') {
@@ -417,27 +425,33 @@ export default function Dashboard() {
       const data = locationBounties.CetusSyndicate || {};
       Object.entries(data).forEach(([key, list]) => {
         if (Array.isArray(list)) {
+          const wsBounty = lookupWsBounty(list[0]);
+          const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
           const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
           const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Cetus\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Tent', 'Pool ') });
+          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Tent', 'Pool '), level });
         }
       });
     } else if (bountyTab === 'deimos') {
       const data = locationBounties.EntratiSyndicate || {};
       Object.entries(data).forEach(([key, list]) => {
         if (Array.isArray(list)) {
+          const wsBounty = lookupWsBounty(list[0]);
+          const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
           const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
           const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Deimos\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Chamber', 'Vault ').replace('Tent', 'Pool ') });
+          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Chamber', 'Vault ').replace('Tent', 'Pool '), level });
         }
       });
     } else if (bountyTab === 'vallis') {
       const data = locationBounties.SolarisSyndicate || {};
       Object.entries(data).forEach(([key, list]) => {
         if (Array.isArray(list)) {
+          const wsBounty = lookupWsBounty(list[0]);
+          const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
           const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
           const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Venus\s+/i, '').replace(/^Solaris\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Bounty', '').replace(/([A-Z])/g, ' $1').trim() });
+          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Bounty', '').replace(/([A-Z])/g, ' $1').trim(), level });
         }
       });
     }
@@ -466,7 +480,10 @@ export default function Dashboard() {
             <div className="absolute inset-0 left-0 right-[20%] flex flex-col justify-between p-3 z-10">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-black text-white uppercase leading-tight flex-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.name}</p>
-                {it.tier && <span className="text-[10px] font-bold text-kronos-accent uppercase bg-kronos-panel/70 px-1.5 rounded">{it.tier}</span>}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {it.level && <span className="text-[10px] font-bold text-kronos-text/60 uppercase bg-black/20 px-1.5 rounded">{it.level}</span>}
+                  {it.tier && <span className="text-[10px] font-bold text-kronos-accent uppercase bg-kronos-panel/70 px-1.5 rounded">{it.tier}</span>}
+                </div>
               </div>
               {it.desc && <p className="text-xs text-kronos-text/90 leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.desc}</p>}
               {it.obj &&
