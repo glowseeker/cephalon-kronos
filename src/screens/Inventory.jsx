@@ -531,18 +531,19 @@ export default function Inventory() {
     vehicles: ['owned', 'mastered', 'archwing', 'kdrive', 'necramech'],
     amps: ['owned', 'mastered'],
     mods: ['owned'],
-    prime_parts: ['owned', 'mastered'],
+    prime_parts: ['owned', 'mastered', 'vaulted'],
     resources: ['owned'],
     ayatan: ['socketed']
   };
 
-  const TRIPLE_FILTERS = new Set(['owned', 'mastered', 'subsumed', 'socketed', 'prime']);
+  const TRIPLE_FILTERS = new Set(['owned', 'mastered', 'subsumed', 'socketed', 'prime', 'vaulted']);
   const NEG_LABELS = {
     owned: t('ui.inventory.filter_owned'),
     mastered: t('ui.inventory.filter_mastered'),
     subsumed: t('ui.inventory.filter_subsumed'),
     socketed: t('ui.inventory.filter_socketed'),
     prime: t('ui.inventory.filter_prime'),
+    vaulted: t('ui.inventory.filter_vaulted_neg'),
     primary: t('ui.inventory.filter_primary'),
     secondary: t('ui.inventory.filter_secondary'),
     melee: resolveGameTerm('/Lotus/Language/Items/MeleeCategoryName', locale),
@@ -659,6 +660,7 @@ export default function Inventory() {
               category: 'prime_parts',
               owned: (p.crafted ?? 0) > 0 || (parent.owned ?? false),
               mastered: setMastered,
+              vaulted: set.vaulted ?? false,
               quantity: (p.crafted ?? 0) + (p.quantity ?? 0),
               _value: primePrices?.[p.unique_name] ?? 0,
               _ducats: ducatsFor(p.unique_name)
@@ -791,12 +793,14 @@ export default function Inventory() {
             if (f === 'necramech' && !item.is_necramech) return false;
             if (f === 'prime' && !item.is_prime) return false;
             if (f === 'socketed' && item.sockets <= 0) return false;
+            if (f === 'vaulted' && !item.vaulted) return false;
           } else if (state === 'no') {
             if (f === 'owned' && item.owned) return false;
             if (f === 'mastered' && item.mastered) return false;
             if (f === 'subsumed' && item.subsumed) return false;
             if (f === 'prime' && item.is_prime) return false;
             if (f === 'socketed' && item.sockets > 0) return false;
+            if (f === 'vaulted' && item.vaulted) return false;
           }
         }
         return true;
@@ -1106,6 +1110,13 @@ export default function Inventory() {
                                 <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${isParentMastered ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/5 text-kronos-dim'}`}>
                                   <span className="text-[10px] font-black uppercase tracking-wider">{isParentMastered ? t('ui.comp.mastered') : t('ui.inventory.badge_unmastered')}</span>
                                 </div>
+
+                                {/* Vaulted Status */}
+                                {set.vaulted &&
+                                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors bg-amber-500/10 border-amber-500/30 text-amber-400">
+                                    <span className="text-[10px] font-black uppercase tracking-wider">{t('ui.inventory.badge_vaulted')}</span>
+                                  </div>
+                                }
                               </div>
                             </div>
                           </div>
