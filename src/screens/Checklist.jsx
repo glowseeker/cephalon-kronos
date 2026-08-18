@@ -29,7 +29,7 @@ import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 const tasks = [
 { id: 'baro', label: 'Baro Ki\'Teer', labelKey: 'ui.dashboard.baro_kiteer', reset: 'baro' },
 { id: 'glast', label: 'Ergo Glast', labelKey: 'checklist.task_glast', reset: 'daily' },
-{ id: 'eleanor', label: 'Eleanor', labelKey: 'checklist.task_eleanor', reset: 'daily' },
+{ id: 'eleanor', label: 'Eleanor', labelKey: 'checklist.task_eleanor', reset: 'eleanor' },
 { id: 'sortie', label: 'Sortie', labelKey: 'ui.dashboard.sortie', reset: 'daily' },
 { id: 'foundry', label: 'Check Foundry', labelKey: 'checklist.task_foundry', reset: 'daily' },
 { id: 'syndicates', label: 'Syndicate Standing', labelKey: 'checklist.task_syndicates', reset: 'daily' },
@@ -276,13 +276,14 @@ const formatTimeLeft = (ms) => {
 };
 
 const TaskCard = ({ task, completed, hidden, onToggle, onHide, timeLeft, nextResetTime, t, locale }) => {
-  const resetLabels = { daily: t('checklist.daily'), weekly: t('checklist.weekly'), biweekly: t('checklist.biweekly'), other: t('checklist.other_8h'), baro: resolveGameTerm('/Lotus/Language/G1Quests/VoidTraderName', locale) };
+  const resetLabels = { daily: t('checklist.daily'), weekly: t('checklist.weekly'), biweekly: t('checklist.biweekly'), other: t('checklist.other_8h'), baro: resolveGameTerm('/Lotus/Language/G1Quests/VoidTraderName', locale), eleanor: t('checklist.eleanor_cycle') };
   const getIntervalMs = (resetType) => {
     if (resetType === 'daily') return 24 * 60 * 60 * 1000;
     if (resetType === 'weekly') return 7 * 24 * 60 * 60 * 1000;
     if (resetType === 'biweekly') return 14 * 24 * 60 * 60 * 1000;
     if (resetType === 'other') return 8 * 60 * 60 * 1000;
     if (resetType === 'baro') return 14 * 24 * 60 * 60 * 1000;
+    if (resetType === 'eleanor') return 8 * 24 * 60 * 60 * 1000;
     return 24 * 60 * 60 * 1000;
   };
   const intervalMs = getIntervalMs(task.reset);
@@ -601,6 +602,23 @@ export default function Checklist() {
       const expiry = worldState.nightwave.expiry;
       if (expiry instanceof Date && !isNaN(expiry.getTime())) return expiry.getTime();
       return 0;
+    }
+    if (taskId === 'eleanor') {
+      // Eleanor's Coda shop cycles Batch A for 4 days, then Batch B for 4 days.
+      // Full 8-day cycle anchored to March 18, 2025 00:00:00 UTC (start of Batch A).
+      const ELEANOR_EPOCH = new Date('2025-03-18T00:00:00Z').getTime();
+      const CYCLE_MS = 8 * 24 * 60 * 60 * 1000;
+      const HALF_CYCLE_MS = 4 * 24 * 60 * 60 * 1000;
+      const current = Date.now();
+      const elapsed = current - ELEANOR_EPOCH;
+      const posInCycle = elapsed % CYCLE_MS;
+      // Within each 8-day cycle: days 0-4 = Batch A, days 4-8 = Batch B
+      // The next batch switch is at the 4-day mark (A->B) or 8-day mark (B->A)
+      if (posInCycle < HALF_CYCLE_MS) {
+        return ELEANOR_EPOCH + Math.floor(elapsed / CYCLE_MS) * CYCLE_MS + HALF_CYCLE_MS;
+      } else {
+        return ELEANOR_EPOCH + (Math.floor(elapsed / CYCLE_MS) + 1) * CYCLE_MS;
+      }
     }
     if (resetType === 'daily') {
       const now = new Date();
