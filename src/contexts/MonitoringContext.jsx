@@ -1019,7 +1019,7 @@ export function MonitoringProvider({ children }) {
         }))
         const evPlat = getRelicEV(sortedRewards, 'Intact', 1, 'plat')
         const evDucats = getRelicEV(sortedRewards, 'Intact', 1, 'ducats')
-        return { name: r.name, era: r.era, evPlat: Math.round(evPlat), evDucats: Math.round(evDucats) }
+        return { name: r.name, era: r.era, vaulted: r.vaulted, evPlat: Math.round(evPlat), evDucats: Math.round(evDucats) }
       })
       const ducatTop = [...enriched].sort((a, b) => b.evDucats - a.evDucats).slice(0, 5)
       const platTop = [...enriched].sort((a, b) => b.evPlat - a.evPlat).slice(0, 5)
@@ -1045,7 +1045,7 @@ export function MonitoringProvider({ children }) {
         }))
         const evPlat = getRelicEV(sortedRewards, 'Intact', 1, 'plat')
         const evDucats = getRelicEV(sortedRewards, 'Intact', 1, 'ducats')
-        return { name: r.name, era: r.era, evPlat: Math.round(evPlat), evDucats: Math.round(evDucats) }
+        return { name: r.name, era: r.era, vaulted: r.vaulted, evPlat: Math.round(evPlat), evDucats: Math.round(evDucats) }
       })
       const ducatTop = [...enriched].sort((a, b) => b.evDucats - a.evDucats).slice(0, 5)
       const platTop = [...enriched].sort((a, b) => b.evPlat - a.evPlat).slice(0, 5)

@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useUi } from '../../contexts/UiContext'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
+import { getSetting } from '../../lib/settings'
 
 export default function RelicPickerOverlay() {
   const { t } = useUi()
   const [relics, setRelics] = useState(null)
   const [windowVisible, setWindowVisible] = useState(false)
   const windowVisibleRef = useRef(false)
+  const [showVaulted, setShowVaulted] = useState(getSetting('relic_picker_include_vaulted', true))
 
   const showWindow = useCallback(async (fromRust = false) => {
     if (windowVisibleRef.current) return
@@ -57,10 +59,21 @@ export default function RelicPickerOverlay() {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-[360px]">
           <div className="flex gap-3">
-            <Column items={relics.ducat_top} title={`Top Ducat EV${eraSuffix}`} accent="text-amber-400" />
-            <Column items={relics.plat_top} title={`Top Plat EV${eraSuffix}`} accent="text-blue-400" />
+            <Column items={relics.ducat_top.filter(item => showVaulted || !item.vaulted)} title={`Top Ducat EV${eraSuffix}`} accent="text-amber-400" />
+            <Column items={relics.plat_top.filter(item => showVaulted || !item.vaulted)} title={`Top Plat EV${eraSuffix}`} accent="text-blue-400" />
           </div>
         </div>
+      </div>
+      <div className="h-12 border-t border-white/10 px-3 flex items-center justify-end gap-2">
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showVaulted}
+            onChange={(e) => setShowVaulted(e.target.checked)}
+            className="w-3.5 h-3.5"
+          />
+          <span className="text-[11px] font-bold text-kronos-dim">{t('relics.vaulted_show')}</span>
+        </label>
       </div>
     </div>
   )
