@@ -141,13 +141,70 @@ function GradeBadge({ grade, className = "" }) {
 
 }
 
+// ── Bounty reward lookup helpers ───────────────────────────────────────────────
+// The drop index (built from ExportRewards/DropsAll) contains every bounty
+// item source.  buildFinalStageIndex scans it once and groups entries by
+// bountyLevel, keeping only Rotation-C "Final Stage" items (the highest-visibility
+// non-guaranteed drop on each bounty card -- our "main guaranteed reward").
+function buildFinalStageIndex(dropIndex) {
+  const idx = {};
+  if (!dropIndex) return idx;
+  for (const sources of Object.values(dropIndex)) {
+    for (const s of sources) {
+      if (s.type === 'bounty' && s.rotation === 'C' && s.stage && s.stage.toLowerCase().includes('final')) {
+        const level = s.bountyLevel;
+        if (level && !Object.prototype.hasOwnProperty.call(idx, level)) {
+          idx[level] = [];
+        }
+        if (level) idx[level].push(s);
+      }
+    }
+  }
+  return idx;
+}
+
+// Look up the Rotation-C Final-Stage rewards for the given syndicate keyword
+// (e.g. "Zariman") and level range (e.g. "50-55"), returning the highest-rarity
+// matching source entry (or null).  The caller resolves the itemName.
+function lookupMainReward(finalStageIdx, keyword, levelRange) {
+  // Try exact match first: "Level <range> <keyword> Bounty"
+  const targetLevel = `Level ${levelRange} ${keyword} Bounty`;
+  let entries = finalStageIdx[targetLevel];
+
+  // If not found, fall back to a fuzzy match on the keyword + level range
+  if (!entries) {
+    const fuzzyKey = `${levelRange} ${keyword}`;
+    const key = Object.keys(finalStageIdx).find(k => k.includes(fuzzyKey));
+    entries = key ? finalStageIdx[key] : [];
+  }
+
+  if (!entries || entries.length === 0) return null;
+
+  // Prefer LEGENDARY > RARE > UNCOMMON > COMMON
+  const priority = { LEGENDARY: 4, RARE: 3, UNCOMMON: 2, COMMON: 1 };
+  entries.sort((a, b) =>
+    (priority[b.rarity || 'COMMON'] || 0) - (priority[a.rarity || 'COMMON'] || 0)
+  );
+  return entries[0];
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
+// Map from bountyTab → (syndicate keyword in bountyLevel, enemy level range).
+// The bounty-cycle tabs (holdfasts/cavia/hex) have fixed level ranges verified
+// against the live rotation: Zariman 50-55, EntratiLab 55-60, Hex 65-70.
+const BOUNTY_CYCLE_LEVELS = {
+  holdfasts: { keyword: 'Zariman', level: '50-55' },
+  cavia:   { keyword: 'Entrati Lab', level: '55-60' },
+  hex:     { keyword: 'Hex', level: '65-70' },
+};
+
 export default function Dashboard() {
   const { t, locale } = useUi()
   const {
     exportData, worldState, spIncursions, arbys, archonModifiers, arbitrationModifiers,
     dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, arbyTiers,
     rawInventory, inventoryData, ES, ENWRawRewards, ExportImages, ExportTextIcons,
+    dropIndex,
     cardImagesPath
   } = useMonitoring();
   const [worldstate, setWorldstate] = useState(null);
@@ -343,6 +400,20 @@ export default function Dashboard() {
   { id: 'vallis', label: dict?.['/Lotus/Language/Syndicates/SolarisSecretName'] || 'Vallis', icon: iconSrc('MiniMapHubFortuna') }],
   [iconsPath, locale, dict]);
 
+  // ── Bounty helper data ───────────────────────────────────────────────────────
+  // Rotation C Final Stage rewards indexed by bountyLevel, used to show the
+  // "main guaranteed reward" on bounty-cycle cards (decision A1).
+  const finalStageIdx = useMemo(() => buildFinalStageIndex(dropIndex), [dropIndex]);
+
+  // Lookup from jobType path → worldstate SyndicateMission (for Cetus/Vallis/Deimos levels).
+  const wsBountyMap = useMemo(() => {
+    const m = new Map();
+    for (const b of (worldstate?.bounties || [])) {
+      if (b.jobType) m.set(b.jobType, b);
+    }
+    return m;
+  }, [worldstate?.bounties]);
+
   // ── Owned-item lookup for the market sales card ─────────────────────────────
   // A shop item counts as owned when its resolved display name matches an item
   // the account owns. Two cheap O(1) sets:
@@ -383,28 +454,28 @@ export default function Dashboard() {
       return <div className="min-h-[80px] flex items-center justify-center"><p className="text-xs text-kronos-dim italic">{t('ui.dashboard.loading_bounties')}</p></div>;
     }
 
-    // Build a lookup from jobType path → level range + reward text from worldstate
-    // SyndicateMissions jobs. Used for Cetus/Vallis/Deimos to show enemy levels.
-    const wsBountyMap = new Map();
-    for (const b of (worldstate?.bounties || [])) {
-      if (b.jobType) wsBountyMap.set(b.jobType, b);
-    }
-    const lookupWsBounty = (jobPath) => wsBountyMap.get(jobPath) || null;
-
     let items = [];
+
+    // Look up a SyndicateMission entry by its jobType path (for location-bounty levels).
+    const lookupWsBounty = (jobPath) => (jobPath ? wsBountyMap.get(jobPath) : null);
 
     if (bountyTab === 'holdfasts' || bountyTab === 'cavia') {
       const key = bountyTab === 'holdfasts' ? 'ZarimanSyndicate' : 'EntratiLabSyndicate';
+      const meta = BOUNTY_CYCLE_LEVELS[bountyTab];
       const data = bountyCycle.bounties?.[key] || [];
       items = data.map((b) => {
+        const mainReward = lookupMainReward(finalStageIdx, meta.keyword, meta.level);
         return {
           name: b.challenge ? resolveChallenge(b.challenge, dict, EC) : 'Unknown Bounty',
           desc: b.challenge ? resolveChallengeFlavour(b.challenge, dict, EC, ERg) : '',
           obj: b.challenge ? resolveChallengeDesc(b.challenge, dict, EC, ERg) : '',
-          tier: b.rot ? `Rotation ${b.rot}` : ''
+          tier: b.rot ? `Rotation ${b.rot}` : '',
+          level: meta.level,
+          mainReward: mainReward ? resolveItemName(mainReward.item || mainReward.name, dict) : '',
         };
       });
     } else if (bountyTab === 'hex') {
+      const meta = BOUNTY_CYCLE_LEVELS[bountyTab];
       const data = bountyCycle.bounties?.HexSyndicate || [];
       items = data.map((b) => {
         const flavour = b.challenge ? resolveChallengeFlavour(b.challenge, dict, EC, ERg, b.ally) : '';
@@ -413,12 +484,15 @@ export default function Dashboard() {
         // have no ally so they get the Techrot art.
         const allyLeaf = b.ally ? b.ally.split('/').pop().replace(/AllyAgent$/, '') : '';
         const img = allyLeaf ? `Bounty${allyLeaf}` : 'BountyTechrot';
+        const mainReward = lookupMainReward(finalStageIdx, meta.keyword, meta.level);
         return {
           name: b.challenge ? resolveChallenge(b.challenge, dict, EC) : 'Unknown Bounty',
           desc: flavour,
           obj,
           tier: b.rot ? `Rotation ${b.rot}` : '',
-          img
+          level: meta.level,
+          img,
+          mainReward: mainReward ? resolveItemName(mainReward.item || mainReward.name, dict) : '',
         };
       });
     } else if (bountyTab === 'cetus') {
@@ -429,7 +503,7 @@ export default function Dashboard() {
           const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
           const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
           const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Cetus\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Tent', 'Pool '), level });
+          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Tent', 'Pool '), level, mainReward: wsBounty?.rewardText || '' });
         }
       });
     } else if (bountyTab === 'deimos') {
@@ -440,7 +514,7 @@ export default function Dashboard() {
           const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
           const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
           const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Deimos\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Chamber', 'Vault ').replace('Tent', 'Pool '), level });
+          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Chamber', 'Vault ').replace('Tent', 'Pool '), level, mainReward: wsBounty?.rewardText || '' });
         }
       });
     } else if (bountyTab === 'vallis') {
@@ -451,7 +525,7 @@ export default function Dashboard() {
           const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
           const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
           const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Venus\s+/i, '').replace(/^Solaris\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Bounty', '').replace(/([A-Z])/g, ' $1').trim(), level });
+          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Bounty', '').replace(/([A-Z])/g, ' $1').trim(), level, mainReward: wsBounty?.rewardText || '' });
         }
       });
     }
@@ -489,6 +563,11 @@ export default function Dashboard() {
               {it.obj &&
             <p className="text-xs font-medium text-kronos-accent mt-auto leading-tight break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{t('dashboard.challenge')} {it.obj}
                 </p>
+            }
+            {it.mainReward &&
+            <p className="text-[10px] font-medium text-kronos-text/70 mt-auto leading-tight break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+              {t('dashboard.main_reward')}: {it.mainReward}
+            </p>
             }
             </div>
           </div>
