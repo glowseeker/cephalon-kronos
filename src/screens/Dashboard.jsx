@@ -365,15 +365,7 @@ export default function Dashboard() {
       const walk = (node) => {
         if (Array.isArray(node)) { for (const v of node) walk(v) }
         else if (node && typeof node === 'object') { for (const v of Object.values(node)) walk(v) }
-        else if (typeof node === 'string' && node.startsWith('/Lotus')) {
-          const l = norm(leaf(node))
-          leaves.add(l)
-          // getShip places decorations using /Lotus/Objects/...Appearance "Deco"
-          // paths whose leaf is the inventory path leaf + "Deco" suffix
-          // (e.g. LisetPropLotusMandolinDeco ≡ Nelumbo Shawzin). Track the
-          // suffix-stripped variant so those marked-owned sales match too.
-          if (l.endsWith('deco')) leaves.add(l.replace(/deco$/, ''))
-        }
+        else if (typeof node === 'string' && node.startsWith('/Lotus')) leaves.add(norm(leaf(node)))
       }
       walk(rawInventory)
     }

@@ -558,7 +558,7 @@ async fn call_api_helper(_app_handle: tauri::AppHandle) -> Result<Value, String>
     let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
     let body = resp.bytes().await.map_err(|e| e.to_string())?;
 
-    let mut value: Value = serde_json::from_slice(&body)
+    let value: Value = serde_json::from_slice(&body)
         .map_err(|e| format!("Invalid JSON from mobile API: {e}"))?;
 
     // Bare {} means the API returned nothing useful.
@@ -576,46 +576,7 @@ async fn call_api_helper(_app_handle: tauri::AppHandle) -> Result<Value, String>
     let inv_path = inv_dir.join("inventory.json");
     fs::write(&inv_path, &body).map_err(|e| e.to_string())?;
 
-    // getShip.php holds placed/claimed ship decorations (e.g. Shawzin skin
-    // decos like "Nelumbo Shawzin" ≡ LisetPropLotusMandolin) that inventory.php
-    // omits. Cache it so the owned-marking on the dashboard can see them, and
-    // merge its /Lotus paths into the returned + cached value under a synthetic
-    // key that parseInventory ignores but the frontend item-walk picks up.
-    let ship_cache = inv_dir.join("ship.json");
-    let ship_url = format!("https://mobile.warframe.com/api/getShip.php{authz}");
-    if let Ok(ship_resp) = client.get(&ship_url).send().await {
-        if let Ok(ship_bytes) = ship_resp.bytes().await {
-            if let Ok(ship_val) = serde_json::from_slice::<Value>(&ship_bytes) {
-                let _ = fs::write(&ship_cache, &ship_bytes);
-                if let Value::Object(obj) = &mut value {
-                    let mut paths = Vec::new();
-                    collect_lotus_paths(&ship_val, &mut paths);
-                    obj.insert(
-                        "PlacedShipDecos".to_string(),
-                        Value::Array(paths.into_iter().map(Value::String).collect()),
-                    );
-                }
-                // Persist the merged value so cached startups (sidebar_load_inventory /
-                // load_cached_inventory) also see the placed-deco paths.
-                if let Ok(merged) = serde_json::to_vec(&value) {
-                    let _ = fs::write(&inv_path, &merged);
-                }
-            }
-        }
-    }
-
     Ok(value)
-}
-
-/// Collect every `/Lotus` unique-name string from a JSON value, including the
-/// placed-deco `Type` paths inside getShip.php's rooms and claimed-deco lists.
-fn collect_lotus_paths(v: &Value, out: &mut Vec<String>) {
-    match v {
-        Value::String(s) if s.starts_with("/Lotus") => out.push(s.clone()),
-        Value::Array(arr) => arr.iter().for_each(|x| collect_lotus_paths(x, out)),
-        Value::Object(map) => map.values().for_each(|x| collect_lotus_paths(x, out)),
-        _ => {}
-    }
 }
 
 /// Read all JSON export files as raw text strings, keyed by file stem.
