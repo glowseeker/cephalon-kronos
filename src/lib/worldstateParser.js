@@ -1091,59 +1091,7 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
     // Vendor timers (not in worldstate - computed from fixed daily rotation schedules).
     // Source: Warframe wiki vendor rotation pages. Ergo Glast's Tenet shop and
     // Eleanor's Coda shop each reset daily at a known UTC time.
-    vendors: computeVendorTimers(raw, mergedDict, uniqueNameToName)
+    // Vendors are tracked as checklist tasks only; see Checklist.jsx.
+    vendors: []
   }
-}
-
-/**
- * Compute vendor rotation timers for vendors not exposed in the worldstate.
- *
- * Refresh schedules (sourced from Warframe wiki):
- * - Ergo Glast: Tenet weapons, daily rotation at 11:00 UTC
- * - Eleanor: Coda weapons, cycles between Batch A and Batch B every 4 days at 0:00 UTC
- *
- * Item pools are not available from the worldstate or any working API; we expose
- * the cycle type so the UI can label which batch is upcoming.
- */
-function computeVendorTimers(raw, dict, uniqueNameToName) {
-  const vendors = []
-
-  const now = Date.now()
-  const MS_PER_DAY = 86400000
-
-  // Ergo Glast - Tenet Weapon shop, daily rotation at 11:00 UTC
-  let glastNextRefresh = new Date(now)
-  glastNextRefresh.setUTCHours(11, 0, 0, 0)
-  if (glastNextRefresh.getTime() <= now) glastNextRefresh = new Date(glastNextRefresh.getTime() + MS_PER_DAY)
-
-  vendors.push({
-    id: 'glast',
-    name: dict?.['/Lotus/Language/Syndicates/ErgoGlastTitle'] || 'Ergo Glast',
-    type: 'tenet_weapons',
-    rotationIntervalHours: 24,
-    nextRefresh: glastNextRefresh,
-  })
-
-  // Eleanor - Coda weapon shop, cycles Batch A/B every 4 days at 0:00 UTC
-  // The wiki confirms the cycle started from March 18, 2025 00:00:00 UTC and
-  // repeats every 4 days. Each 4-day cycle: first 2 days = Batch A, second 2 days = Batch B.
-  const ELEANOR_EPOCH = new Date('2025-03-18T00:00:00Z').getTime()
-  const ELEANOR_CYCLE_MS = 4 * MS_PER_DAY
-  const elapsed = now - ELEANOR_EPOCH
-  const cycleIndex = Math.floor(elapsed / ELEANOR_CYCLE_MS)
-  const nextCycleStart = ELEANOR_EPOCH + (cycleIndex + 1) * ELEANOR_CYCLE_MS
-  eleanorNextRefresh = new Date(nextCycleStart)
-  const eleanorCyclePos = cycleIndex % 2
-
-  vendors.push({
-    id: 'eleanor',
-    name: 'Eleanor',
-    type: 'coda_weapons',
-    rotationIntervalHours: 96,
-    nextRefresh: eleanorNextRefresh,
-    cycleBatch: eleanorCyclePos === 0 ? 'A' : 'B',
-    nextBatch: eleanorCyclePos === 0 ? 'B' : 'A',
-  })
-
-  return vendors
 }

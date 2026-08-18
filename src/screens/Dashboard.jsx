@@ -1338,39 +1338,6 @@ export default function Dashboard() {
 
   };
 
-  const renderVendor = (vendor) => {
-    if (!vendor) return null;
-
-    return (
-      <Card glow className="p-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <ShoppingBag size={16} className="text-kronos-accent flex-shrink-0" />
-            <p className="font-bold text-sm uppercase">{vendor.name}</p>
-          </div>
-        </div>
-        <div className="bg-kronos-panel/40 rounded p-2">
-          <p className="text-xs text-kronos-dim mt-0.5 font-mono">
-            {vendor.nextRefresh ? t('ui.dashboard.vendor_refreshes', { time: timeRemaining(vendor.nextRefresh, t) }) : t('ui.dashboard.vendor_loading')}
-          </p>
-          {vendor.cycleBatch &&
-          <p className="text-xs text-kronos-dim mt-0.5 font-mono">
-            {t('ui.dashboard.vendor_eleanor_batch', { current: vendor.cycleBatch, next: vendor.nextBatch })}
-          </p>
-          }
-          {vendor.items?.length > 0 &&
-          <div className="flex flex-wrap gap-1 mt-2">
-            {vendor.items.slice(0, 4).map((item, idx) => (
-              <span key={idx} className="text-[10px] font-bold text-kronos-text uppercase bg-black/20 px-1.5 py-0.5 rounded">
-                {item.item}
-              </span>
-            ))}
-          </div>
-          }
-        </div>
-      </Card>);
-  };
-
   const BaroModal = () => {
     const vt = worldstate?.voidTrader;
     const inventory = vt?.inventory;
@@ -1667,15 +1634,6 @@ export default function Dashboard() {
           }
 
           {isVisible('baro') && renderBaro()}
-
-          {/* Vendor Timers (Ergo Glast + Eleanor) */}
-          {worldState && (() => {
-            const vendors = worldState.vendors || []
-            if (vendors.length === 0) return null
-            return vendors.map((vendor) => (
-              <div key={vendor.id}>{renderVendor(vendor)}</div>
-            ))
-          })()}
 
           {/* Arbitration */}
           {isVisible('arb') &&
