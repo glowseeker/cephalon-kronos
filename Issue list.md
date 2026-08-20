@@ -122,10 +122,10 @@ Reported: low-contrast borders/dividers and undersized text in multiple spots, h
 
 ## 10. Random smaller ones
 
-- ~~Show bounty levels and the main (guaranteed) rewards~~ (done in v0.8.0 - bounty cards now show level ranges and reward icons/counts)
-- Ergo Glast refreshes Tenet Weapons shop in 2d 7h 31m 50s - add vendor
+- Show bounty levels and the main (guaranteed) rewards
+- Ergo Glast refreshes Tenet Weapons shop in 2d 7h 31m 50s — add vendor
   timers to tasks or a vendor screen
-- Eleanor sells Batch A Coda Weapons from wiki - same timer treatment
+- Eleanor sells Batch A Coda Weapons from wiki — same timer treatment
 - Nightwave: track what challenges the user has done to show Recovered
   challenges (ergo up to date, not just this week's)
   - "Any Weekly and Elite Weekly Acts that have not been completed before the
@@ -185,7 +185,6 @@ Issue #50 github kind of relates to those above
   - Market sale box and wishlist item names now wrap to multiple lines instead of truncating (e.g. "TEN YEAR ANNIVERSARY COMMUNITY ART PACK").
 - **Dashboard bounties**: 
   - Bounty cards (holdfasts/cavia/hex) redesigned: title renders plainly (e.g. "Volatile Techrot"), the challenge lore ("She wants to teach…", "Arthur needs to study…") shows as the description, and the objective is labeled "Challenge: …" underneath (e.g. "Challenge: Destroy 3 backpacks on Scaldra units"). Removed the broken "Arthur (Exploding)" node line. `resolveChallengeDesc` now strips OPEN_COLOR marketing labels and substitutes |COUNT|/|ALLY| before `clean()` so objectives no longer start with a stray "Bounty" or drop the count. Hex bounty artwork uses object-contain (full portrait); text renders over the transparent-left zone, wider on non-image cards (Cetus/Deimos/Vallis use full width). Text size bumped across all bounty tabs.
-  - Bounty reward icons: each tab shows the correct reward icon per faction - Hex/Vallis/Cetus/Cavia use DailyStanding, Holdfasts uses VoidplumeQuill, Deimos uses MotherToken. Holdfasts cards render the VoidplumeQuill icon enlarged (24px) in the bottom-right corner with a '5x' count label, matching the hex standing icon placement.
 - **Wishlist/Market items**: 
   - Dante Tytonis Collection (Pagemaster Deluxe Skin Bundle) image now resolves to the authoritative content.warframe.com contentHash URL via its first component's skin icon, instead of the browse.wf URL that 404s. The EI builders (MonitoringContext + MirroredMonitoringProvider) are now contentHash-aware for all icons, falling back to component icons for bundles lacking their own contentHash.
 - **Riven pricer (only relevant for local building)**: 
