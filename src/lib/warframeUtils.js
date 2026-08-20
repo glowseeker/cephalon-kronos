@@ -118,6 +118,7 @@ export const MAPPING_TYPES = {
   'MT_EXTERMINATION': 'Extermination',
   'MT_RESCUE': 'Rescue',
   'MT_CAPTURE': 'Capture',
+  'MT_ENDLESS_CAPTURE': 'Endless Capture',
   'MT_EXCAVATION': 'Excavation',
   // Live worldstate sends MT_EXCAVATE for excavation fissures (the older
   // MT_EXCAVATION code still appears in node data).
@@ -166,6 +167,7 @@ const MISSION_NAME_KEYS = {
   'Extermination': 'Exterminate',
   'Rescue': 'Rescue',
   'Capture': 'Capture',
+  'Endless Capture': 'EndlessCapture',
   'Excavation': 'Excavation',
   'Hijack': 'Retrieval',
   'Interception': 'Territory',
@@ -357,6 +359,73 @@ export function resolveChallenge(path, dict, EC) {
   const last = path.split('/').at(-1)
   if (GeneralOverrides[last]) return GeneralOverrides[last]
   return last.replace(/Challenge$/, '').replace(/([A-Z])/g, ' $1').trim()
+}
+
+// ─── Hex Bounty Faction Resolution ──────────────────────────────
+/**
+ * Determine the faction prefix for a Hex/Syndicate-1999 bounty based on its
+ * challenge path. Returns a localized faction name (e.g. "Scaldra", "Techrot")
+ * or '' when the challenge doesn't map to a known faction.
+ *
+ * Logic:
+ *   /Lich/ in path  → Scaldra  (Lich/Vania-Assassin = Antivirus/Scaldra agent)
+ *   /Calendar1999/  → faction extracted from the challenge leaf
+ *   otherwise       → '' (no faction prefix — e.g. generic protoframe bounty)
+ */
+export function resolveHexBountyFaction(challengePath, dict, locale = 'en') {
+  if (!challengePath) return ''
+  // Lich challenges: /Lotus/Types/Challenges/Vania/Lich/LichVania...
+  if (challengePath.includes('/Lich/')) {
+    const key = '/Lotus/Language/1999/Faction_Scaldra'
+    return clean(dict?.[key] || dict?.['/' + key] || 'Scaldra')
+  }
+  // Calendar 1999 challenges encode faction in the leaf: e.g.
+  //   CalendarKillScaldraEnemiesEasy  →  Scaldra
+  //   CalendarKillTechrotEnemiesEasy  →  Techrot
+  if (challengePath.includes('/Calendar1999/')) {
+    const leaf = challengePath.split('/').pop() || ''
+    const fcMatch = leaf.match(/(Scaldra|Techrot)/)
+    if (fcMatch) {
+      const key = `/Lotus/Language/1999/Faction_${fcMatch[1]}`
+      return clean(dict?.[key] || dict?.['/' + key] || fcMatch[1])
+    }
+    return ''
+  }
+  return ''
+}
+
+// ─── Reward Icon Resolution ────────────────────────────────────
+/**
+ * Inspect a bounty reward string and return the icon filename (without .png)
+ * to display alongside it, or null when no icon applies.
+ *
+ * Per-bounty-type icon mapping:
+ *   - Hex (Syndicate-1999):    DailyStanding
+ *   - Holdfasts (Zariman):     VoidplumeQuill
+ *   - Cavia (Entrati Lab):     DailyStanding
+ *   - Deimos (Entrati):        MotherToken
+ *   - Cetus (Ostron):          DailyStanding
+ *   - Vallis (Solaris):        DailyStanding
+ * When no bountyType is passed (legacy callers), fall back to the
+ * "Standing" string-matching heuristic so existing Cetus/Deimos/Vallis
+ * cards keep working.
+ */
+export function resolveRewardIcon(reward, bountyType) {
+  if (bountyType) {
+    const iconMap = {
+      hex: 'DailyStanding',
+      holdfasts: 'VoidplumeQuill',
+      cavia: 'DailyStanding',
+      deimos: 'MotherToken',
+      cetus: 'DailyStanding',
+      vallis: 'DailyStanding',
+    }
+    return iconMap[bountyType] || null
+  }
+  // Legacy fallback: string-match for standing
+  if (!reward || typeof reward !== 'string') return null
+  if (/standing/i.test(reward)) return 'DailyStanding'
+  return null
 }
 
 // ─── Bounty Challenge Display Name ─────────────────────────────────────

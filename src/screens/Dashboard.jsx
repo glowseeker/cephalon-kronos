@@ -42,6 +42,8 @@ import {
   resolveRewardText,
   resolveAnyImage,
   resolveChallenge,
+  resolveHexBountyFaction,
+  resolveRewardIcon,
   cleanBountyName,
   resolveChallengeDesc,
   resolveChallengeFlavour,
@@ -139,8 +141,18 @@ function GradeBadge({ grade, className = "" }) {
   return (
     <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${colors[grade] || colors.F} ${className}`}>
       {grade}
-    </span>);
+    </span>
+  );
+}
 
+// Unified badge for bounty cards - consistent base style across mission-type,
+// level, and tier badges. Only text color varies per badge type.
+function Badge({ text, color, className = "" }) {
+  return (
+    <span className={"text-[10px] font-bold uppercase bg-black/20 rounded " + color + " " + className}>
+      {text}
+    </span>
+  );
 }
 
 // ── Bounty reward lookup helpers ───────────────────────────────────────────────
@@ -199,6 +211,26 @@ const BOUNTY_CYCLE_LEVELS = {
   cavia: { keyword: 'Entrati Lab', level: '55-60' },
   hex: { keyword: 'Hex', level: '65-70' },
 };
+
+// Zariman bounties come in 5 difficulty tiers (matched 1:1 by the bounty-cycle
+// array order). Each tier runs at its own enemy level and guarantees that many
+// Voidplume Quills on completion; the Steel Path variant grants 150% rounded up.
+// (Source: wiki.warframe.com — "There are five bounty tiers available on the
+// Zariman... Tier 1 = 1x Voidplume Quills ... Tier 5 = 5x", SP "2-8".)
+const ZARIMAN_TIER_LEVELS = ['50-55', '60-65', '70-75', '90-95', '110-115'];
+const spRewardCount = (count) => Math.ceil(count * 1.5);
+
+// Entrati Lab (Cavia) and WF1999 (Hex) bounty cycles also map 1:1 to tiered
+// enemy levels and guaranteed standing, verified in-game per tier:
+//   Cavia: 55-60, 65-70, 75-80, 95-100, 115-120  (5 tiers)
+//   Hex:   65-70, 75-80, 85-90, 95-100, 105-110, 115-120, 125-130  (7 tiers)
+// Standing amounts are fixed per tier (normal / Steel Path); SP = 1.5x normal.
+const CAVIA_TIER_LEVELS = ['55-60', '65-70', '75-80', '95-100', '115-120'];
+const HEX_TIER_LEVELS = ['65-70', '75-80', '85-90', '95-100', '105-110', '115-120', '125-130'];
+const CAVIA_STANDING = [1000, 2000, 3000, 4000, 5000];
+const CAVIA_STANDING_SP = [1500, 3000, 4500, 6000, 7500];
+const HEX_STANDING = [1000, 2000, 3000, 4000, 5000, 6000, 7500];
+const HEX_STANDING_SP = [1500, 3000, 4500, 6000, 7500, 9000, 11250];
 
 export default function Dashboard() {
   const { t, locale } = useUi()
@@ -461,40 +493,91 @@ export default function Dashboard() {
     // Look up a SyndicateMission entry by its jobType path (for location-bounty levels).
     const lookupWsBounty = (jobPath) => (jobPath ? wsBountyMap.get(jobPath) : null);
 
-    if (bountyTab === 'holdfasts' || bountyTab === 'cavia') {
-      const key = bountyTab === 'holdfasts' ? 'ZarimanSyndicate' : 'EntratiLabSyndicate';
-      const meta = BOUNTY_CYCLE_LEVELS[bountyTab];
+    if (bountyTab === 'holdfasts') {
+      // Zariman bounties: 5 difficulty tiers, one per card in board order.
+      // Bounty cycle arrays are ordered tier 1 → tier 5, so the array index
+      // directly gives the tier. Reward = that many Voidplume Quills.
+      const data = bountyCycle.bounties?.ZarimanSyndicate || [];
+      const standingLabel = t('ui.dashboard.standing');
+      items = data.map((b, idx) => {
+        const tier = idx + 1;
+        const nodeName = b.node ? resolveNode(b.node, dict, ERg) : '';
+        const nodeEntry = b.node ? ERg[b.node] : null;
+        const missionType = nodeEntry ? resolveMissionType(nodeEntry.missionType, dict, ERg, locale) : '';
+        return {
+          name: b.challenge ? resolveChallenge(b.challenge, dict, EC) : 'Unknown Bounty',
+          desc: b.challenge ? resolveChallengeFlavour(b.challenge, dict, EC, ERg, b.ally) : '',
+          obj: b.challenge ? resolveChallengeDesc(b.challenge, dict, EC, ERg, b.ally) : '',
+          faction: '',
+          node: nodeName,
+          mtype: missionType,
+          tier: '',
+          level: ZARIMAN_TIER_LEVELS[tier - 1] || '50-55',
+          rewardCount: tier,
+          spRewardCount: spRewardCount(tier),
+          rewardIcon: resolveRewardIcon(null, 'holdfasts'),
+          mainReward: standingLabel,
+        };
+      });
+    } else if (bountyTab === 'cavia') {
+      const key = 'EntratiLabSyndicate';
       const data = bountyCycle.bounties?.[key] || [];
-      items = data.map((b) => {
-        const mainReward = lookupMainReward(finalStageIdx, meta.keyword, meta.level);
+      const standingLabel = t('ui.dashboard.standing');
+      items = data.map((b, idx) => {
+        const nodeName = b.node ? resolveNode(b.node, dict, ERg) : '';
+        const nodeEntry = b.node ? ERg[b.node] : null;
+        const missionType = nodeEntry ? resolveMissionType(nodeEntry.missionType, dict, ERg, locale) : '';
         return {
           name: b.challenge ? resolveChallenge(b.challenge, dict, EC) : 'Unknown Bounty',
           desc: b.challenge ? resolveChallengeFlavour(b.challenge, dict, EC, ERg) : '',
           obj: b.challenge ? resolveChallengeDesc(b.challenge, dict, EC, ERg) : '',
+          faction: '',
+          node: nodeName,
+          mtype: missionType,
           tier: b.rot ? `Rotation ${b.rot}` : '',
-          level: meta.level,
-          mainReward: mainReward ? resolveItemName(mainReward.item || mainReward.name, dict) : '',
+          level: CAVIA_TIER_LEVELS[idx] || '55-60',
+          standingReward: CAVIA_STANDING[idx],
+          spStandingReward: CAVIA_STANDING_SP[idx],
+          rewardIcon: resolveRewardIcon(null, bountyTab),
+          mainReward: standingLabel,
         };
       });
     } else if (bountyTab === 'hex') {
-      const meta = BOUNTY_CYCLE_LEVELS[bountyTab];
       const data = bountyCycle.bounties?.HexSyndicate || [];
-      items = data.map((b) => {
+      items = data.map((b, idx) => {
         const flavour = b.challenge ? resolveChallengeFlavour(b.challenge, dict, EC, ERg, b.ally) : '';
         const obj = b.challenge ? resolveChallengeDesc(b.challenge, dict, EC, ERg, b.ally) : '';
         // Bounty card art lives in assets/ui/Bounty{Ally}.png; Lich bounties
         // have no ally so they get the Techrot art.
         const allyLeaf = b.ally ? b.ally.split('/').pop().replace(/AllyAgent$/, '') : '';
         const img = allyLeaf ? `Bounty${allyLeaf}` : 'BountyTechrot';
-        const mainReward = lookupMainReward(finalStageIdx, meta.keyword, meta.level);
+        // For Hex bounties, prepend the faction prefix (Techrot/Scaldra) to the
+        // mission type so e.g. "Survival" shows as "Techrot Survival" or
+        // "Scaldra Survival" based on the challenge path.
+        const faction = resolveHexBountyFaction(b.challenge, dict, locale);
+        const baseMtype = b.node && ERg[b.node] ? resolveMissionType(ERg[b.node].missionType, dict, ERg, locale) : '';
+        const mtype = faction && baseMtype ? `${faction} ${baseMtype}` : baseMtype;
+        // Hex bounties guarantee Standing from the syndicate-1999 faction.
+        // Only Standing gets an icon; the rest are shown as plain text.
+        const standingLabel = t('ui.dashboard.standing');
+        const hexMeta = BOUNTY_CYCLE_LEVELS.hex;
+        const mainReward = lookupMainReward(finalStageIdx, hexMeta.keyword, HEX_TIER_LEVELS[idx] || '55-60');
+        const rewardText = mainReward ? resolveItemName(mainReward.item || mainReward.name, dict) : '';
+        const mainRewardText = [rewardText, standingLabel].filter(Boolean).join(', ');
         return {
           name: b.challenge ? resolveChallenge(b.challenge, dict, EC) : 'Unknown Bounty',
           desc: flavour,
           obj,
+          faction,
+          node: '',
+          mtype,
           tier: b.rot ? `Rotation ${b.rot}` : '',
-          level: meta.level,
+          level: HEX_TIER_LEVELS[idx] || '65-70',
           img,
-          mainReward: mainReward ? resolveItemName(mainReward.item || mainReward.name, dict) : '',
+          standingReward: HEX_STANDING[idx],
+          spStandingReward: HEX_STANDING_SP[idx],
+          rewardIcon: resolveRewardIcon(null, 'hex'),
+          mainReward: mainRewardText,
         };
       });
     } else if (bountyTab === 'cetus') {
@@ -505,7 +588,7 @@ export default function Dashboard() {
           const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
           const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
           const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Cetus\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Tent', 'Pool '), level, mainReward: wsBounty?.rewardText || '' });
+          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Tent', 'Pool '), level, rewardCount: 5, rewardIcon: resolveRewardIcon(wsBounty?.rewardText, 'cetus'), mainReward: wsBounty?.rewardText || '' });
         }
       });
     } else if (bountyTab === 'deimos') {
@@ -516,7 +599,7 @@ export default function Dashboard() {
           const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
           const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
           const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Deimos\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Chamber', 'Vault ').replace('Tent', 'Pool '), level, mainReward: wsBounty?.rewardText || '' });
+          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Chamber', 'Vault ').replace('Tent', 'Pool '), level, rewardCount: 5, rewardIcon: resolveRewardIcon(wsBounty?.rewardText, 'deimos'), mainReward: wsBounty?.rewardText || '' });
         }
       });
     } else if (bountyTab === 'vallis') {
@@ -527,7 +610,7 @@ export default function Dashboard() {
           const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
           const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
           const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Venus\s+/i, '').replace(/^Solaris\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Bounty', '').replace(/([A-Z])/g, ' $1').trim(), level, mainReward: wsBounty?.rewardText || '' });
+          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Bounty', '').replace(/([A-Z])/g, ' $1').trim(), level, rewardCount: 5, rewardIcon: resolveRewardIcon(wsBounty?.rewardText, 'vallis'), mainReward: wsBounty?.rewardText || '' });
         }
       });
     }
@@ -552,26 +635,51 @@ export default function Dashboard() {
             }
             {/* Darken the left transparent zone so overlaid text stays legible; the portrait is right/top anchored */}
             <div className="absolute inset-0 left-0 right-[10%] bg-gradient-to-r from-black/65 via-black/40 to-transparent" />
-            {/* Text spans the transparent-left width; stops short of the portrait */}
-            <div className="absolute inset-0 left-0 right-[20%] flex flex-col justify-between p-3 z-10">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-black text-white uppercase leading-tight flex-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.name}</p>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {it.level && <span className="text-[10px] font-bold text-kronos-text/60 uppercase bg-black/20 px-1.5 rounded">{it.level}</span>}
-                  {it.tier && <span className="text-[10px] font-bold text-kronos-accent uppercase bg-kronos-panel/70 px-1.5 rounded">{it.tier}</span>}
+            {/* Text is in normal flow so the card grows to fit its content
+                (fixes clipped challenges/standing); width is capped when a
+                portrait or the corner voidplume icon occupies the right side */}
+            <div className="relative flex flex-col p-3 z-10 w-[80%]">
+              <div className="min-w-0">
+                  <p className="text-sm font-black text-white leading-snug drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.name}</p>
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    {it.node && <span className="text-[11px] font-semibold text-kronos-text/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.node}</span>}
+                    {it.mtype && <Badge text={it.mtype} color="text-kronos-accent" />}
+                    {it.level && <span className="text-[11px] font-bold text-kronos-text/60 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">({it.level})</span>}
+                    {it.tier && <Badge text={it.tier} color="text-kronos-accent" />}
+                  </div>
                 </div>
-              </div>
-              {it.desc && <p className="text-xs text-kronos-text/90 leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.desc}</p>}
+              {it.desc && <p className="text-xs text-kronos-text/90 leading-snug mt-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.desc}</p>}
               {it.obj &&
-                <p className="text-xs font-medium text-kronos-accent mt-auto leading-tight break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{t('dashboard.challenge')} {it.obj}
-                </p>
-              }
-              {it.mainReward &&
-                <p className="text-[10px] font-medium text-kronos-text/70 mt-auto leading-tight break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
-                  {t('dashboard.main_reward')}: {it.mainReward}
+                <p className="text-xs font-medium text-kronos-accent leading-snug mt-auto pt-2 break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{t('dashboard.challenge')} {it.obj}
                 </p>
               }
             </div>
+            {/* Reward pill pinned to the card's bottom-right corner. Shows the
+                standing amount (normal / Steel Path) on standing tabs, or the
+                reward count ("4x / 6x") for Voidplume/MotherToken cards. The
+                big icon underneath is shown on cards without a member portrait;
+                hex cards use the portrait as their visual instead. */}
+            {(it.standingReward || it.rewardCount) &&
+              <div className="absolute top-2 right-2 z-10 flex flex-col items-center gap-1">
+                <span className="text-[11px] font-black text-kronos-text bg-black/70 rounded-md px-2 py-0.5 whitespace-nowrap drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] flex flex-col items-center leading-tight">
+                  {it.standingReward
+                    ? <>
+                        <span>{it.standingReward}</span>
+                        {it.spStandingReward ? <><span className="w-full h-[2px] bg-kronos-accent my-1" /><span>{it.spStandingReward}</span></> : null}
+                      </>
+                    : <>
+                        <span>{it.rewardCount}x</span>
+                        {it.spRewardCount ? <><span className="w-full h-[2px] bg-kronos-accent my-1" /><span>{it.spRewardCount}x</span></> : null}
+                      </>}
+                </span>
+                {!it.img && (it.rewardIcon && iconsPath) &&
+                  <img
+                    src={iconSrc(it.rewardIcon)}
+                    alt={it.rewardIcon}
+                    className="w-20 h-20 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]" />
+                }
+              </div>
+            }
           </div>
         )}
       </div>);
