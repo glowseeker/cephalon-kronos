@@ -190,6 +190,9 @@ export function MonitoringProvider({ children }) {
   const isMonitoringRef = useRef(false)
   const hasCachedDataRef = useRef(false)
   const [cardImagesPath, setCardImagesPath] = useState('')
+  const [bountyIconsReady, setBountyIconsReady] = useState(() => {
+    try { return localStorage.getItem('kronos_bounty_icons_ready') === '1' } catch { return false }
+  })
   const [fixProgress, setFixProgress] = useState({ checking: true })
   const cardInitStarted = useRef(false)
   const startedRef = useRef(false)
@@ -1134,6 +1137,10 @@ export function MonitoringProvider({ children }) {
         localStorage.setItem('kronos_card_images_path', p)
         localStorage.setItem('kronos_card_images_ready', '1')
         setCardImagesPath(p)
+        // The same pipeline extracts open-world bounty icons into the UI
+        // assets dir; only mark them available if they actually extracted.
+        const ready = await invoke('bounty_icons_ready').catch(() => false)
+        try { localStorage.setItem('kronos_bounty_icons_ready', ready ? '1' : '0'); setBountyIconsReady(ready) } catch {}
       } catch (err) {
         // Extraction failure (e.g. stale cache path) must not leave the UI
         // stuck on "extracting" forever  -  fall back to regular card images.
@@ -1144,6 +1151,17 @@ export function MonitoringProvider({ children }) {
       setFixProgress({ phase: 'done', current: 1, total: 1, current_file: '' })
     }
   }, [inventoryData])
+
+  // ── Bounty icon availability ────────────────────────────────────────────
+  // Bounty card art is extracted from the game cache. Sync the flag with the
+  // real filesystem state on mount (a stale localStorage flag from a run
+  // where extraction produced nothing would otherwise hide card art forever).
+  useEffect(() => {
+    invoke('bounty_icons_ready').then((ready) => {
+      setBountyIconsReady(ready)
+      try { localStorage.setItem('kronos_bounty_icons_ready', ready ? '1' : '0') } catch {}
+    }).catch(() => {})
+  }, [])
 
   // ── Mod image pipeline (extract → fix → composite) ─────────────────
   // Single consolidated Tauri command with unified progress events.
@@ -1177,6 +1195,8 @@ export function MonitoringProvider({ children }) {
           localStorage.setItem('kronos_card_images_path', p)
           localStorage.setItem('kronos_card_images_ready', '1')
           setCardImagesPath(p)
+          const ready = await invoke('bounty_icons_ready').catch(() => false)
+          try { localStorage.setItem('kronos_bounty_icons_ready', ready ? '1' : '0'); setBountyIconsReady(ready) } catch {}
         } catch (err) {
           console.error('card images init: ensure_card_images failed:', err)
           setFixProgress({ phase: 'done', current: 1, total: 1, current_file: '' })
@@ -1196,7 +1216,7 @@ export function MonitoringProvider({ children }) {
       isMonitoring, monitorResult, autoStart, setAutoStart, lastUpdate, nextRetryAt, rawInventory, inventoryData, isInventoryLoading, worldState, setWorldState, statusText,
       masteryProgress, allPrices, isPriceLoading, priceFetchProgress, priceLastUpdated, refreshPrices,
       startMonitoring, stopMonitoring, manualRefresh, callApiHelper,
-      cardImagesPath, fixProgress, retryCardImages, notificationHistory,
+      cardImagesPath, bountyIconsReady, fixProgress, retryCardImages, notificationHistory,
     }}>
       {children}
     </MonitoringContext.Provider>

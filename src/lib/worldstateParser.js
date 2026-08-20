@@ -975,23 +975,25 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
     }),
 
     // Syndicate bounties (location-bounties: Cetus, Vallis, Deimos)
-    // Each job carries minEnemyLevel/maxEnemyLevel + a missionReward deck.
+    // Each job carries minEnemyLevel/maxEnemyLevel + a rewards deck.
     // Used by Dashboard's bounty tabs to show the real enemy-level range.
-    bounties: (raw.SyndicateMissions || []).map(s => {
-      const job = (s.Jobs || [])[0] || {}
-      const minLevel = job.minEnemyLevel ?? s.MissionInfo?.minEnemyLevel ?? null
-      const maxLevel = job.maxEnemyLevel ?? s.MissionInfo?.maxEnemyLevel ?? null
-      return {
-        id: s._id?.$oid || s._id || s.Tag,
-        tag: s.Tag,
-        jobType: job.jobType || '',
-        node: s.NodeType ? resolveNode(s.NodeType, dict, ERg, locale) : '',
-        minLevel,
-        maxLevel,
-        rewardText: resolveRewardText(job.missionReward || s.MissionInfo?.missionReward, dict, ERg, uniqueNameToName, ", ", locale),
-        expiry: s.Expiry,
-      }
-    }),
+    // One entry per job (not per syndicate) so tabs can render per-tier cards.
+    bounties: (raw.SyndicateMissions || []).flatMap(s =>
+      (s.Jobs || []).map(job => {
+        const minLevel = job.minEnemyLevel ?? s.MissionInfo?.minEnemyLevel ?? null
+        const maxLevel = job.maxEnemyLevel ?? s.MissionInfo?.maxEnemyLevel ?? null
+        return {
+          id: s._id?.$oid || s._id || s.Tag,
+          tag: s.Tag,
+          jobType: job.jobType || '',
+          node: s.NodeType ? resolveNode(s.NodeType, dict, ERg, locale) : '',
+          minLevel,
+          maxLevel,
+          rewardText: resolveRewardText(job.missionReward || s.MissionInfo?.missionReward, dict, ERg, uniqueNameToName, ", ", locale),
+          expiry: s.Expiry,
+        }
+      })
+    ),
 
     // Alerts
     alerts: (raw.Alerts || []).map(a => ({

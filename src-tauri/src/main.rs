@@ -151,6 +151,7 @@ const EXPORT_FILES: &[&str] = &[
     "ExportRelics.json",
     "ExportRewards.json",
     "ExportChallenges.json",
+    "ExportBounties.json",
     "ExportRegions.json",
     "ExportNightwave.json",
     "ExportSyndicates.json",
@@ -1092,6 +1093,13 @@ fn get_cdn_base_url() -> String {
     "https://browse.wf".to_string()
 }
 
+/// Whether open-world bounty icons were successfully extracted from the game
+/// cache (a `.ready` marker is written only after a successful extraction).
+#[tauri::command]
+fn bounty_icons_ready() -> bool {
+    resolve_path("data/assets/ui/Lotus/Interface/Quests/.ready").exists()
+}
+
 // --- Mod Images Extraction ---
 //
 // Mod images are extracted from the local Warframe game cache using the
@@ -1709,6 +1717,72 @@ fn extract_card_images_inner(app_handle: &tauri::AppHandle, cache_path: &str) ->
         }
         let _ = ui_cmd.output();
         extracted = walk_dir_count(&output_dir);
+    }
+
+    // Open-world bounty card art (Cetus / Vallis / Deimos / Narmer bounty
+    // icons) ships as UI quest icons under /Lotus/Interface/Quests/. Only the
+    // four subfolders referenced by ExportBounties.json hold the actual bounty
+    // art; extracting the whole tree would pull in unrelated quest keychains
+    // and posters. Each subfolder is guarded by its own sentinel (like the UI
+    // icon paths above) so they only extract once.
+    let ui_assets_dir = resolve_path("data/assets/ui");
+    let quest_dir = ui_assets_dir.join("Lotus/Interface/Quests");
+    let quest_internal_paths = [
+        "/Lotus/Interface/Quests/EidolonNew/",
+        "/Lotus/Interface/Quests/Deimos/",
+        "/Lotus/Interface/Quests/Venus/",
+        "/Lotus/Interface/Quests/Narmer/",
+        // Bounty challenge art for Zariman (holdfasts) + Cavia (EntratiLabs)
+        // lives under these folders; referenced by ExportChallenges.json.
+        "/Lotus/Interface/Quests/Zariman/",
+        "/Lotus/Interface/Quests/EntratiLabs/",
+        // 1999 / Hex bounty challenge art.
+        "/Lotus/Interface/Quests/Vania/",
+    ];
+    for internal_path in quest_internal_paths.iter() {
+        let leaf = internal_path.trim_end_matches('/').split('/').last().unwrap_or_default();
+        let sub_dir = quest_dir.join(leaf);
+        let sentinel = sub_dir.join(".fresh");
+        if sub_dir.exists() && walk_dir_count(&sub_dir) > 0 && !sentinel.exists() {
+            let _ = std::fs::remove_dir_all(&sub_dir);
+        }
+        if sub_dir.exists() && walk_dir_count(&sub_dir) > 0 {
+            continue;
+        }
+        std::fs::create_dir_all(&sub_dir).ok();
+        let _ = std::fs::write(&sentinel, b"1");
+        let mut q_cmd = std::process::Command::new(&bin_path);
+        #[cfg(target_os = "linux")]
+        {
+            q_cmd.env("APPIMAGE_EXTRACT_AND_RUN", "1");
+            q_cmd.env_remove("APPDIR");
+            q_cmd.env_remove("APPIMAGE");
+        }
+        q_cmd.arg("--cache-dir")
+           .arg(cache_path)
+           .arg("--game")
+           .arg("Warframe")
+           .arg("--extract-textures")
+           .arg("--package")
+           .arg("Texture")
+           .arg("--texture-format")
+           .arg("PNG")
+           .arg("--internal-path")
+           .arg(internal_path)
+           .arg("--output-path")
+           .arg(&ui_assets_dir);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            q_cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        let _ = q_cmd.output();
+    }
+    // Only mark the bounty icons available if the extraction actually produced
+    // files; the frontend uses this to decide whether to show local card art.
+    if walk_dir_count(&quest_dir) > 0 {
+        let _ = std::fs::write(quest_dir.join(".ready"), b"1");
     }
 
     Ok(extracted)
@@ -3498,6 +3572,7 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
             get_mod_frames_path,
             get_icons_path,
             get_ui_path,
+            bounty_icons_ready,
             // --- mod images ---
             get_card_images_path,
             read_file,

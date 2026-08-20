@@ -434,7 +434,7 @@ export function resolveRewardIcon(reward, bountyType) {
 // Includes path-structure-only tokens, tier/rotation markers, and abbreviations
 // that don't carry meaning for the user-facing bounty name.
 const BOUNTY_FILLER = new Set([
-  'Bounty', 'Cap', 'Ext', 'Lib', 'Sab', 'Cache', 'Two', 'Props', 'Easy',
+  'Bounty', 'Cap', 'Ext', 'Lib', 'Sab', 'Resc', 'Ass', 'Cache', 'Two', 'Props', 'Easy',
   'Normal', 'Hard', 'Elite', 'X', 'Tent', 'Job', 'Key', 'Pieces', 'Crp',
   'Grn', 'Endless', 'Chamber',
   // Syndicate / area prefixes
@@ -467,6 +467,9 @@ const DEIMOS_BOUNTY_ABBR = {
   AreaDefense: 'AreaDef',
   Assassinate: 'Assass',
   Purify: 'Purify',
+  EndlessExcavate: 'EndlessExcav',
+  EndlessPurify: 'EndlessPurify',
+  EndlessAreaDefense: 'EndlessAreaDef',
 }
 
 /**
@@ -480,31 +483,45 @@ const DEIMOS_BOUNTY_ABBR = {
  * Returns '' when the path isn't a known bounty job (caller falls back).
  */
 export function resolveBountyTitle(path, dict) {
+  return resolveBountyKey(path, dict, 'Title')
+}
+
+/**
+ * Resolve an open-world bounty jobType path to its official localized
+ * description, mirroring resolveBountyTitle but reading {Type}Desc keys
+ * (e.g. /Lotus/Language/OstronJobs/{leaf}Desc). Returns '' when absent.
+ */
+export function resolveBountyDesc(path, dict) {
+  return resolveBountyKey(path, dict, 'Desc')
+}
+
+function resolveBountyKey(path, dict, suffix) {
   if (!path || !dict) return ''
   const leaf = path.split('/').pop()
   if (!leaf) return ''
   // Cetus / Ostron
-  let key = `/Lotus/Language/OstronJobs/${leaf}Title`
+  let key = `/Lotus/Language/OstronJobs/${leaf}${suffix}`
   let res = dict[key] || dict['/' + key]
   if (res && !res.startsWith('/Lotus/')) return clean(res)
 
   // Vallis / Solaris (leaf may be Venus{...} or NarmerVenus{...})
   const solarisLeaf = leaf.replace(/^(Narmer)?Venus/, '')
-  key = `/Lotus/Language/SolarisJobs/${solarisLeaf}Title`
+  key = `/Lotus/Language/SolarisJobs/${solarisLeaf}${suffix}`
   res = dict[key] || dict['/' + key]
   if (!res && solarisLeaf.endsWith('s')) {
     // e.g. VenusHelpingJobCaches → HelpingJobCacheTitle (dict uses singular)
     const singular = solarisLeaf.slice(0, -1)
-    key = `/Lotus/Language/SolarisJobs/${singular}Title`
+    key = `/Lotus/Language/SolarisJobs/${singular}${suffix}`
     res = dict[key] || dict['/' + key]
   }
   if (res && !res.startsWith('/Lotus/')) return clean(res)
 
-  // Deimos / Entrati
+  // Deimos / Entrati (titles use the ...Name suffix; descriptions use ...Desc)
   const m = leaf.match(/^Deimos(.+)Bounty$/)
   if (m) {
     const type = DEIMOS_BOUNTY_ABBR[m[1]] ?? m[1]
-    key = `/Lotus/Language/InfestedMicroplanet/DeimosBounty${type}Name`
+    const deimosSuffix = suffix === 'Title' ? 'Name' : suffix
+    key = `/Lotus/Language/InfestedMicroplanet/DeimosBounty${type}${deimosSuffix}`
     res = dict[key] || dict['/' + key]
     if (res && !res.startsWith('/Lotus/')) return clean(res)
   }

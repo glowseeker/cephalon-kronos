@@ -48,6 +48,7 @@ import {
   resolveChallengeDesc,
   resolveChallengeFlavour,
   resolveBountyTitle,
+  resolveBountyDesc,
   resolveItemName,
   timeRemaining,
   timeSince
@@ -232,6 +233,35 @@ const CAVIA_STANDING_SP = [1500, 3000, 4500, 6000, 7500];
 const HEX_STANDING = [1000, 2000, 3000, 4000, 5000, 6000, 7500];
 const HEX_STANDING_SP = [1500, 3000, 4500, 6000, 7500, 9000, 11250];
 
+// Cetus (Ostron) bounties: standing per job in worldstate order. The 7th job is
+// the Narmer bounty. (Source: in-game bounty board, verified by the user.)
+const CETUS_STANDING = [1080, 1800, 2770, 3510, 4180, 5020, 4780];
+
+// Necralisk (Deimos) + Fortuna (Vallis) rewards, keyed by the job's level range
+// (the reward is set by tier, not by the specific job, so this stays correct
+// across bounty rotations). Deimos bounties pay Mother Tokens; the Isolation
+// Vaults pay a smaller flat amount. Fortuna bounties pay Solaris United
+// standing (the 50-70 job is the Narmer one).
+// (Source: in-game bounty board, verified by the user.)
+const DEIMOS_TOKENS = { '5-15': 18, '15-25': 36, '25-30': 42, '30-40': 80, '40-60': 131, '100-100': 150 };
+const DEIMOS_VAULT_TOKENS = { '30-40': 10, '40-50': 15, '50-60': 20 };
+const VALLIS_STANDING = { '5-15': 1020, '10-30': 1950, '20-40': 2910, '30-50': 3450, '40-60': 4520, '100-100': 5020, '50-70': 4940 };
+// Deimos job leaves encode their mission in the name; give each a clean
+// descriptor for the badge (cleanBountyName would emit "DEIMOS KEY PIECES
+// BOUNTY" for KeyPieces, or duplicate the title for Excavate/etc).
+const DEIMOS_MTYPE = {
+  DeimosGrnSurvivorBounty: 'Survivor',
+  DeimosCrpSurvivorBounty: 'Survivor',
+  DeimosKeyPiecesBounty: 'Salvage',
+  DeimosExcavateBounty: 'Excavate',
+  DeimosEndlessExcavateBounty: 'Endless Excavate',
+  DeimosEndlessPurifyBounty: 'Endless Purify',
+  DeimosEndlessAreaDefenseBounty: 'Endless Area Defense',
+  DeimosPurifyBounty: 'Purify',
+  DeimosAreaDefenseBounty: 'Area Defense',
+  DeimosAssassinateBounty: 'Assassinate',
+};
+
 export default function Dashboard() {
   const { t, locale } = useUi()
   const {
@@ -239,7 +269,7 @@ export default function Dashboard() {
     dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, arbyTiers,
     rawInventory, inventoryData, ES, ENWRawRewards, ExportImages, ExportTextIcons,
     dropIndex,
-    cardImagesPath
+    cardImagesPath, bountyIconsReady
   } = useMonitoring();
   const [worldstate, setWorldstate] = useState(null);
   const [locationBounties, setLocationBounties] = useState(null);
@@ -430,8 +460,8 @@ export default function Dashboard() {
     { id: 'cavia', label: dict?.['/Lotus/Language/EntratiLab/EntratiGeneral/EntratiLabSyndicateName'] || 'Cavia', icon: iconSrc('MiniMapCaviaHubSyndicate') },
     { id: 'hex', label: dict?.['/Lotus/Language/1999/MessengerHexName'] || 'Hex', icon: iconSrc('MiniMapMarkersJobBoard') },
     { id: 'cetus', label: dict?.['/Lotus/Language/Syndicates/CetusName'] || 'Cetus', icon: iconSrc('MiniMapEidolonCetusElder') },
-    { id: 'deimos', label: dict?.['/Lotus/Language/InfestedMicroplanet/EntratiSyndicateName'] || 'Deimos', icon: iconSrc('MiniMapDeimosGrandmother') },
-    { id: 'vallis', label: dict?.['/Lotus/Language/Syndicates/SolarisSecretName'] || 'Vallis', icon: iconSrc('MiniMapHubFortuna') }],
+    { id: 'deimos', label: 'Necralisk', icon: iconSrc('MiniMapDeimosGrandmother') },
+    { id: 'vallis', label: 'Fortuna', icon: iconSrc('MiniMapHubFortuna') }],
     [iconsPath, locale, dict]);
 
   // ── Bounty helper data ───────────────────────────────────────────────────────
@@ -439,14 +469,40 @@ export default function Dashboard() {
   // "main guaranteed reward" on bounty-cycle cards (decision A1).
   const finalStageIdx = useMemo(() => buildFinalStageIndex(dropIndex), [dropIndex]);
 
-  // Lookup from jobType path → worldstate SyndicateMission (for Cetus/Vallis/Deimos levels).
-  const wsBountyMap = useMemo(() => {
-    const m = new Map();
-    for (const b of (worldstate?.bounties || [])) {
-      if (b.jobType) m.set(b.jobType, b);
-    }
-    return m;
-  }, [worldstate?.bounties]);
+  // ── ExportBounties lookup for open-world bounty cards ───────────────────────
+  // ExportBounties.json carries the exact localized name/description dict keys
+  // plus the card art icon path for every job (Cetus/Vallis/Deimos + Narmer
+  // variants), so cards get official titles/descs and real art instead of the
+  // heuristic fallbacks and the generic standing icon.
+  const EB = useMemo(() => exportData?.ExportBounties || {}, [exportData]);
+  const resolveLocKey = useCallback((key) => {
+    if (!key) return '';
+    const res = dict[key] || dict['/' + key] || '';
+    return res && !res.startsWith('/Lotus/') ? res.replace(/<[^>]*>/g, '').trim() : '';
+  }, [dict]);
+  const bountyIconUrl = useCallback((iconPath) => {
+    // Bounty card art comes from the game cache (extracted into the UI assets
+    // dir by the Warframe-Exporter-CLI during the card-images pipeline). Until
+    // that extraction is available the card falls back to the reward icon.
+    if (!iconPath || !bountyIconsReady) return '';
+    const clean = iconPath.startsWith('/') ? iconPath.slice(1) : iconPath;
+    return clean;
+  }, [bountyIconsReady]);
+  const bountyInfo = useCallback((jobType) => {
+    const eb = jobType ? EB[jobType] : null;
+    return {
+      name: eb ? resolveLocKey(eb.name) : '',
+      desc: eb ? resolveLocKey(eb.description) : '',
+      icon: eb?.icon || '',
+    };
+  }, [EB, resolveLocKey]);
+  // Bounty challenge art (Zariman/Cavia/Hex) lives on ExportChallenges entries.
+  const challengeIcon = useCallback((challengePath) => {
+    const icon = challengePath ? EC[challengePath]?.icon : '';
+    // Only real quest/bounty art; generic Retro challenge icons aren't bounty art.
+    if (!icon || !icon.includes('/Lotus/Interface/Quests/')) return '';
+    return bountyIconUrl(icon);
+  }, [EC, bountyIconUrl]);
 
   // ── Owned-item lookup for the market sales card ─────────────────────────────
   // A shop item counts as owned when its resolved display name matches an item
@@ -490,9 +546,6 @@ export default function Dashboard() {
 
     let items = [];
 
-    // Look up a SyndicateMission entry by its jobType path (for location-bounty levels).
-    const lookupWsBounty = (jobPath) => (jobPath ? wsBountyMap.get(jobPath) : null);
-
     if (bountyTab === 'holdfasts') {
       // Zariman bounties: 5 difficulty tiers, one per card in board order.
       // Bounty cycle arrays are ordered tier 1 → tier 5, so the array index
@@ -513,6 +566,8 @@ export default function Dashboard() {
           mtype: missionType,
           tier: '',
           level: ZARIMAN_TIER_LEVELS[tier - 1] || '50-55',
+          img: challengeIcon(b.challenge),
+          imgCover: true,
           rewardCount: tier,
           spRewardCount: spRewardCount(tier),
           rewardIcon: resolveRewardIcon(null, 'holdfasts'),
@@ -536,6 +591,8 @@ export default function Dashboard() {
           mtype: missionType,
           tier: b.rot ? `Rotation ${b.rot}` : '',
           level: CAVIA_TIER_LEVELS[idx] || '55-60',
+          img: challengeIcon(b.challenge),
+          imgCover: true,
           standingReward: CAVIA_STANDING[idx],
           spStandingReward: CAVIA_STANDING_SP[idx],
           rewardIcon: resolveRewardIcon(null, bountyTab),
@@ -547,10 +604,11 @@ export default function Dashboard() {
       items = data.map((b, idx) => {
         const flavour = b.challenge ? resolveChallengeFlavour(b.challenge, dict, EC, ERg, b.ally) : '';
         const obj = b.challenge ? resolveChallengeDesc(b.challenge, dict, EC, ERg, b.ally) : '';
-        // Bounty card art lives in assets/ui/Bounty{Ally}.png; Lich bounties
-        // have no ally so they get the Techrot art.
+        // Member portrait sits in front of the 1999 bounty challenge art
+        // (Vania icons from ExportChallenges.json). Lich bounties have no
+        // ally so they get the Techrot portrait.
         const allyLeaf = b.ally ? b.ally.split('/').pop().replace(/AllyAgent$/, '') : '';
-        const img = allyLeaf ? `Bounty${allyLeaf}` : 'BountyTechrot';
+        const portrait = allyLeaf ? `Bounty${allyLeaf}` : 'BountyTechrot';
         // For Hex bounties, prepend the faction prefix (Techrot/Scaldra) to the
         // mission type so e.g. "Survival" shows as "Techrot Survival" or
         // "Scaldra Survival" based on the challenge path.
@@ -573,7 +631,8 @@ export default function Dashboard() {
           mtype,
           tier: b.rot ? `Rotation ${b.rot}` : '',
           level: HEX_TIER_LEVELS[idx] || '65-70',
-          img,
+          img: challengeIcon(b.challenge),
+          portrait,
           standingReward: HEX_STANDING[idx],
           spStandingReward: HEX_STANDING_SP[idx],
           rewardIcon: resolveRewardIcon(null, 'hex'),
@@ -581,37 +640,91 @@ export default function Dashboard() {
         };
       });
     } else if (bountyTab === 'cetus') {
-      const data = locationBounties.CetusSyndicate || {};
-      Object.entries(data).forEach(([key, list]) => {
-        if (Array.isArray(list)) {
-          const wsBounty = lookupWsBounty(list[0]);
-          const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
-          const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
-          const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Cetus\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Tent', 'Pool '), level, rewardCount: 5, rewardIcon: resolveRewardIcon(wsBounty?.rewardText, 'cetus'), mainReward: wsBounty?.rewardText || '' });
-        }
+      // Cetus (Ostron) bounties: one card per worldstate job, in board order.
+      // The worldstate lists the 6 regular bounties (5-15 → 100-100) plus the
+      // Narmer bounty last. Standing per tier is in-game verified (CETUS_STANDING).
+      const data = (worldstate?.bounties || []).filter(b => b.tag === 'CetusSyndicate');
+      const standingLabel = t('ui.dashboard.standing');
+      items = data.map((b, idx) => {
+        const isNarmer = (b.jobType || '').includes('/Narmer/');
+        const info = bountyInfo(b.jobType);
+        const mtype = b.jobType ? cleanBountyName(b.jobType) : '';
+        const level = b.minLevel && b.maxLevel ? `${b.minLevel}-${b.maxLevel}` : '';
+        return {
+          name: info.name || (b.jobType ? resolveBountyTitle(b.jobType, dict) || cleanBountyName(b.jobType) : 'Bounty'),
+          desc: info.desc || (b.jobType ? resolveBountyDesc(b.jobType, dict) : ''),
+          obj: '',
+          faction: isNarmer ? 'Narmer' : '',
+          node: '',
+          mtype: isNarmer && mtype ? `Narmer ${mtype}` : mtype,
+          tier: '',
+          level,
+          img: info.icon ? bountyIconUrl(info.icon) : '',
+          standingReward: CETUS_STANDING[idx],
+          rewardIcon: resolveRewardIcon(null, 'cetus'),
+          mainReward: standingLabel,
+        };
       });
     } else if (bountyTab === 'deimos') {
-      const data = locationBounties.EntratiSyndicate || {};
-      Object.entries(data).forEach(([key, list]) => {
-        if (Array.isArray(list)) {
-          const wsBounty = lookupWsBounty(list[0]);
-          const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
-          const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
-          const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Deimos\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Chamber', 'Vault ').replace('Tent', 'Pool '), level, rewardCount: 5, rewardIcon: resolveRewardIcon(wsBounty?.rewardText, 'deimos'), mainReward: wsBounty?.rewardText || '' });
+      // Necralisk (Entrati) bounties: one card per worldstate job, in board
+      // order. The worldstate lists the 6 regular bounties (5-15 → 100-100)
+      // plus the 3 Isolation Vaults (jobType is null for those). Standing per
+      // job comes from DEIMOS_STANDING (in-game verified).
+      const data = (worldstate?.bounties || []).filter(b => b.tag === 'EntratiSyndicate');
+      const standingLabel = t('ui.dashboard.standing');
+      const vaultLetters = ['A', 'B', 'C'];
+      let vaultCount = 0;
+      items = data.map((b, idx) => {
+        const isVault = !b.jobType;
+        const info = bountyInfo(b.jobType);
+        const level = b.minLevel && b.maxLevel ? `${b.minLevel}-${b.maxLevel}` : '';
+        let tier = '';
+        if (isVault) {
+          tier = `Vault ${vaultLetters[vaultCount] || ''}`;
+          vaultCount += 1;
         }
+        return {
+          name: isVault ? 'Isolation Vault'
+            : info.name || resolveBountyTitle(b.jobType, dict) || cleanBountyName(b.jobType),
+          desc: isVault ? '' : info.desc || resolveBountyDesc(b.jobType, dict),
+          obj: '',
+          faction: '',
+          node: '',
+          mtype: isVault ? '' : DEIMOS_MTYPE[b.jobType.split('/').pop()] || cleanBountyName(b.jobType),
+          tier,
+          level,
+          img: isVault ? bountyIconUrl('/Lotus/Interface/Quests/Deimos/DeimosBountyA.png') : (info.icon ? bountyIconUrl(info.icon) : ''),
+          rewardCount: isVault ? DEIMOS_VAULT_TOKENS[level] : DEIMOS_TOKENS[level],
+          rewardIcon: resolveRewardIcon(null, 'deimos'),
+          mainReward: standingLabel,
+        };
       });
     } else if (bountyTab === 'vallis') {
-      const data = locationBounties.SolarisSyndicate || {};
-      Object.entries(data).forEach(([key, list]) => {
-        if (Array.isArray(list)) {
-          const wsBounty = lookupWsBounty(list[0]);
-          const level = wsBounty?.minLevel && wsBounty?.maxLevel ? `${wsBounty.minLevel}-${wsBounty.maxLevel}` : '';
-          const main = list[0] ? resolveBountyTitle(list[0], dict) || cleanBountyName(list[0]) : 'Bounty';
-          const stages = list.map((p) => resolveBountyTitle(p, dict) || resolveChallenge(p, dict, EC).replace(/^Venus\s+/i, '').replace(/^Solaris\s+/i, '')).join('\n');
-          items.push({ name: main, desc: '', obj: stages, node: '', tier: key.replace('Bounty', '').replace(/([A-Z])/g, ' $1').trim(), level, rewardCount: 5, rewardIcon: resolveRewardIcon(wsBounty?.rewardText, 'vallis'), mainReward: wsBounty?.rewardText || '' });
-        }
+      // Fortuna (Solaris United) bounties: one card per worldstate job, in
+      // board order. The worldstate lists the 6 regular bounties (5-15 →
+      // 100-100) plus the Narmer one last. Standing per job comes from
+      // VALLIS_STANDING (in-game verified).
+      const data = (worldstate?.bounties || []).filter(b => b.tag === 'SolarisSyndicate');
+      const standingLabel = t('ui.dashboard.standing');
+      items = data.map((b, idx) => {
+        const isNarmer = (b.jobType || '').includes('/Narmer/');
+        const info = bountyInfo(b.jobType);
+        const mtype = b.jobType ? cleanBountyName(b.jobType) : '';
+        const level = b.minLevel && b.maxLevel ? `${b.minLevel}-${b.maxLevel}` : '';
+        return {
+          name: info.name || (b.jobType ? resolveBountyTitle(b.jobType, dict) || cleanBountyName(b.jobType) : 'Bounty'),
+          desc: info.desc || (b.jobType ? resolveBountyDesc(b.jobType, dict) : ''),
+          obj: '',
+          faction: isNarmer ? 'Narmer' : '',
+          node: '',
+          mtype: isNarmer && mtype ? `Narmer ${mtype}` : mtype,
+          tier: '',
+          level,
+          img: info.icon ? bountyIconUrl(info.icon) : '',
+          standingReward: VALLIS_STANDING[level],
+          rewardIcon: resolveRewardIcon(null, 'vallis'),
+          mainReward: standingLabel,
+        };
       });
     }
     if (items.length === 0) return <div className="min-h-[80px] flex items-center justify-center"><p className="text-xs text-kronos-dim italic">{t('ui.dashboard.no_bounties')}</p></div>;
@@ -623,63 +736,77 @@ export default function Dashboard() {
             key={`${it.name}-${idx}`}
             className="relative rounded-lg border border-transparent hover:border-kronos-accent/30 transition-all group overflow-hidden min-h-[140px]">
 
-            {/* Bounty art  -  character portrait sits on the right; the left ~40% is transparent whitespace */}
-            {it.img && iconsPath &&
+            {/* Bounty art fills the card background on every tab for a homogenous look */}
+            {it.img && (it.img.startsWith('http') || iconsPath) &&
               <img
-                src={convertFileSrc(`${iconsPath}/${it.img}.png`)}
+                src={it.img.startsWith('http') ? it.img : convertFileSrc(`${iconsPath}/${it.img}${it.img.endsWith('.png') ? '' : '.png'}`)}
                 alt={it.name}
-                className="absolute inset-0 w-full h-full object-contain"
-                style={{ objectPosition: 'right top' }}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ objectPosition: 'center 15%' }}
                 onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
 
             }
-            {/* Darken the left transparent zone so overlaid text stays legible; the portrait is right/top anchored */}
-            <div className="absolute inset-0 left-0 right-[10%] bg-gradient-to-r from-black/65 via-black/40 to-transparent" />
+            {/* Darken the full card so overlaid text + the large right-side icon stay legible over any art */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/35" />
+            {/* Large featured icon on the right: Hex shows the member portrait; every
+                other tab shows its resolveRewardIcon() art (Voidplume Quill for
+                holdfasts, Mother Token for deimos, standing icon otherwise) */}
+            {it.portrait && iconsPath &&
+              <img
+                src={convertFileSrc(`${iconsPath}/${it.portrait}.png`)}
+                alt={it.name}
+                className="absolute inset-0 w-full h-full object-contain z-[1] drop-shadow-[0_4px_14px_rgba(0,0,0,0.9)]"
+                style={{ objectPosition: 'right top' }}
+                onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
+            }
+            {!it.portrait && it.rewardIcon && iconsPath &&
+              <img
+                src={iconSrc(it.rewardIcon)}
+                alt={it.rewardIcon}
+                className="absolute right-0 bottom-2 z-[1] w-24 h-24 object-contain drop-shadow-[0_4px_14px_rgba(0,0,0,0.9)]" />
+            }
             {/* Text is in normal flow so the card grows to fit its content
                 (fixes clipped challenges/standing); width is capped when a
                 portrait or the corner voidplume icon occupies the right side */}
             <div className="relative flex flex-col p-3 z-10 w-[80%]">
               <div className="min-w-0">
-                  <p className="text-sm font-black text-white leading-snug drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.name}</p>
-                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                    {it.node && <span className="text-[11px] font-semibold text-kronos-text/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.node}</span>}
-                    {it.mtype && <Badge text={it.mtype} color="text-kronos-accent" />}
-                    {it.level && <span className="text-[11px] font-bold text-kronos-text/60 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">({it.level})</span>}
-                    {it.tier && <Badge text={it.tier} color="text-kronos-accent" />}
-                  </div>
+                <p className="text-sm font-black text-white leading-snug [text-shadow:0_1px_3px_rgba(0,0,0,0.95),0_0_10px_rgba(0,0,0,0.9)]">{it.name}</p>
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  {it.node && <span className="text-[11px] font-semibold text-kronos-text/90 [text-shadow:0_1px_3px_rgba(0,0,0,0.95),0_0_8px_rgba(0,0,0,0.9)]">{it.node}</span>}
+                  {it.mtype && <Badge text={it.mtype} color="text-kronos-accent" />}
+                  {it.level && <span className="text-[11px] font-bold text-kronos-text/70 [text-shadow:0_1px_3px_rgba(0,0,0,0.95),0_0_8px_rgba(0,0,0,0.9)]">({it.level})</span>}
+                  {it.tier && <Badge text={it.tier} color="text-kronos-accent" />}
                 </div>
-              {it.desc && <p className="text-xs text-kronos-text/90 leading-snug mt-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{it.desc}</p>}
+              </div>
+              {it.desc && <p className="text-xs text-kronos-text/95 leading-snug mt-2 [text-shadow:0_1px_3px_rgba(0,0,0,0.95),0_0_8px_rgba(0,0,0,0.9)]">{it.desc}</p>}
               {it.obj &&
-                <p className="text-xs font-medium text-kronos-accent leading-snug mt-auto pt-2 break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">{t('dashboard.challenge')} {it.obj}
+                <p className="text-xs font-medium text-kronos-accent leading-snug mt-auto pt-2 break-words [text-shadow:0_1px_3px_rgba(0,0,0,0.95),0_0_8px_rgba(0,0,0,0.9)]">{t('dashboard.challenge')} {it.obj}
                 </p>
               }
             </div>
-            {/* Reward pill pinned to the card's bottom-right corner. Shows the
-                standing amount (normal / Steel Path) on standing tabs, or the
-                reward count ("4x / 6x") for Voidplume/MotherToken cards. The
-                big icon underneath is shown on cards without a member portrait;
-                hex cards use the portrait as their visual instead. */}
-            {(it.standingReward || it.rewardCount) &&
+            {/* Reward pill at top-right; the icon itself is now the unified large
+                right-side art above, so this is text-only. Hex additionally tags the
+                standing figure with the DailyStanding icon (this reward is the 1999
+                syndicate's daily-capped standing, unlike the other tabs). */}
+            {(it.standingReward || it.rewardCount) ? (
               <div className="absolute top-2 right-2 z-10 flex flex-col items-center gap-1">
                 <span className="text-[11px] font-black text-kronos-text bg-black/70 rounded-md px-2 py-0.5 whitespace-nowrap drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] flex flex-col items-center leading-tight">
                   {it.standingReward
                     ? <>
-                        <span>{it.standingReward}</span>
-                        {it.spStandingReward ? <><span className="w-full h-[2px] bg-kronos-accent my-1" /><span>{it.spStandingReward}</span></> : null}
-                      </>
+                      <span className="flex items-center gap-1">
+                        {it.standingReward}
+                        {bountyTab === 'hex' && iconsPath &&
+                          <img src={iconSrc('DailyStanding')} alt="" className="w-3 h-3 object-contain" />}
+                      </span>
+                      {it.spStandingReward ? <><span className="w-full h-[2px] bg-kronos-accent my-1" /><span className="flex items-center gap-1">{it.spStandingReward}{bountyTab === 'hex' && iconsPath && <img src={iconSrc('DailyStanding')} alt="" className="w-3 h-3 object-contain" />}</span></> : null}
+                    </>
                     : <>
-                        <span>{it.rewardCount}x</span>
-                        {it.spRewardCount ? <><span className="w-full h-[2px] bg-kronos-accent my-1" /><span>{it.spRewardCount}x</span></> : null}
-                      </>}
+                      <span>{it.rewardCount}x</span>
+                      {it.spRewardCount ? <><span className="w-full h-[2px] bg-kronos-accent my-1" /><span>{it.spRewardCount}x</span></> : null}
+                    </>}
                 </span>
-                {!it.img && (it.rewardIcon && iconsPath) &&
-                  <img
-                    src={iconSrc(it.rewardIcon)}
-                    alt={it.rewardIcon}
-                    className="w-20 h-20 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]" />
-                }
               </div>
-            }
+            ) : null}
           </div>
         )}
       </div>);

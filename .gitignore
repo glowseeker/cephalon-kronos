@@ -30,6 +30,8 @@ src-tauri/data/user/*
 
 # Mod images are extracted from Warframe cache at runtime (140+ MB)
 src-tauri/data/assets/card-images/
+# Quest bounty card art extracted from Warframe cache (runtime data)
+src-tauri/data/assets/ui/Lotus/
 
 src-tauri/data/bin/*
 !src-tauri/data/bin/*.png
