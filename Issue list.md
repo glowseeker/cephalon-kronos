@@ -123,6 +123,9 @@ Reported: low-contrast borders/dividers and undersized text in multiple spots, h
 ## 10. Random smaller ones
 
 - ~~Show bounty levels and the main (guaranteed) rewards~~ (done in v0.8.0 - bounty cards now show level ranges and reward icons/counts)
+- Ergo Glast refreshes Tenet Weapons shop in 2d 7h 31m 50s - add vendor
+  timers to tasks or a vendor screen
+- Eleanor sells Batch A Coda Weapons from wiki - same timer treatment
 - Nightwave: track what challenges the user has done to show Recovered
   challenges (ergo up to date, not just this week's)
   - "Any Weekly and Elite Weekly Acts that have not been completed before the
@@ -152,9 +155,6 @@ Issue #50 github kind of relates to those above
 - **Owned marking — placed ship decorations (getShip)**: `inventory.php` omits ship decorations, so placed ones (e.g. the Nelumbo Shawzin ≡ `LisetPropLotusMandolin`) never matched as owned. `call_api_helper` now also fetches `getShip.php`, caches it to `data/user/ship.json`, and merges its `/Lotus` paths into the returned/cached inventory under a `PlacedShipDecos` key that `parseInventory` ignores. The dashboard owned-set tracks `Deco`-suffix-stripped leaves so getShip's `/Lotus/Objects/.../...Deco` object paths match the bare item paths market sales use. Committed as `defbeae`.
 - **Notifications**:
   - #30 Added bounty notification trigger (Zariman/Cavia/Hex) with syndicate and mission type filters, matching the pattern of existing void fissure notifications.
-- **Checklist tasks**:
-  - Ergo Glast's Tenet Weapons shop refresh timer added as a checklist task (`task_glast`).
-  - Eleanor's Batch A Coda Weapons shop refresh timer added as a checklist task (`task_eleanor`).
 - **#36 Localization (game data)**:
   - `check_exports` now fetches `dict.{locale}.json` / `supp-dict.{locale}.json` based on the `gameLocale` setting, so item names (including prime parts, mods, avionics) render in the game's language instead of English.
   - Per-locale mod stats from the DE public manifest: `index_{locale}.txt.lzma` (LZMA1 alone-format) → contentHash → `ExportUpgrades_{locale}.json`, merged into mod `levelStats` over the English `_fixed.json`. Verified (de): 1,597 upgrades — 1,465 with literal German stat text ("+55 % Nahkampfschaden"), 132 resolving via dict keys; only 4 English-only entries stay English (StaffCmbOneMeleeTree, AvatarSlideBoostMod, AvatarPowerToHealthOnDeathMod, LocateCreatures).
