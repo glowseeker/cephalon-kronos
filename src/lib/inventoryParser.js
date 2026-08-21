@@ -2069,37 +2069,6 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
   };
 
   // ── Relics ──────────────────────────────────────────────────────────────────
-  // Currently-obtainable relic base names from warframe-drop-data's live drop
-  // tables (mission/bounty/transient rewards, refreshed daily with the exports).
-  // A relic absent from these tables is vaulted (not in the current rotation).
-  // Relic base names look like "Meso T2 Relic" — era + category code — which is
-  // exactly what relicNameFromPath produces, so the sets match directly.
-  const obtainableRelicNames = new Set();
-  {
-    const dropsAll = exports.DropsAll;
-    const relicNameRe = /^(Lith|Meso|Neo|Axi|Requiem|Vanguard)\s+(\S+)\s+Relic/;
-    const walkDrop = (node) => {
-      if (Array.isArray(node)) {
-        for (const r of node) {
-          if (r && typeof r === 'object') {
-            const n = r.itemName;
-            if (typeof n === 'string') {
-              const m = n.match(relicNameRe);
-              if (m) obtainableRelicNames.add(`${m[1]} ${m[2]} Relic`);
-            }
-            if (r.rewards) walkDrop(r.rewards);
-          }
-        }
-      } else if (node && typeof node === 'object') {
-        for (const v of Object.values(node)) walkDrop(v);
-      }
-    };
-    if (dropsAll) {
-      for (const key of ['missionRewards', 'transientRewards', 'cetusBountyRewards', 'solarisBountyRewards', 'deimosRewards', 'zarimanRewards', 'entratiLabRewards', 'hexRewards']) {
-        walkDrop(dropsAll[key]);
-      }
-    }
-  }
   const relicGroups = {};
   (raw.MiscItems ?? []).filter(i => i.ItemType?.includes('/Projections/') || i.ItemType?.includes('/Upgrades/Relic/')).forEach(item => {
     const un = item.ItemType;
@@ -2132,7 +2101,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
         unique_name: relicId,
         name: baseName,
         era,
-        vaulted: !obtainableRelicNames.has(baseName),
+        vaulted: !!entry?.vaultedAt,
         description: relDescription,
         image: resolveImage(un, ERel),
         category: 'relics',

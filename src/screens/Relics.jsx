@@ -18,8 +18,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useUi } from '../contexts/UiContext'
 import { resolveGameTerm } from '../lib/gameTerm'
-import { Search, AlertCircle, Users, Zap, TrendingUp, Coins, ArrowUpDown } from 'lucide-react';
-import { PageLayout, Input, Card, Tabs, MonitorState, Select } from '../components/UI';
+import { Search, AlertCircle, Users, Zap, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
+import { PageLayout, Input, Card, Tabs, MonitorState } from '../components/UI';
 import { useMonitoring } from '../contexts/MonitoringContext';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { getRelicEV } from '../lib/relicParser';
@@ -40,8 +40,13 @@ export default function Relics() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeEra, setActiveEra] = useState('All');
   const [activeQuality, setActiveQuality] = useState('All');
-  const [refinementFilter, setRefinementFilter] = useState('All'); // 'All' | 'HasRefinements' | 'IntactOnly'
-  const [vaultFilter, setVaultFilter] = useState('All'); // 'All' | 'Unvaulted' | 'Vaulted'
+  const [vaultFilter, setVaultFilter] = useState('All'); // tristate: 'All' -> 'Vaulted' -> 'Unvaulted' -> 'All'
+  // Tristate cycle handler
+  const cycleVaultFilter = () => {
+    if (vaultFilter === 'All') setVaultFilter('Vaulted');
+    else if (vaultFilter === 'Vaulted') setVaultFilter('Unvaulted');
+    else setVaultFilter('All');
+  };
   const [squadSize, setSquadSize] = useState(1);
   const [sortMode, setSortMode] = useState('name'); // 'name' | 'ducat' | 'plat'
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
@@ -60,15 +65,6 @@ export default function Relics() {
 
     const matchQuality = activeQuality === 'All' || r.refinements && r.refinements[activeQuality] > 0;
     if (!matchQuality) return false;
-
-    // Refinement filter: 'HasRefinements' = at least one non-Intact refinement; 'IntactOnly' = only Intact count > 0
-    if (refinementFilter !== 'All') {
-      const refinements = r.refinements || {};
-      const nonIntactCount = (refinements.Exceptional || 0) + (refinements.Flawless || 0) + (refinements.Radiant || 0);
-      if (refinementFilter === 'HasRefinements' && nonIntactCount === 0) return false;
-      if (refinementFilter === 'IntactOnly' && nonIntactCount > 0) return false;
-    }
-
 
     const matchVault = vaultFilter === 'All' || (vaultFilter === 'Vaulted' ? !!r.vaulted : !r.vaulted);
     if (!matchVault) return false;
@@ -148,6 +144,14 @@ export default function Relics() {
 
   const iconSrc = (name) => iconsPath ? convertFileSrc(`${iconsPath}/${name}.png`) : null;
 
+  const SORT_OPTIONS = [
+    { id: 'name', label: t('relics.sort_name'), icon: null },
+    { id: 'ducat', label: t('relics.sort_ducat'), icon: iconSrc('Ducats') },
+    { id: 'plat', label: t('relics.sort_plat'), icon: iconSrc('Platinum') },
+    { id: 'ducat_gain', label: t('relics.sort_ducat_gain'), icon: iconSrc('Ducats') },
+    { id: 'plat_gain', label: t('relics.sort_plat_gain'), icon: iconSrc('Platinum') }
+  ];
+
   const eraTabs = ['All', ...ERA_ORDER, 'Other'].
   filter((e) => e === 'All' || relics.some((r) => r.era === e)).
   map((e) => ({
@@ -159,8 +163,8 @@ export default function Relics() {
   const qualityTabs = ['All', ...QUALITY_ORDER].map((q) => ({ id: q, label: q === 'All' ? t('relics.all') : t(REFINEMENT_LABELS[q]) }));
 
   const renderHeaderPanel = () =>
-  <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
+  <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {/* Search Bar */}
         <div className="relative flex-1 min-w-[200px] group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-kronos-dim group-focus-within:text-kronos-accent transition-colors" size={18} />
@@ -168,23 +172,19 @@ export default function Relics() {
           placeholder={t('relics.search')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-12 bg-black/20 border-white/5 h-[42px]" />
-        
+          className="pl-12 bg-black/20 border-white/5 h-[36px]" />
         </div>
 
         {/* Squad Size */}
-        <div className="flex items-center gap-1.5 p-1 bg-black/20 rounded-xl border border-white/5 h-[42px] px-2">
-          <div className="px-2 flex items-center gap-2 border-r border-white/5 h-6">
-            <Users size={14} className="text-kronos-dim" />
-            <span className="text-[10px] font-black uppercase text-kronos-dim tracking-wider">{t('relics.squad')}</span>
-          </div>
-          <div className="flex gap-1">
+        <div className="flex items-center gap-1 p-1 bg-black/20 rounded-xl border border-white/5 h-[36px] px-2">
+          <Users size={14} className="text-kronos-dim" />
+          <span className="text-[9px] font-black uppercase text-kronos-dim tracking-wider">{t('relics.squad')}</span>
+          <div className="flex gap-0.5">
             {[1, 2, 3, 4].map((size) =>
           <button
             key={size}
             onClick={() => setSquadSize(size)}
-            className={`w-7 h-7 rounded-lg text-xs font-black transition-all ${squadSize === size ? 'bg-kronos-accent text-kronos-bg shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' : 'text-kronos-dim hover:text-white'}`}>
-            
+            className={`w-6 h-6 rounded-lg text-[10px] font-black transition-all ${squadSize === size ? 'bg-kronos-accent text-kronos-bg' : 'text-kronos-dim hover:text-white'}`}>
                 {size}
               </button>
           )}
@@ -192,19 +192,16 @@ export default function Relics() {
         </div>
 
         {/* Refinement Override (for EV calculation) */}
-        <div className="flex items-center gap-1.5 p-1 bg-black/20 rounded-xl border border-white/5 h-[42px] px-2">
-          <div className="px-2 flex items-center gap-2 border-r border-white/5 h-6">
-            <Zap size={14} className="text-kronos-dim" />
-            <span className="text-[10px] font-black uppercase text-kronos-dim tracking-wider">{t('relics.target')}</span>
-          </div>
-          <div className="flex gap-1">
+        <div className="flex items-center gap-1 p-1 bg-black/20 rounded-xl border border-white/5 h-[36px] px-2">
+          <Zap size={14} className="text-kronos-dim" />
+          <span className="text-[9px] font-black uppercase text-kronos-dim tracking-wider">{t('relics.target')}</span>
+          <div className="flex gap-0.5">
             {QUALITY_ORDER.map((q) =>
           <button
             key={q}
             onClick={() => setEvRefinementOverride(q)}
-            className={`w-7 h-7 rounded-lg text-[10px] font-black uppercase transition-all ${evRefinementOverride === q ? 'bg-kronos-accent text-kronos-bg shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' : 'text-kronos-dim hover:text-white'}`}
+            className={`w-6 h-6 rounded-lg text-[10px] font-black uppercase transition-all ${evRefinementOverride === q ? 'bg-kronos-accent text-kronos-bg' : 'text-kronos-dim hover:text-white'}`}
             title={t(REFINEMENT_LABELS[q])}>
-            
                 {q.charAt(0)}
               </button>
           )}
@@ -212,80 +209,53 @@ export default function Relics() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2">
         {/* Era Filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest px-1">{t('relics.era')}</span>
-          <Tabs tabs={eraTabs} activeTab={activeEra} onChange={setActiveEra} />
-        </div>
+        <Tabs tabs={eraTabs} activeTab={activeEra} onChange={setActiveEra} />
 
         {/* Inventory Quality Filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest px-1">{t('relics.owned')}</span>
-          <Tabs tabs={qualityTabs} activeTab={activeQuality} onChange={setActiveQuality} />
-        </div>
+        <Tabs tabs={qualityTabs} activeTab={activeQuality} onChange={setActiveQuality} />
 
-        {/* Vaulted Filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest px-1">{t('relics.vaulted')}</span>
-          <Tabs
-            tabs={['All', 'Unvaulted', 'Vaulted'].map((v) => ({ id: v, label: t('relics.vault_' + v.toLowerCase()) }))}
-            activeTab={vaultFilter}
-            onChange={setVaultFilter} />
-        </div>
-
-        {/* Refinement Filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest px-1">{t('relics.refinement_filter')}</span>
-          <Tabs
-            tabs={[
-              { id: 'All', label: t('relics.all') },
-              { id: 'HasRefinements', label: t('relics.has_refinements') },
-              { id: 'IntactOnly', label: t('relics.intact_only') }
-            ]}
-            activeTab={refinementFilter}
-            onChange={setRefinementFilter} />
-        </div>
+        {/* Vaulted Filter (tristate button) */}
+        <button
+          onClick={cycleVaultFilter}
+          className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all whitespace-nowrap ${
+            vaultFilter === 'Unvaulted' ? 'bg-kronos-accent text-kronos-bg' :
+            vaultFilter === 'Vaulted' ? 'bg-red-500/20 text-red-400' :
+            'text-kronos-dim hover:text-white hover:bg-white/5'
+          }`}>
+          {vaultFilter === 'All' ? t('relics.vault_show_all') : vaultFilter === 'Vaulted' ? t('relics.vault_show_vaulted') : t('relics.vault_show_unvaulted')}
+        </button>
 
         {/* Sort Controls */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black text-kronos-accent uppercase tracking-widest px-1">{t('relics.sort')}</span>
-          <div className="flex bg-black/20 rounded-xl p-1 border border-white/5 gap-1">
-            {[
-            { id: 'name', label: t('relics.sort_name'), icon: null },
-            { id: 'ducat', label: t('relics.sort_ducat'), icon: iconSrc('Ducats') },
-            { id: 'plat', label: t('relics.sort_plat'), icon: iconSrc('Platinum') },
-            { id: 'ducat_gain', label: t('relics.sort_ducat_gain'), icon: iconSrc('Ducats') },
-            { id: 'plat_gain', label: t('relics.sort_plat_gain'), icon: iconSrc('Platinum') }].map((mode) => {
-            const isActive = sortMode === mode.id;
-            return (
-              <button
-                key={mode.id}
-                onClick={() => {
-                  if (isActive) {
-                    setSortOrder((prev) => prev === 'desc' ? 'asc' : 'desc');
-                  } else {
-                    setSortMode(mode.id);
-                    setSortOrder('desc');
-                  }
-                }}
-                className={`px-4 py-1.5 rounded-lg text-[11px] uppercase tracking-wider transition-all duration-300 whitespace-nowrap font-sans flex items-center gap-1.5 ${isActive ? 'bg-kronos-accent text-kronos-bg font-black shadow-[0_0_15px_rgba(var(--kronos-accent-rgb),0.4)] scale-[1.02]' : 'text-kronos-dim hover:text-white hover:bg-white/5'}`}>
-                
-                  {mode.icon && <img src={mode.icon} className="w-3.5 h-3.5 object-contain" alt="" />}
-                  {mode.label}
-                  {isActive && <ArrowUpDown size={12} className={sortOrder === 'desc' ? 'rotate-180' : ''} />}
-                </button>);
-
+        <div className="flex bg-black/20 rounded-xl p-0.5 border border-white/5 gap-0.5 h-[34px]">
+          {SORT_OPTIONS.map((mode) => {
+          const isActive = sortMode === mode.id;
+          return (
+            <button
+              key={mode.id}
+              onClick={() => {
+                if (isActive) {
+                  setSortOrder((prev) => prev === 'desc' ? 'asc' : 'desc');
+                } else {
+                  setSortMode(mode.id);
+                  setSortOrder('desc');
+                }
+              }}
+              className={`px-3 py-1 rounded-lg text-[10px] uppercase tracking-wider transition-all duration-300 whitespace-nowrap font-sans flex items-center gap-1 ${isActive ? 'bg-kronos-accent text-kronos-bg font-black' : 'text-kronos-dim hover:text-white hover:bg-white/5'}`}>
+                {mode.icon && <img src={mode.icon} className="w-3.5 h-3.5 object-contain" alt="" />}
+                {mode.label}
+                {isActive && (sortOrder === 'desc' ? <ChevronDown size={11} className="text-current" /> : <ChevronUp size={11} className="text-current" />)}
+              </button>);
           })}
-          </div>
         </div>
 
         {/* Void Traces - Aligned Right in the same row */}
         {inventoryData?.account &&
-      <div className="ml-auto flex items-center gap-3 bg-black/20 px-3 py-1 rounded-xl border border-white/5 h-[34px]">
-            {uiPath && <img src={convertFileSrc(`${uiPath}/VoidTraces.png`)} alt="" className="w-7 h-7 object-contain" />}
+      <div className="ml-auto flex items-center gap-2 bg-black/20 px-2 rounded-xl border border-white/5 h-[34px]">
+            {uiPath && <img src={convertFileSrc(`${uiPath}/VoidTraces.png`)} alt="" className="w-6 h-6 object-contain" />}
             <div className="flex flex-col items-end">
-              <span className="text-[9px] font-black text-kronos-accent uppercase tracking-widest leading-none mb-0.5">{resolveGameTerm('/Lotus/Language/Items/VoidTearDrop', locale)}</span>
+              <span className="text-[8px] font-black text-kronos-accent uppercase tracking-widest leading-none mb-0.5">{resolveGameTerm('/Lotus/Language/Items/VoidTearDrop', locale)}</span>
               <span className="text-sm font-black text-kronos-text leading-none">
                 {inventoryData.account.void_traces}
                 <span className="text-kronos-dim text-[10px] ml-1">/ {inventoryData.account.void_traces_max}</span>

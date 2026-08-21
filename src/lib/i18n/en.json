@@ -350,6 +350,9 @@
     "relics.squad": "Squad",
     "relics.target": "Target",
     "relics.void_traces": "Void Traces",
+    "relics.vault_show_all": "Show Vaulted + Unvaulted",
+    "relics.vault_show_vaulted": "Show Vaulted",
+    "relics.vault_show_unvaulted": "Show Unvaulted",
     "relics.vault_all": "All",
     "relics.vault_unvaulted": "Unvaulted",
     "relics.vault_vaulted": "Vaulted",
@@ -1003,9 +1006,6 @@
     "relics.refinement_radiant": "Radiant",
     "relics.all": "All",
     "relics.other": "Other",
-    "relics.refinement_filter": "REFINEMENT:",
-    "relics.has_refinements": "Has Refinements",
-    "relics.intact_only": "Intact Only",
     "ui.inventory.cat_kitguns": "Kitguns",
     "ui.inventory.cat_archwing": "Archwing",
     "ui.inventory.cat_keys": "Keys",
@@ -1334,7 +1334,8 @@
     "vault_unvaulted": "Unvaulted",
     "vault_vaulted": "Vaulted",
     "vaulted": "Vault:",
-    "vaulted_badge": "Vaulted"
+    "vaulted_badge": "Vaulted",
+    "vaulted_show": "Show Vaulted Relics"
   },
   "riven_card": {
     "na": "N/A",
@@ -1447,6 +1448,7 @@
     "up_to_date": "Up to Date",
     "update_available": "Update Available",
     "updates": "Updates",
-    "version": "Version"
+    "version": "Version",
+    "relic_picker_vaulted": "Include vaulted relics in picker"
   }
 }

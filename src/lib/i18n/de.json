@@ -1201,7 +1201,10 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Nahkampf",
     "relics.void_traces": "Void-Spuren",
-    "relics.vault_all": "Alle",
+    "relics.vault_show_all": "Alle anzeigen",
+    "relics.vault_show_vaulted": "Eingelagerte anzeigen",
+    "relics.vault_show_unvaulted": "Nicht-eingelagerte anzeigen",
+        "relics.vault_all": "Alle",
     "relics.vault_unvaulted": "Aus dem Tresor",
     "relics.vault_vaulted": "Im Tresor",
     "relics.vaulted": "Tresor:",
@@ -1325,7 +1328,8 @@
     "vault_unvaulted": "Aus dem Tresor",
     "vault_vaulted": "Im Tresor",
     "vaulted": "Tresor:",
-    "vaulted_badge": "Eingelagert"
+    "vaulted_badge": "Eingelagert",
+    "vaulted_show": "Show Vaulted Relics"
   },
   "riven_card": {
     "na": "N/A",
@@ -1438,6 +1442,7 @@
     "up_to_date": "Up to Date",
     "update_available": "Update Available",
     "updates": "Updates",
-    "version": "Version"
+    "version": "Version",
+    "relic_picker_vaulted": "Include vaulted relics in picker"
   }
 }

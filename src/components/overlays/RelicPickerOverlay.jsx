@@ -56,6 +56,19 @@ export default function RelicPickerOverlay() {
 
   return (
     <div className="w-full h-full bg-zinc-900 flex flex-col">
+      {/* Vaulted toggle - full-width standalone line */}
+      <div className="h-12 border-b border-white/10 px-3 flex items-center justify-center">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showVaulted}
+            onChange={(e) => setShowVaulted(e.target.checked)}
+            className="w-4 h-4 rounded accent-kronos-accent"
+          />
+          <span className="text-[11px] font-bold text-white">{t('relics.vaulted_show')}</span>
+        </label>
+      </div>
+
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-[360px]">
           <div className="flex gap-3">
@@ -63,17 +76,6 @@ export default function RelicPickerOverlay() {
             <Column items={relics.plat_top.filter(item => showVaulted || !item.vaulted)} title={`Top Plat EV${eraSuffix}`} accent="text-blue-400" />
           </div>
         </div>
-      </div>
-      <div className="h-12 border-t border-white/10 px-3 flex items-center justify-end gap-2">
-        <label className="flex items-center gap-1.5 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showVaulted}
-            onChange={(e) => setShowVaulted(e.target.checked)}
-            className="w-3.5 h-3.5"
-          />
-          <span className="text-[11px] font-bold text-kronos-dim">{t('relics.vaulted_show')}</span>
-        </label>
       </div>
     </div>
   )
@@ -93,7 +95,7 @@ function Column({ items, title, accent }) {
           >
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
               <span className="text-[9px] font-black text-kronos-dim w-3 flex-shrink-0">{i + 1}.</span>
-              <span className="text-[12px] font-bold text-white truncate">{item.name}</span>
+              <span className="text-[12px] font-bold text-white truncate">{item.name}{item.vaulted && <span className="text-amber-500/80 font-bold"> (V)</span>}</span>
             </div>
             <span className={`text-[10px] font-black flex-shrink-0 ml-1 ${accent}`}>
               {title.startsWith('Top Ducat') ? `${item.evDucats}` : `${item.evPlat}p`}

@@ -1201,7 +1201,10 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "อาวุธประชาน",
     "relics.void_traces": "ร่องรอยวอยด์",
-    "relics.vault_all": "ทั้งหมด",
+    "relics.vault_show_all": "แสดงหนักสะสม + พร้อมใช้งาน",
+    "relics.vault_show_vaulted": "แสดงหนักสะสม",
+    "relics.vault_show_unvaulted": "แสดงพร้อมใช้งาน",
+        "relics.vault_all": "ทั้งหมด",
     "relics.vault_unvaulted": "พร้อมใช้งาน",
     "relics.vault_vaulted": "อยู่ในห้องนิรภัย",
     "relics.vaulted": "ห้องนิรภัย:",
@@ -1325,7 +1328,8 @@
     "vault_unvaulted": "พร้อมใช้งาน",
     "vault_vaulted": "อยู่ในห้องนิรภัย",
     "vaulted": "ห้องนิรภัย:",
-    "vaulted_badge": "ในห้องนิรภัย"
+    "vaulted_badge": "ในห้องนิรภัย",
+    "vaulted_show": "Show Vaulted Relics"
   },
   "riven_card": {
     "na": "N/A",
@@ -1438,6 +1442,7 @@
     "up_to_date": "Up to Date",
     "update_available": "Update Available",
     "updates": "Updates",
-    "version": "Version"
+    "version": "Version",
+    "relic_picker_vaulted": "Include vaulted relics in picker"
   }
 }

@@ -1201,7 +1201,10 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Broń przystająca",
     "relics.void_traces": "Ślady Pustki",
-    "relics.vault_all": "Wszystkie",
+    "relics.vault_show_all": "Pokaż skarbiecz + dostępne",
+    "relics.vault_show_vaulted": "Pokaż skarbiecz",
+    "relics.vault_show_unvaulted": "Pokaż dostępne",
+        "relics.vault_all": "Wszystkie",
     "relics.vault_unvaulted": "Dostępne",
     "relics.vault_vaulted": "W skarbcu",
     "relics.vaulted": "Skarbiec:",
@@ -1325,7 +1328,8 @@
     "vault_unvaulted": "Dostępne",
     "vault_vaulted": "W skarbcu",
     "vaulted": "Skarbiec:",
-    "vaulted_badge": "W skarbcu"
+    "vaulted_badge": "W skarbcu",
+    "vaulted_show": "Show Vaulted Relics"
   },
   "riven_card": {
     "na": "N/A",
@@ -1438,6 +1442,7 @@
     "up_to_date": "Up to Date",
     "update_available": "Update Available",
     "updates": "Updates",
-    "version": "Version"
+    "version": "Version",
+    "relic_picker_vaulted": "Include vaulted relics in picker"
   }
 }

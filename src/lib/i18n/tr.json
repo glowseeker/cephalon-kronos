@@ -1201,7 +1201,10 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Yakın silah",
     "relics.void_traces": "Void İzleri",
-    "relics.vault_all": "Tümü",
+    "relics.vault_show_all": "Kasalı + açık göster",
+    "relics.vault_show_vaulted": "Kasalı göster",
+    "relics.vault_show_unvaulted": "Açık göster",
+        "relics.vault_all": "Tümü",
     "relics.vault_unvaulted": "Açıkta",
     "relics.vault_vaulted": "Kasadan",
     "relics.vaulted": "Kasa:",
@@ -1325,7 +1328,8 @@
     "vault_unvaulted": "Açıkta",
     "vault_vaulted": "Kasadan",
     "vaulted": "Kasa:",
-    "vaulted_badge": "Kasadan"
+    "vaulted_badge": "Kasadan",
+    "vaulted_show": "Show Vaulted Relics"
   },
   "riven_card": {
     "na": "N/A",
@@ -1438,6 +1442,7 @@
     "up_to_date": "Up to Date",
     "update_available": "Update Available",
     "updates": "Updates",
-    "version": "Version"
+    "version": "Version",
+    "relic_picker_vaulted": "Include vaulted relics in picker"
   }
 }

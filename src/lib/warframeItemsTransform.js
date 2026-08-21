@@ -48,7 +48,7 @@ function itemsToMap(items) {
       masteryReq: item.masteryReq,
       excludeFromCodex: item.excludeFromCodex,
       variantType: item.isPrime ? 'VT_PRIME' : undefined,
-      vaulted: item.vaulted,
+      vaulted: typeof item.vaulted === 'boolean' ? item.vaulted : (Array.isArray(item.tags) && item.tags.includes('Vaulted')),
       vaultDate: item.vaultDate,
       estimatedVaultDate: item.estimatedVaultDate,
       primeSellingPrice: item.primeSellingPrice,

@@ -748,7 +748,17 @@ export default function SettingsScreen() {
               </div>
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
                 <span className="text-[10px] font-black uppercase tracking-widest text-kronos-dim">{t('settings.relic_picker_vaulted')}</span>
-                <Toggle checked={relicPickerIncludeVaulted} onChange={handleSetRelicPickerIncludeVaulted} />
+                <label className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={relicPickerIncludeVaulted}
+                    onChange={(e) => handleSetRelicPickerIncludeVaulted(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span className={`inline-block h-6 w-11 rounded-full transition-colors ${relicPickerIncludeVaulted ? 'bg-kronos-accent' : 'bg-white/10'}`}>
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${relicPickerIncludeVaulted ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  </span>
+                </label>
               </div>
             </div>
           </div>

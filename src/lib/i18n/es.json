@@ -1201,7 +1201,10 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Arma cuerpo a cuerpo",
     "relics.void_traces": "Rastros del Vacío",
-    "relics.vault_all": "Todos",
+    "relics.vault_show_all": "Mostrar cofres + disponibles",
+    "relics.vault_show_vaulted": "Mostrar cofres",
+    "relics.vault_show_unvaulted": "Mostrar disponibles",
+        "relics.vault_all": "Todos",
     "relics.vault_unvaulted": "Disponibles",
     "relics.vault_vaulted": "En la bóveda",
     "relics.vaulted": "Bóveda:",
@@ -1325,7 +1328,8 @@
     "vault_unvaulted": "Disponibles",
     "vault_vaulted": "En la bóveda",
     "vaulted": "Bóveda:",
-    "vaulted_badge": "En bóveda"
+    "vaulted_badge": "En bóveda",
+    "vaulted_show": "Show Vaulted Relics"
   },
   "riven_card": {
     "na": "N/A",
@@ -1438,6 +1442,7 @@
     "up_to_date": "Up to Date",
     "update_available": "Update Available",
     "updates": "Updates",
-    "version": "Version"
+    "version": "Version",
+    "relic_picker_vaulted": "Include vaulted relics in picker"
   }
 }

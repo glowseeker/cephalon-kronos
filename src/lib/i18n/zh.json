@@ -1201,7 +1201,10 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "近战武器",
     "relics.void_traces": "空洞痕迹",
-    "relics.vault_all": "全部",
+    "relics.vault_show_all": "显示已入库 + 未入库",
+    "relics.vault_show_vaulted": "显示已入库",
+    "relics.vault_show_unvaulted": "显示未入库",
+        "relics.vault_all": "全部",
     "relics.vault_unvaulted": "未入库",
     "relics.vault_vaulted": "已入库",
     "relics.vaulted": "宝库:",
@@ -1325,7 +1328,8 @@
     "vault_unvaulted": "未入库",
     "vault_vaulted": "已入库",
     "vaulted": "宝库:",
-    "vaulted_badge": "已入库"
+    "vaulted_badge": "已入库",
+    "vaulted_show": "Show Vaulted Relics"
   },
   "riven_card": {
     "na": "N/A",
@@ -1438,6 +1442,7 @@
     "up_to_date": "Up to Date",
     "update_available": "Update Available",
     "updates": "Updates",
-    "version": "Version"
+    "version": "Version",
+    "relic_picker_vaulted": "Include vaulted relics in picker"
   }
 }

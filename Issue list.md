@@ -122,10 +122,6 @@ Reported: low-contrast borders/dividers and undersized text in multiple spots, h
 
 ## 10. Random smaller ones
 
-- Show bounty levels and the main (guaranteed) rewards
-- Ergo Glast refreshes Tenet Weapons shop in 2d 7h 31m 50s — add vendor
-  timers to tasks or a vendor screen
-- Eleanor sells Batch A Coda Weapons from wiki — same timer treatment
 - Nightwave: track what challenges the user has done to show Recovered
   challenges (ergo up to date, not just this week's)
   - "Any Weekly and Elite Weekly Acts that have not been completed before the
@@ -185,6 +181,7 @@ Issue #50 github kind of relates to those above
   - Market sale box and wishlist item names now wrap to multiple lines instead of truncating (e.g. "TEN YEAR ANNIVERSARY COMMUNITY ART PACK").
 - **Dashboard bounties**: 
   - Bounty cards (holdfasts/cavia/hex) redesigned: title renders plainly (e.g. "Volatile Techrot"), the challenge lore ("She wants to teach…", "Arthur needs to study…") shows as the description, and the objective is labeled "Challenge: …" underneath (e.g. "Challenge: Destroy 3 backpacks on Scaldra units"). Removed the broken "Arthur (Exploding)" node line. `resolveChallengeDesc` now strips OPEN_COLOR marketing labels and substitutes |COUNT|/|ALLY| before `clean()` so objectives no longer start with a stray "Bounty" or drop the count. Hex bounty artwork uses object-contain (full portrait); text renders over the transparent-left zone, wider on non-image cards (Cetus/Deimos/Vallis use full width). Text size bumped across all bounty tabs.
+  - Bounty reward icons: each tab shows the correct reward icon per faction - Hex/Vallis/Cetus/Cavia use DailyStanding, Holdfasts uses VoidplumeQuill, Deimos uses MotherToken. Holdfasts cards render the VoidplumeQuill icon enlarged (24px) in the bottom-right corner with a '5x' count label, matching the hex standing icon placement.
 - **Wishlist/Market items**: 
   - Dante Tytonis Collection (Pagemaster Deluxe Skin Bundle) image now resolves to the authoritative content.warframe.com contentHash URL via its first component's skin icon, instead of the browse.wf URL that 404s. The EI builders (MonitoringContext + MirroredMonitoringProvider) are now contentHash-aware for all icons, falling back to component icons for bundles lacking their own contentHash.
 - **Riven pricer (only relevant for local building)**: 
@@ -217,7 +214,18 @@ Issue #50 github kind of relates to those above
 - **Force-show UI fix**: Replaced blind 5-second `thread::sleep` force-show fallback (that fired regardless of frontend state) with an `AtomicBool ready_fired` flag — the force-show thread early-exits if `frontend-ready` already fired, preventing redundant window-show calls. Committed as `cea9918`.
 
 - **Prime set progress display**: Prime set completion showed `partsMet/totalNeed` (sum of `ItemCount` across recipe ingredients, e.g. 6 for a 4-component set needing 1+2+2+1) instead of `partsMet/parts.length` (the number of component types, 4). This produced misleading fractions like "3/6 (50%)" for an Afuris Prime set where 3 of 4 component types were collected. Fixed: denominator is now `set.parts.length`. Also aligned the parts-grid `met` check (`(crafted ?? 0) + (quantity ?? 0) >= need`) with the `partsMet` summary calculation to eliminate inconsistent counting.
-- **Sticky page headers**: The `headerPanel` (filters/categories/tabs row) in `PageLayout` scrolled away after roughly a viewport of scrolling instead of staying pinned. Root cause: the sticky header was nested inside `<div className="relative min-h-full flex flex-col">` — a flex item of the scroll container with default `flex-shrink: 1` floored at `min-height: 100%`. The browser shrank that item to viewport height and the tall content overflowed it, so the header's sticky containing block ended after one viewport and it unpinned. Fixed by hoisting `headerPanel` out of the shrinkable wrapper to be a direct child of the scroll container with `flex-shrink-0`, so it sticks against the full scrollable content again.
+- **Sticky page headers**: The `headerPanel`...aligned the parts-grid `met` check (`(crafted ?? 0) + (quantity ?? 0) >= need`) with the `partsMet` summary calculation to eliminate inconsistent counting.
+
+- **Issue #50 — Vaulted relic filtering & REFINEMENT filter removal (#50)**:
+- **Vaulted status fix**: Replaced the broken `DropsAll` walk in `inventoryParser.js` (which only matched ~35/770 relics due to naming format mismatches) with `ExportRelics.json`'s `vaultedAt` field — correctly identifies all 2932 vaulted relics.
+- **Prime parts fallback**: Prime Laser Rifle had no `vaulted` boolean but had `"Vaulted"` in its tags array — added a tags-array fallback check in `warframeItemsTransform.js`.
+- **Relic picker overlay**: Added `(V)` badge in amber after vaulted relic names. Moved the vaulted toggle from right-aligned footer to a centered full-width line above columns. Added `include_vaulted` setting in Settings.jsx with a compact inline toggle switch.
+- **Relics page — REFINEMENT filter removed**: Removed `refinementFilter` state, filtering logic, UI tabs ("All", "Has Refinements", "Intact Only"), and all 3 i18n keys (`relics.refinement_filter`, `has_refinements`, `intact_only`) from all 15 locale files.
+- **Relics page — filter compaction**: Compacted filter bar to a single wrapping row matching other inventory pages (Mods.jsx pattern) — removed redundant label spans, reduced pill heights from 42px to 36px, reduced gaps from `gap-3/gap-4` to `gap-2`.
+- **Vaulted tristate button**: Added tristate vaulted filter button (Show Vaulted + Unvaulted / Show Vaulted / Show Unvaulted) with the same styling pattern as the Inventory page tristate filters (Unvaulted=accent, Vaulted=red, neutral=all).
+- **Sort arrows fix**: Replaced rotating `ArrowUpDown` icon with always-visible `ChevronUp`/`ChevronDown` showing clear direction at a glance.
+- **Era filtering preserved**: NOT removed from MonitoringContext or the relic picker overlay (only REFINEMENT filter was removed per user instruction).
+- Added i18n keys: `relics.vault_show_all`, `relics.vault_show_vaulted`, `relics.vault_show_unvaulted` to all 15 locale files (EN, FR, UK, DE, ES, IT, JA, KO, PL, PT, RU, TC, TH, TR, ZH).
 
 ## Localization:
 - **All 13 game languages**: UI chrome (`t()` via `UiContext`) and game-sourced terms (item names, mod stats, bounty titles, riven stat names) now resolve for all shipped locales (EN, DE, FR, IT, ES, PT, RU, TR, ZH, TC, KO, JA, PL) via `dict.{locale}.json` from the DE public manifest. Covers all 14 `screen.*`, `nav.*`, `sync.*`, `scanner.*`, and `settings.*` keys.

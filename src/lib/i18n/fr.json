@@ -347,6 +347,9 @@
     "relics.squad": "Escouade",
     "relics.target": "Cible",
     "relics.void_traces": "Traces du Vide",
+    "relics.vault_show_all": "Afficher coffrés + disponibles",
+    "relics.vault_show_vaulted": "Afficher coffrés",
+    "relics.vault_show_unvaulted": "Afficher disponibles",
     "relics.vault_all": "Tout",
     "relics.vault_unvaulted": "Disponibles",
     "relics.vault_vaulted": "Coffrés",
@@ -1324,7 +1327,8 @@
     "vault_unvaulted": "Disponibles",
     "vault_vaulted": "Coffrés",
     "vaulted": "Coffre :",
-    "vaulted_badge": "Coffré"
+    "vaulted_badge": "Coffré",
+    "vaulted_show": "Show Vaulted Relics"
   },
   "riven_card": {
     "na": "N/D",
@@ -1437,6 +1441,7 @@
     "up_to_date": "À jour",
     "update_available": "Mise à jour disponible",
     "updates": "Mises à jour",
-    "version": "Version"
+    "version": "Version",
+    "relic_picker_vaulted": "Include vaulted relics in picker"
   }
 }

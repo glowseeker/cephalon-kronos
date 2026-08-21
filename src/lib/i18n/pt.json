@@ -1201,7 +1201,10 @@
     "mastery.cat_kdrive": "K-Drive",
     "mastery.cat_melee": "Arma corpo a corpo",
     "relics.void_traces": "Rastros do Vazio",
-    "relics.vault_all": "Todos",
+    "relics.vault_show_all": "Mostrar cofres + disponíveis",
+    "relics.vault_show_vaulted": "Mostrar cofres",
+    "relics.vault_show_unvaulted": "Mostrar disponíveis",
+        "relics.vault_all": "Todos",
     "relics.vault_unvaulted": "Disponíveis",
     "relics.vault_vaulted": "Cofrados",
     "relics.vaulted": "Cofre:",
@@ -1325,7 +1328,8 @@
     "vault_unvaulted": "Disponíveis",
     "vault_vaulted": "Cofrados",
     "vaulted": "Cofre:",
-    "vaulted_badge": "Cofrado"
+    "vaulted_badge": "Cofrado",
+    "vaulted_show": "Show Vaulted Relics"
   },
   "riven_card": {
     "na": "N/A",
@@ -1438,6 +1442,7 @@
     "up_to_date": "Up to Date",
     "update_available": "Update Available",
     "updates": "Updates",
-    "version": "Version"
+    "version": "Version",
+    "relic_picker_vaulted": "Include vaulted relics in picker"
   }
 }
