@@ -6,7 +6,7 @@ import { MonitoringProvider } from './contexts/MonitoringContext';
 import { UpdateProvider, useUpdate } from './contexts/UpdateContext';
 import { Tooltip } from './components/UI';
 import { UiProvider, useUi } from './contexts/UiContext';
-import { AlertTriangle, FolderOpen } from 'lucide-react';
+import { AlertTriangle, FolderOpen, BarChart3 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, emit } from '@tauri-apps/api/event';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
@@ -27,10 +27,11 @@ const NAV_ITEMS = [
 { id: 'adversaries', icon: 'Adversaries.png', label: 'Adversaries' },
 { id: 'wiki', icon: 'Wiki.png', label: 'Wiki' },
 { id: 'settings', icon: 'IconSettings.png', label: 'Settings' },
-{ id: 'about', icon: 'IconInfo.png', label: 'About' }];
+{ id: 'about', icon: 'IconInfo.png', label: 'About' },
+{ id: 'history', lucide: BarChart3, label: 'History' }];
 
 
-const ICON_NAMES = [...NAV_ITEMS.map((i) => i.icon), 'IconKronos.png'];
+const ICON_NAMES = [...NAV_ITEMS.filter((i) => i.icon).map((i) => i.icon), 'IconKronos.png'];
 
 function useUIIcons(iconNames) {
   const [iconCache, setIconCache] = useState({});
@@ -63,6 +64,7 @@ function useUIIcons(iconNames) {
 // Screens (lazy-loaded, main window only)
 const Dashboard = lazy(() => import('./screens/Dashboard'));
 const Inventory = lazy(() => import('./screens/Inventory'));
+const History = lazy(() => import('./screens/History'));
 const Mastery = lazy(() => import('./screens/Mastery'));
 const Notes = lazy(() => import('./screens/Notes'));
 const Maps = lazy(() => import('./screens/Maps'));
@@ -301,6 +303,7 @@ function AppContent() {
 
   const screens = {
     dashboard: <Dashboard />,
+    history: <History />,
     inventory: <Inventory />,
     rivens: <Rivens />,
     relics: <Relics />,
@@ -350,8 +353,10 @@ function AppContent() {
                       `}>
                       
                       <div
-                        className="w-7 h-7 flex-shrink-0 transition-colors duration-200"
-                        style={{
+                        className="w-7 h-7 flex-shrink-0 transition-opacity duration-200"
+                        style={item.lucide ? {
+                          color: isActive ? 'var(--color-accent, #5590ab)' : 'currentColor',
+                        } : {
                           backgroundColor: isActive ? 'var(--color-accent, #5590ab)' : 'currentColor',
                           maskImage: `url(${uiIcon(item.icon)})`,
                           WebkitMaskImage: `url(${uiIcon(item.icon)})`,
@@ -362,7 +367,9 @@ function AppContent() {
                           maskPosition: 'center',
                           WebkitMaskPosition: 'center',
                           opacity: isActive ? 1 : 0.6
-                        }} />
+                        }}>
+                        {item.lucide ? (() => { const Icon = item.lucide; return <Icon size={28} /> })() : null}
+                      </div>
                       
                     </button>
                   </Tooltip>

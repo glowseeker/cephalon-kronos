@@ -531,6 +531,247 @@ async fn load_cached_inventory() -> Result<Option<(Value, u64)>, String> {
     Ok(Some((json, timestamp)))
 }
 
+/// Diff the new inventory against the previous snapshot, save both the diff
+/// to a history log and the new snapshot to disk for the next comparison.
+/// Returns the diff so the frontend can show recent gains in real-time.
+#[tauri::command]
+async fn diff_and_save_inventory(new_raw: Value) -> Result<Option<Value>, String> {
+    let inv_dir = crate::resolve_path("data/user");
+    if !inv_dir.exists() {
+        fs::create_dir_all(&inv_dir).map_err(|e| e.to_string())?;
+    }
+
+    let snapshot_path = inv_dir.join("inventory_snapshot.json");
+    let history_path = inv_dir.join("inventory_history.json");
+
+    // Load previous snapshot (if any)
+    let prev_raw: Option<Value> = if snapshot_path.exists() {
+        let content = fs::read_to_string(&snapshot_path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).ok()
+    } else {
+        None
+    };
+
+    // Save new snapshot to disk
+    let snapshot_str = serde_json::to_string(&new_raw).map_err(|e| e.to_string())?;
+    fs::write(&snapshot_path, &snapshot_str).map_err(|e| e.to_string())?;
+
+    // If no previous snapshot, nothing to diff
+    let prev = match prev_raw {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+
+    // Build the diff
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+
+    let diff = diff_inventory(&prev, &new_raw, now_ms);
+    if diff.is_null() {
+        return Ok(None);
+    }
+
+    // Append diff to history log
+    let history_entry = serde_json::json!({
+        "timestamp": now_ms,
+        "diff": diff,
+    });
+
+    let mut history: Vec<Value> = if history_path.exists() {
+        let content = fs::read_to_string(&history_path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).unwrap_or_default()
+    } else {
+        vec![]
+    };
+    history.push(history_entry);
+
+    // Cap at 10,000 entries (~7 months at 3min intervals, ~3.5MB)
+    if history.len() > 10_000 {
+        let trimmed = history.split_off(history.len() - 10_000);
+        let _ = trimmed;
+    }
+
+    let history_str = serde_json::to_string(&history).map_err(|e| e.to_string())?;
+    let history_json: Value = serde_json::from_str(&history_str).unwrap_or(Value::Null);
+    let history_pretty = serde_json::to_string_pretty(&history_json).map_err(|e| e.to_string())?;
+    fs::write(&history_path, &history_pretty).map_err(|e| e.to_string())?;
+
+    Ok(Some(diff))
+}
+
+/// Load the saved inventory history log, filtered by range, filter type, and search.
+/// range: "1d", "1m", "1y", "all"
+/// filter: "all", "credits", "plat", "endo", "mods", "resources", "items"
+/// search: case-insensitive substring match against item type names
+#[tauri::command]
+async fn load_inventory_history(range: Option<String>, filter: Option<String>, search: Option<String>) -> Result<Vec<Value>, String> {
+    let history_path = crate::resolve_path("data/user/inventory_history.json");
+    if !history_path.exists() {
+        return Ok(vec![]);
+    }
+    let content = fs::read_to_string(&history_path).map_err(|e| e.to_string())?;
+    let history: Vec<Value> = serde_json::from_str(&content).unwrap_or_default();
+
+    let filter = filter.as_deref().unwrap_or("all");
+    let search_lower = search.unwrap_or_default().to_lowercase();
+
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+
+    let cutoff_ms = match range.as_deref().unwrap_or("1d") {
+        "1d" => now_ms.saturating_sub(86_400_000),
+        "1m" => now_ms.saturating_sub(30 * 86_400_000),
+        "1y" => now_ms.saturating_sub(365 * 86_400_000),
+        "all" => 0,
+        _ => now_ms.saturating_sub(86_400_000),
+    };
+
+    let mut result: Vec<Value> = history
+        .into_iter()
+        .filter(|entry| {
+            // Filter by time range
+            if let Some(ts) = entry.get("timestamp").and_then(|v| v.as_u64()) {
+                if ts < cutoff_ms {
+                    return false;
+                }
+            }
+
+            // If no filter or search, include everything in range
+            if filter == "all" && search_lower.is_empty() {
+                return true;
+            }
+
+            let diff = match entry.get("diff") {
+                Some(d) => d,
+                None => return true, // include entries without diff
+            };
+
+            // Apply filter
+            let mut matches_filter = true;
+            if filter != "all" {
+                matches_filter = match filter {
+                    "credits" | "plat" | "endo" | "scalars" => {
+                        diff.get("scalars").is_some()
+                    }
+                    "mods" => {
+                        diff.get("increases").and_then(|d| d.get("Upgrades")).is_some()
+                            || diff.get("decreases").and_then(|d| d.get("Upgrades")).is_some()
+                    }
+                    "resources" | "items" => {
+                        let has_misc = diff.get("increases").and_then(|d| d.get("MiscItems")).is_some()
+                            || diff.get("decreases").and_then(|d| d.get("MiscItems")).is_some();
+                        let has_resources = diff.get("increases").and_then(|d| d.get("Resources")).is_some()
+                            || diff.get("decreases").and_then(|d| d.get("Resources")).is_some();
+                        has_misc || has_resources
+                    }
+                    _ => true,
+                };
+            }
+
+            if !matches_filter {
+                return false;
+            }
+
+            // Apply search (only if there's a diff to search in)
+            if search_lower.is_empty() {
+                return true;
+            }
+
+            let search_in = serde_json::to_string(diff).unwrap_or_default().to_lowercase();
+            search_in.contains(&search_lower)
+        })
+        .collect();
+
+    result.reverse(); // most recent first
+    Ok(result)
+}
+
+/// Compute the diff between two raw inventory snapshots.
+/// Returns a JSON object with `increases`, `decreases`, and scalar deltas.
+fn diff_inventory(prev: &Value, cur: &Value, timestamp: u64) -> Value {
+    let mut increases: serde_json::Map<String, Value> = serde_json::Map::new();
+    let mut decreases: serde_json::Map<String, Value> = serde_json::Map::new();
+    let mut scalars: serde_json::Map<String, Value> = serde_json::Map::new();
+
+    // Compare scalar fields (credits, etc.)
+    for field in ["RegularCredits", "PremiumCredits", "PlayerLevel", "DailyFocus", "RandomModBin", "FusionPoints"] {
+        let prev_val = prev.get(field).and_then(|v| v.as_i64()).unwrap_or(0);
+        let cur_val = cur.get(field).and_then(|v| v.as_i64()).unwrap_or(0);
+        if prev_val != cur_val {
+            scalars.insert(field.to_string(), serde_json::json!({
+                "from": prev_val,
+                "to": cur_val,
+                "delta": cur_val - prev_val,
+            }));
+        }
+    }
+
+    // Compare array fields (items, mods, resources, etc.)
+    // Each of these is an array of objects with ItemType/uniqueName and ItemCount/quantity
+    let array_fields: &[(&str, &str, &str)] = &[
+        ("MiscItems", "ItemType", "ItemCount"),
+        ("Resources", "ItemType", "ItemCount"),
+        ("Consumables", "ItemType", "ItemCount"),
+        ("Recipes", "ItemType", "ItemCount"),
+        ("Upgrades", "uniqueName", "ItemCount"),
+    ];
+
+    for (field, key_field, count_field) in array_fields {
+        let prev_items = prev.get(field).and_then(|v| v.as_array()).map(|a| a.as_slice()).unwrap_or(&[]);
+        let cur_items = cur.get(field).and_then(|v| v.as_array()).map(|a| a.as_slice()).unwrap_or(&[]);
+
+        // Build maps of uniqueName -> count
+        let mut prev_map: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+        for item in prev_items {
+            if let (Some(key), Some(count)) = (item.get(key_field).and_then(|v| v.as_str()), item.get(count_field).and_then(|v| v.as_i64())) {
+                prev_map.insert(key.to_string(), count);
+            }
+        }
+
+        let mut cur_map: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+        for item in cur_items {
+            if let (Some(key), Some(count)) = (item.get(key_field).and_then(|v| v.as_str()), item.get(count_field).and_then(|v| v.as_i64())) {
+                cur_map.insert(key.to_string(), count);
+            }
+        }
+
+        let all_keys: std::collections::HashSet<String> = prev_map.keys().chain(cur_map.keys()).cloned().collect();
+
+        for key in all_keys {
+            let prev_count = prev_map.get(&key).copied().unwrap_or(0);
+            let cur_count = cur_map.get(&key).copied().unwrap_or(0);
+            let delta = cur_count - prev_count;
+            if delta != 0 {
+                let entry = serde_json::json!({
+                    "from": prev_count,
+                    "to": cur_count,
+                    "delta": delta,
+                });
+                if delta > 0 {
+                    increases.insert(key, entry);
+                } else {
+                    decreases.insert(key, entry);
+                }
+            }
+        }
+    }
+
+    if increases.is_empty() && decreases.is_empty() && scalars.is_empty() {
+        return Value::Null;
+    }
+
+    serde_json::json!({
+        "timestamp": timestamp,
+        "increases": Value::Object(increases),
+        "decreases": Value::Object(decreases),
+        "scalars": Value::Object(scalars),
+    })
+}
+
 /// Scan Warframe process memory for the auth token, then fetch inventory from
 /// mobile.warframe.com.
 #[tauri::command]
@@ -576,6 +817,13 @@ async fn call_api_helper(_app_handle: tauri::AppHandle) -> Result<Value, String>
     }
     let inv_path = inv_dir.join("inventory.json");
     fs::write(&inv_path, &body).map_err(|e| e.to_string())?;
+
+    // Diff against the previous snapshot and append to history log.
+    // Spawn on a blocking task so we don't hold the async runtime.
+    let value_for_diff = value.clone();
+    tokio::task::spawn(async move {
+        let _ = diff_and_save_inventory(value_for_diff).await;
+    });
 
     Ok(value)
 }
@@ -3546,6 +3794,8 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
             // --- data ---
             load_cached_inventory,
             call_api_helper,
+            diff_and_save_inventory,
+            load_inventory_history,
             check_exports,
             check_ocr_models,
             check_pricer_models,

@@ -20,7 +20,8 @@
         "height": 800,
         "minWidth": 900,
         "minHeight": 500,
-        "visible": false
+        "visible": false,
+        "devtools": true
       },
       {
         "label": "overlay-tl",

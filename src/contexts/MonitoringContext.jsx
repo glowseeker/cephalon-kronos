@@ -146,9 +146,29 @@ export function MonitoringProvider({ children }) {
   const [lastUpdate, setLastUpdate] = useState(localStorage.getItem('lastUpdate') || null)
   const [rawInventory, setRawInventory] = useState(null)
   const rawInventoryRef = useRef(null)
+  const [inventoryHistory, setInventoryHistory] = useState(null)
   const exportDataRef = useRef(null)
   const [inventoryData, setInventoryData] = useState(undefined)
   const [isInventoryLoading, setIsInventoryLoading] = useState(false)
+  const [historyRange, setHistoryRange] = useState('1d')
+  const [historyFilter, setHistoryFilter] = useState('all')
+  const [historySearch, setHistorySearch] = useState('')
+
+  // Load inventory history from disk (lazy - only when accessed)
+  const loadInventoryHistory = useCallback(async (opts = {}) => {
+    try {
+      const range = opts.range || historyRange
+      const filter = opts.filter || historyFilter
+      const search = opts.search || historySearch
+      const result = await invoke('load_inventory_history', { range, filter, search })
+      setInventoryHistory(result || [])
+      return result || []
+    } catch (e) {
+      console.error('Failed to load inventory history:', e)
+      setInventoryHistory([])
+      return []
+    }
+  }, [historyRange, historyFilter, historySearch])
   const allPricesRef = useRef({})
   const [allPrices, setAllPrices] = useState(() => {
     try {
@@ -1217,6 +1237,7 @@ export function MonitoringProvider({ children }) {
       masteryProgress, allPrices, isPriceLoading, priceFetchProgress, priceLastUpdated, refreshPrices,
       startMonitoring, stopMonitoring, manualRefresh, callApiHelper,
       cardImagesPath, bountyIconsReady, fixProgress, retryCardImages, notificationHistory,
+      inventoryHistory, loadInventoryHistory, historyRange, setHistoryRange, historyFilter, setHistoryFilter, historySearch, setHistorySearch,
     }}>
       {children}
     </MonitoringContext.Provider>
