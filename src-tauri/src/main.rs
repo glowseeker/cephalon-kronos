@@ -3098,13 +3098,26 @@ fn is_warframe_focused() -> bool {
 /// Returns None if the model isn't loaded (e.g. no pricer-models present).
 #[tauri::command]
 fn estimate_riven_price(input: pricer::RivenInput) -> Option<f32> {
-    pricer::estimate_price(&input)
+    eprintln!("[PRICER CMD] estimate_riven_price called: weapon='{}'", input.weapon_name);
+    let result = pricer::estimate_price(&input);
+    match &result {
+        Some(p) => eprintln!("[PRICER CMD] estimate_riven_price OK: price={}", p),
+        None => eprintln!("[PRICER CMD] estimate_riven_price returned None"),
+    }
+    result
 }
 
 /// Full estimate: price + grade + reroll expected value.
 #[tauri::command]
 fn estimate_riven_full(input: pricer::RivenInput) -> Option<pricer::RivenFullEstimate> {
-    pricer::estimate_full(&input)
+    eprintln!("[PRICER CMD] estimate_riven_full called: weapon='{}' pos1={:?} pos2={:?} pos3={:?} neg={:?} rolls={}", 
+        input.weapon_name, input.positive1, input.positive2, input.positive3, input.negative, input.re_rolls);
+    let result = pricer::estimate_full(&input);
+    match &result {
+        Some(est) => eprintln!("[PRICER CMD] estimate_riven_full OK: price={} grade={}", est.price, est.grade),
+        None => eprintln!("[PRICER CMD] estimate_riven_full returned None"),
+    }
+    result
 }
 
 /// Batch estimate: price every riven in one call.

@@ -268,7 +268,18 @@ fn init_pricer_inner() -> Option<RivenPricer> {
 // firing in parallel on mount) block on the OnceLock rather than each
 // running init_pricer_inner() and thrashing the blocking pool.
 fn get_pricer() -> Option<&'static RivenPricer> {
-    PRICER.get_or_init(|| init_pricer_inner()).as_ref()
+    eprintln!("[PRICER] get_pricer called");
+    let opt = PRICER.get_or_init(|| {
+        eprintln!("[PRICER] init_pricer_inner starting...");
+        let r = init_pricer_inner();
+        match &r {
+            Some(p) => eprintln!("[PRICER] init_pricer_inner: pricer loaded, {} weapons in vocab", p.weapon_vocab.len()),
+            None => eprintln!("[PRICER] init_pricer_inner: FAILED to load pricer"),
+        }
+        r
+    });
+    eprintln!("[PRICER] get_pricer: pricer is {}", if opt.is_some() { "Some" } else { "None" });
+    opt.as_ref()
 }
 
 pub fn estimate_price(input: &RivenInput) -> Option<f32> {
@@ -368,10 +379,14 @@ fn run_inference(pricer: &RivenPricer, input: &RivenInput) -> Option<(f32, f32)>
                 .unwrap_or(&key);
             attr_indices[i] = *pricer.attr_vocab.get(url)
                 .unwrap_or(&pricer.mask_index);
+            eprintln!("[PRICER] attr[{}] = '{}' -> url '{}' -> idx {}", i, attr, url, attr_indices[i]);
+        } else {
+            eprintln!("[PRICER] attr[{}] = None (mask)", i);
         }
     }
 
     let re_rolled: f32 = if input.re_rolls > 0 { 1.0 } else { 0.0 };
+    eprintln!("[PRICER] re_rolled={}", re_rolled);
 
     // Build input tensors for tract
     // weapon_idx: shape [1, 1] int32
@@ -384,18 +399,44 @@ fn run_inference(pricer: &RivenPricer, input: &RivenInput) -> Option<(f32, f32)>
     let attr_tensor: Tensor = tract_ndarray::arr2(&[[
         attr_indices[0], attr_indices[1], attr_indices[2], attr_indices[3]
     ]]).into_tensor();
+    eprintln!("[PRICER] input tensors: weapon_idx={}, re_rolled={}, attrs=[{}, {}, {}, {}]",
+        weapon_idx, re_rolled, attr_indices[0], attr_indices[1], attr_indices[2], attr_indices[3]);
 
-    let model_guard = pricer.model.lock().ok()?;
+    eprintln!("[PRICER] acquiring model mutex...");
+    let model_guard = match pricer.model.lock() {
+        Ok(g) => g,
+        Err(e) => {
+            eprintln!("[PRICER] model mutex POISONED: {:?}", e);
+            return None;
+        }
+    };
+    eprintln!("[PRICER] model mutex acquired, running inference...");
 
     // tract takes inputs positionally in the order the ONNX model declares them:
     // weapon_idx, re_rolled, attr_indices
-    let outputs = model_guard.run(tvec![
+    let outputs = match model_guard.run(tvec![
         weapon_tensor.into(),
         re_rolled_tensor.into(),
         attr_tensor.into(),
-    ]).ok()?;
+    ]) {
+        Ok(o) => {
+            eprintln!("[PRICER] model.run() succeeded");
+            o
+        }
+        Err(e) => {
+            eprintln!("[PRICER] model.run() FAILED: {:?}", e);
+            return None;
+        }
+    };
 
-    let output = outputs[0].to_array_view::<f32>().ok()?;
+    let output = match outputs[0].to_array_view::<f32>() {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("[PRICER] to_array_view FAILED: {:?}", e);
+            return None;
+        }
+    };
     let log_price = output[[0, 0]];
+    eprintln!("[PRICER] model output: log_price={}", log_price);
     Some((log_price.exp() - 1.0, log_price))
 }

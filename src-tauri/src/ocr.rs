@@ -74,6 +74,7 @@ fn ocr_card_image(
     }
 
     let crop = full.crop_imm(cx, cy, cw, ch);
+    eprintln!("[OCR] ocr_card_image: crop bounds cx={} cy={} cw={} ch={} (full {}x{})", cx, cy, cw, ch, sw, sh);
 
     if save_crop {
         let pos_name = format!("{:?}", position).to_lowercase();
@@ -139,6 +140,7 @@ fn ocr_card_image(
     }
 
     let combined = merged.join(" | ");
+    eprintln!("[OCR] ocr_card_image RESULT: position={:?} text='{}'", position, combined);
     crate::logger::log_to_disk(app, &format!("[RIVEN OCR] Card {:?}: {:?}", position, combined));
 
     Ok(RivenOcrResult { text: combined })
@@ -150,11 +152,24 @@ pub fn ocr_riven_card(
     position: RivenCardPosition,
     game_locale: String,
 ) -> Result<RivenOcrResult, String> {
+    eprintln!("[OCR] ocr_riven_card START: position={:?} game_locale={}", position, game_locale);
+    eprintln!("[OCR] getting target monitor...");
     let Some(monitor) = get_target_monitor(&app) else {
+        eprintln!("[OCR] ERROR: No target monitor found");
         return Err("No target monitor".to_string());
     };
+    eprintln!("[OCR] target monitor: {}x{}", 
+        monitor.width().unwrap_or(0), monitor.height().unwrap_or(0));
+    eprintln!("[OCR] capturing monitor image...");
     let image = capture_monitor_image(&app, &monitor)?;
-    ocr_card_image(&app, DynamicImage::ImageRgba8(image), position, false, &game_locale)
+    eprintln!("[OCR] capture_monitor_image returned image: {}x{}", image.width(), image.height());
+    eprintln!("[OCR] cropping + preprocessing + running OCR...");
+    let result = ocr_card_image(&app, DynamicImage::ImageRgba8(image), position, false, &game_locale);
+    match &result {
+        Ok(r) => eprintln!("[OCR] ocr_card_image OK, text length: {}", r.text.len()),
+        Err(e) => eprintln!("[OCR] ocr_card_image FAILED: {}", e),
+    }
+    result
 }
 
 #[tauri::command]
@@ -305,63 +320,91 @@ fn is_kde_kwin() -> bool {
 }
 
 pub(crate) fn capture_monitor_image(app: &AppHandle, monitor: &Monitor) -> Result<image::RgbaImage, String> {
+    eprintln!("[OCR] capture_monitor_image START");
     #[cfg(target_os = "linux")]
     {
         let is_wayland = std::env::var("XDG_SESSION_TYPE")
             .map(|v| v == "wayland")
             .unwrap_or(false);
+        eprintln!("[OCR] is_wayland={}", is_wayland);
 
         if is_wayland {
+            eprintln!("[OCR] Wayland: trying grim...");
             if let Some(img) = try_grim(app, monitor) {
                 if is_valid_capture(&img) {
+                    eprintln!("[OCR] grim: SUCCESS, buffer {}x{}", img.width(), img.height());
                     return Ok(img);
                 }
-                eprintln!("[OCR] grim returned invalid/blank buffer, discarding");
+                eprintln!("[OCR] grim: blank/invalid buffer");
+            } else {
+                eprintln!("[OCR] grim: not available");
             }
         }
 
+        eprintln!("[OCR] trying xcap Monitor::capture_image...");
         if let Ok(img) = monitor.capture_image() {
             if is_valid_capture(&img) {
-                crate::logger::log_to_disk(app, "[OCR] Capture via xcap Monitor");
+                eprintln!("[OCR] xcap Monitor: SUCCESS, buffer {}x{}", img.width(), img.height());
                 return Ok(img);
             }
-            crate::logger::log_to_disk(app, "[OCR] xcap returned invalid/blank buffer, discarding");
+            eprintln!("[OCR] xcap Monitor: blank/invalid buffer");
         } else {
-            crate::logger::log_to_disk(app, "[OCR] xcap Monitor::capture_image failed");
+            eprintln!("[OCR] xcap Monitor::capture_image FAILED");
         }
 
         // Fallback: capture the Warframe XWayland window directly via XCB
+        eprintln!("[OCR] trying xcap Window capture (Warframe XWayland)...");
         if let Ok(windows) = xcap::Window::all() {
             let warframe = windows.iter().find(|w| {
                 w.title().as_deref().unwrap_or("").contains("Warframe")
             }).cloned();
             if let Some(w) = warframe {
+                eprintln!("[OCR] Found Warframe window: title={:?}", w.title());
                 if let Ok(img) = w.capture_image() {
                     if is_valid_capture(&img) {
-                        crate::logger::log_to_disk(app, "[OCR] Capture via xcap Window (Warframe XWayland)");
+                        eprintln!("[OCR] xcap Window (Warframe): SUCCESS, buffer {}x{}", img.width(), img.height());
                         return Ok(img);
                     }
-                    crate::logger::log_to_disk(app, "[OCR] xcap Window returned invalid/blank buffer, discarding");
+                    eprintln!("[OCR] xcap Window (Warframe): blank/invalid buffer");
+                } else {
+                    eprintln!("[OCR] xcap Window (Warframe)::capture_image FAILED");
                 }
+            } else {
+                eprintln!("[OCR] No Warframe window found (checked {} windows)", windows.len());
             }
+        } else {
+            eprintln!("[OCR] xcap::Window::all() FAILED");
         }
 
         if is_wayland {
             if is_kde_kwin() {
+                eprintln!("[OCR] Wayland+KDE: trying spectacle...");
                 if let Some(img) = try_spectacle(app, monitor) {
                     if is_valid_capture(&img) {
+                        eprintln!("[OCR] spectacle: SUCCESS, buffer {}x{}", img.width(), img.height());
                         return Ok(img);
                     }
+                    eprintln!("[OCR] spectacle: blank/invalid buffer");
+                } else {
+                    eprintln!("[OCR] spectacle: FAILED");
                 }
+            } else {
+                eprintln!("[OCR] Wayland but not KDE KWin, skipping spectacle");
             }
         } else {
+            eprintln!("[OCR] X11: trying import...");
             if let Some(img) = try_import(app, monitor) {
                 if is_valid_capture(&img) {
+                    eprintln!("[OCR] import: SUCCESS, buffer {}x{}", img.width(), img.height());
                     return Ok(img);
                 }
+                eprintln!("[OCR] import: blank/invalid buffer");
+            } else {
+                eprintln!("[OCR] import: FAILED");
             }
         }
 
+        eprintln!("[OCR] ALL CAPTURE METHODS EXHAUSTED");
         crate::logger::log_to_disk(app, "[OCR] Capture failed (all methods exhausted or returned invalid data)");
         return Err("capture failed (all methods exhausted or returned invalid data)".to_string());
     }

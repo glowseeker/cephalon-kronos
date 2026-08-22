@@ -167,16 +167,16 @@ export default function RivenOverlay() {
     return cleaned.trim().split(/\s+/)[0].replace(/^\d+\s*[-– - ]\s*/, '') || cleaned;
   }
 
+  const logTerminal = (msg) => { invoke('log_terminal', { message: msg }).catch(() => {}); };
+
   const doPricing = useCallback((p) => {
     if (!p || !p.stats.length) {setEstimatedPrice(null);setRivenInfo(null);return;}
     const weaponName = extractWeaponName(p.name || '');
+    logTerminal(`[OVERLAY] doPricing called: weapon='${weaponName}'`);
     const pos = p.stats.filter((s) => !s.value.startsWith('-')).map((s) => cleanStatName(s.name, statAliases));
     const neg = p.stats.filter((s) => s.value.startsWith('-') || /^x/i.test(s.value)).map((s) => cleanStatName(s.name, statAliases));
 
-    console.log('[PRICER] weaponName:', weaponName);
-    console.log('[PRICER] pos:', pos);
-    console.log('[PRICER] neg:', neg);
-    console.log('[PRICER] parsed.name was:', p.name);
+    logTerminal(`[OVERLAY] pos=[${pos.join(', ')}] neg=[${neg.join(', ')}]`);
 
     invoke('estimate_riven_full', {
       input: {
@@ -188,31 +188,36 @@ export default function RivenOverlay() {
         negative: neg[0] || null
       }
     }).then((info) => {
+      logTerminal('[OVERLAY] estimate_riven_full resolved: ' + JSON.stringify(info));
       if (aliveRef.current) {
         setRivenInfo(info);
         setEstimatedPrice(info?.price ?? null);
       }
-    }).catch(console.error);
+    }).catch((e) => logTerminal('[OVERLAY] estimate_riven_full FAILED: ' + e));
   }, [statAliases]);
 
   const doOcr = useCallback((pos) => {
+    logTerminal(`[OVERLAY] doOcr('Middle') called, aliveRef.current=${aliveRef.current}`);
     if (!aliveRef.current) return;
     setOcrLoading(true);
     setParsed(null);
     setEstimatedPrice(null);
-    invoke('ocr_riven_card', { position: pos, game_locale: gameLocale }).
+    invoke('ocr_riven_card', { position: pos, gameLocale: gameLocale }).
     then((res) => {
+      logTerminal('[OVERLAY] ocr_riven_card resolved: text=' + res.text);
       if (aliveRef.current) {
         const p = parseRivenOcr(res.text, garbageRe, gameLocale);
+        logTerminal('[OVERLAY] parsed result: ' + JSON.stringify(p));
         setParsed(p);
         doPricing(p);
       }
     }).
-    catch(() => {if (aliveRef.current) setParsed({ name: '', mr: '', stats: [], raw: '[OCR failed]' });}).
+    catch((e) => {logTerminal('[OVERLAY] ocr_riven_card FAILED: ' + e);if (aliveRef.current) setParsed({ name: '', mr: '', stats: [], raw: '[OCR failed]' });}).
     finally(() => {if (aliveRef.current) setOcrLoading(false);});
   }, [doPricing, garbageRe, gameLocale]);
 
   const show = useCallback(() => {
+    logTerminal(`[OVERLAY] show() called, showingRef.current=${showingRef.current}`);
     if (showingRef.current) return;
     showingRef.current = true;
     aliveRef.current = true;
@@ -232,13 +237,16 @@ export default function RivenOverlay() {
   }, [label]);
 
   useEffect(() => {
+    logTerminal('[OVERLAY] useEffect mounted, registering listeners');
     const unsubs = [
     listen('riven-ocr-result', (e) => {
       const payload = typeof e.payload === 'string' ? e.payload : String(e.payload);
+      logTerminal('[OVERLAY] riven-ocr-result event received');
       if (aliveRef.current) {
         setVisible(true);
         setOcrLoading(false);
         const p = parseRivenOcr(payload, garbageRe, gameLocale);
+        logTerminal('[OVERLAY] parsed OCR: ' + JSON.stringify(p));
         setParsed(p);
         doPricing(p);
       }
@@ -249,6 +257,7 @@ export default function RivenOverlay() {
       let timer = null;
       unsubs.push(
         listen('riven-reroll', () => {
+          logTerminal('[OVERLAY] riven-reroll event received');
           timer = setTimeout(() => {
             show();
             doOcr('Middle');
@@ -270,8 +279,9 @@ export default function RivenOverlay() {
     } else {
       let refreshTimer = null;
       unsubs.push(
-        listen('riven-linked-open', () => {show();doOcr('Linked');}),
+        listen('riven-linked-open', () => { logTerminal('[OVERLAY] riven-linked-open'); show(); doOcr('Linked'); }),
         listen('riven-screen-open', () => {
+          logTerminal('[OVERLAY] riven-screen-open event received');
           show();
           doOcr('Middle');
         }),

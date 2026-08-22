@@ -159,18 +159,33 @@ pub fn recognize(gray_image: &image::GrayImage, locale: &str) -> String {
 /// Multi-line recognition (riven-card path). Uses the locale's pipeline
 /// (det + locale-specific rec) so localized stat names come back in-script.
 pub fn recognize_riven(text_region: &DynamicImage, locale: &str) -> Vec<String> {
+    eprintln!("[OCR] recognize_riven START: locale={}", locale);
     let entry = match get_locale(locale) {
         Some(e) => e,
-        None => return Vec::new(),
+        None => {
+            eprintln!("[OCR] recognize_riven: get_locale returned None for '{}'", locale);
+            return Vec::new();
+        }
     };
+    eprintln!("[OCR] recognize_riven: locale loaded, running pipeline...");
     let results = match entry.pipeline.recognize(text_region) {
-        Ok(r) => r,
-        Err(_) => return Vec::new(),
+        Ok(r) => {
+            eprintln!("[OCR] recognize_riven: pipeline returned {} results", r.len());
+            r
+        }
+        Err(e) => {
+            eprintln!("[OCR] recognize_riven: pipeline error: {:?}", e);
+            return Vec::new();
+        }
     };
     let mut sorted: Vec<_> = results
         .into_iter()
         .filter(|r| !r.text.is_empty())
         .collect();
     sorted.sort_by_key(|r| r.bbox.rect.top());
-    sorted.into_iter().map(|r| r.text).collect()
+    eprintln!("[OCR] recognize_riven: {} results after filtering", sorted.len());
+    sorted.into_iter().map(|r| {
+        eprintln!("[OCR] recognize_riven: result='{}'", r.text);
+        r.text
+    }).collect()
 }
