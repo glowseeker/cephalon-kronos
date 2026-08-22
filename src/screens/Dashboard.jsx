@@ -35,6 +35,7 @@ import {
 } from
   'lucide-react';
 import { useMonitoring } from '../contexts/MonitoringContext';
+import { getPrice } from '../lib/marketEngine';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import {
   resolveNode,
@@ -268,8 +269,7 @@ export default function Dashboard() {
     exportData, worldState, spIncursions, arbys, archonModifiers, arbitrationModifiers,
     dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, arbyTiers,
     rawInventory, inventoryData, ES, ENWRawRewards, ExportImages, ExportTextIcons,
-    dropIndex,
-    cardImagesPath, bountyIconsReady
+    dropIndex, cardImagesPath, bountyIconsReady, allPrices
   } = useMonitoring();
   const [worldstate, setWorldstate] = useState(null);
   const [locationBounties, setLocationBounties] = useState(null);
@@ -1613,11 +1613,104 @@ export default function Dashboard() {
 
   const WishlistModal = () => {
     const wishlist = inventoryData?.wishlist ?? [];
+    const [wishlistPrices, setWishlistPrices] = useState({});
+    const bundles = exportData?.ExportBundles || {};
+    const resources = exportData?.ExportResources || {};
+    const customs = exportData?.ExportCustoms || {};
+    const gear = exportData?.ExportGear || {};
+    // Build a combined lookup map for component price resolution
+    // Includes normalized paths (StoreItems prefix stripped) since bundle
+    // component typeNames use /Lotus/StoreItems/... but export entries use /Lotus/...
+    const itemLookup = useMemo(() => {
+      const map = {};
+      for (const src of [resources, customs, bundles, gear]) {
+        for (const [k, v] of Object.entries(src)) {
+          if (v?.platinumCost) {
+            map[k] = v;
+            const norm = k.replace('/Lotus/StoreItems/', '/Lotus/');
+            if (norm !== k) map[norm] = v;
+          }
+        }
+      }
+      return map;
+    }, [resources, customs, bundles, gear]);
+    // Normalize a typeName path: /Lotus/StoreItems/... -> /Lotus/...
+    const normalizePath = (path) => {
+      if (!path) return path;
+      return path.replace('/Lotus/StoreItems/', '/Lotus/');
+    };
+    useEffect(() => {
+      if (!showWishlistModal || wishlist.length === 0) return;
+      const fetchPrices = async () => {
+        const prices = {};
+        for (const item of wishlist) {
+          let price = null;
+          // 1. Check market prices (relics.run WFM data)
+          price = await getPrice(item.unique_name, item.name);
+          // 2. Check bundles (e.g. syandana packs) - look for platinumCost
+          if (!price) {
+            const bundle = bundles[item.unique_name];
+            price = bundle?.platinumCost;
+            // 3. If bundle has components but no direct price, calculate from components
+            if (!price && bundle?.components) {
+              let componentTotal = 0;
+              let allResolved = true;
+              for (const comp of bundle.components) {
+                const typeName = comp.typeName;
+                const resolved = itemLookup[typeName] || itemLookup[normalizePath(typeName)];
+                const compPrice = resolved?.platinumCost;
+                if (compPrice != null) {
+                  componentTotal += compPrice * (comp.purchaseQuantity || 1);
+                } else {
+                  allResolved = false;
+                }
+              }
+              if (allResolved && componentTotal > 0) {
+                const discount = bundle.packageDiscount || 0;
+                price = Math.ceil(componentTotal * (1 - discount));
+              }
+            }
+          }
+          // 4. Check resources and customs (e.g. shawzins, ship decorations)
+          if (!price) {
+            const resource = resources[item.unique_name];
+            price = resource?.platinumCost;
+          }
+          if (!price) {
+            const custom = customs[item.unique_name];
+            price = custom?.platinumCost;
+          }
+          // 5. Fallback for booster store items - DE static export has no platinumCost
+          // for individual booster items. Standard store prices (per DE):
+          // 3-day=40p, 7-day=80p, 30-day=200p (applies to all booster types)
+          if (!price && item.unique_name?.includes('Booster') && item.unique_name?.includes('StoreItem')) {
+            const is3Day = /3Day/.test(item.unique_name);
+            const is7Day = /7Day/.test(item.unique_name);
+            const is30Day = /30Day/.test(item.unique_name);
+            if (is3Day) price = 40;
+            else if (is7Day) price = 80;
+            else if (is30Day) price = 200;
+          }
+          prices[item.unique_name] = price ?? 0;
+        }
+        setWishlistPrices(prices);
+      };
+      fetchPrices();
+    }, [showWishlistModal, wishlist, bundles, resources, customs, itemLookup]);
+    const prices = { ...allPrices, ...wishlistPrices };
+    const totalPlat = wishlist.reduce((sum, item) => sum + (prices[item.unique_name] ?? 0), 0);
     return (
       <Modal
         isOpen={showWishlistModal}
         onClose={() => setShowWishlistModal(false)}
-        title={t('ui.dashboard.wishlist')}>
+        title={t('ui.dashboard.wishlist')}
+        headerAction={wishlist.length > 0 ?
+          <span className="flex items-center gap-1 text-xs text-kronos-accent font-bold">
+            <span>{t('ui.dashboard.total_cost')}:</span>
+            {iconSrc('Platinum') && <img src={iconSrc('Platinum')} className="w-4 h-4 object-contain" alt="" />}
+            {totalPlat}
+          </span> :
+          null}>
 
         {wishlist.length === 0 ?
           <p className="text-xs text-kronos-dim italic text-center py-8">{t('ui.dashboard.no_wishlist_items')}</p> :
@@ -1630,6 +1723,16 @@ export default function Dashboard() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-kronos-text uppercase" title={item.name}>{item.name}</p>
+                </div>
+                <div className="flex-shrink-0">
+                  {prices[item.unique_name] > 0 ?
+                    <span className="flex items-center justify-end gap-1 px-2 py-1 bg-kronos-panel/60 rounded text-xs text-kronos-accent font-bold">
+                      <img src={iconSrc('Platinum')} className="w-3 h-3 object-contain" alt="" />
+                      {prices[item.unique_name]}
+                    </span>
+                  :
+                    <span className="text-xs text-kronos-dim">-</span>
+                  }
                 </div>
               </div>
             )}

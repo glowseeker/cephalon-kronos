@@ -346,7 +346,7 @@ export function Select({ options, value, onChange, label, className = '' }) {
 }
 
 // Modal Component
-export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl' }) {
+export function Modal({ isOpen, onClose, title, headerAction, children, maxWidth = 'max-w-2xl' }) {
   useEffect(() => {
     if (isOpen) document.body.style.overflow = 'hidden';else
     document.body.style.overflow = 'unset';
@@ -366,6 +366,7 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl'
           <div>
             <h3 className="text-xl font-bold uppercase tracking-tight">{title}</h3>
           </div>
+          {headerAction && <div className="flex-shrink-0">{headerAction}</div>}
           <button
             onClick={onClose}
             className="p-2 hover:bg-white/5 rounded-full transition-colors text-kronos-dim hover:text-white">
