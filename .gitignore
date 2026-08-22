@@ -64,5 +64,5 @@ lib/soup/
 src-tauri/gen/
 
 # Internal issue list
+"Issue list.md"
 
-Issue list.md
