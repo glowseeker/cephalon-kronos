@@ -1281,7 +1281,13 @@
     "history.timeline_chart_title": "累積淨收益",
     "history.summary_title": "摘要",
     "history.log_title": "詳細日誌",
-    "history.scalar_items": "物品"
+    "history.scalar_items": "物品",
+    "inventory": {
+      "badge_mastered": "已精通"
+    },
+    "dashboard": {
+      "baro_hide_owned": "隱藏已擁有"
+    }
   },
   "inventory": {
     "filled": "Filled",
@@ -1478,5 +1484,6 @@
     "updates": "Updates",
     "version": "Version",
     "relic_picker_vaulted": "Include vaulted relics in picker"
-  }
+  },
+  "badge_mastered": "已掌握的"
 }

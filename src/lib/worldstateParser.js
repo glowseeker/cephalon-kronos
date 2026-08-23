@@ -340,7 +340,7 @@ export function extractNightwaveSeason(credName, locale = 'en') {
  *   - descendiaDesc   Descendia description map (key → description text)
  *   - completedChallengeIds  Set of Nightwave challenge UIDs the player has completed (for recovered challenges)
  */
-export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ExportImages, ExportUpgrades, archimedeaMap, descendiaDesc, completedChallengeIds, locale = 'en', i18nData = null }) {
+export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ExportImages, ExportUpgrades, ExportRecipes, ExportKeys, archimedeaMap, descendiaDesc, completedChallengeIds, locale = 'en', i18nData = null }) {
 
   const nightwaveRewards = ENWRawRewards || []
   const imagesMap = ExportImages || {}
@@ -1074,12 +1074,39 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         expiry: t.Expiry,
         expiryMs: expMs,
         active: actMs > 0 && Date.now() >= actMs && (expMs === 0 || Date.now() < expMs),
-        inventory: (t.Manifest || []).map(item => ({
-          item: resolveItemName(item.ItemType, mergedDict, uniqueNameToName),
-          uniqueName: item.ItemType,
-          ducats: item.PrimePrice ?? 0,
-          credits: item.RegularPrice ?? 0,
-        }))
+        inventory: (t.Manifest || []).map(item => {
+          // Follow the chain: worldstate path → ExportRecipes → resultType → ExportKeys
+          // to get the correct display name and icon.
+          let name = resolveItemName(item.ItemType, mergedDict, uniqueNameToName)
+          let icon = null
+
+          // Strip /StoreItems/ prefix to get the recipe key
+          const recipeKey = item.ItemType?.startsWith('/Lotus/StoreItems/')
+            ? item.ItemType.replace('/StoreItems/', '/')
+            : item.ItemType
+
+          const recipe = ExportRecipes?.[recipeKey]
+          if (recipe?.resultType) {
+            const keyEntry = ExportKeys?.[recipe.resultType]
+            if (keyEntry?.name) {
+              const localizedName = mergedDict[keyEntry.name] || mergedDict['/' + keyEntry.name]
+              if (localizedName && typeof localizedName === 'string' && !localizedName.startsWith('/Lotus/')) {
+                name = localizedName.replace(/<[^>]*>/g, '').trim()
+              }
+            }
+            if (keyEntry?.icon) {
+              icon = keyEntry.icon
+            }
+          }
+
+          return {
+            item: name,
+            uniqueName: item.ItemType,
+            icon,
+            ducats: item.PrimePrice ?? 0,
+            credits: item.RegularPrice ?? 0,
+          }
+        })
       }
     })(),
 

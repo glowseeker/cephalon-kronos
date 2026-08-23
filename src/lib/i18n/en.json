@@ -1287,7 +1287,13 @@
     "history.timeline_chart_title": "Cumulative Net Gain",
     "history.summary_title": "Summary",
     "history.log_title": "Detailed Log",
-    "history.scalar_items": "Items"
+    "history.scalar_items": "Items",
+    "inventory": {
+      "badge_mastered": "Mastered"
+    },
+    "dashboard": {
+      "baro_hide_owned": "Hide owned items"
+    }
   },
   "inventory": {
     "filled": "Filled",
@@ -1484,5 +1490,6 @@
     "updates": "Updates",
     "version": "Version",
     "relic_picker_vaulted": "Include vaulted relics in picker"
-  }
+  },
+  "badge_mastered": "Mastered"
 }

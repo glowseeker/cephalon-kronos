@@ -481,6 +481,8 @@ export default function MirroredMonitoringProvider({ children }) {
   const ENWRawRewards = useMemo(() => exportData?.ExportNightwave?.rewards || [], [exportData])
   const ExportImages = useMemo(() => exportData?.ExportImages ?? {}, [exportData])
   const ExportTextIcons = useMemo(() => exportData?.ExportTextIcons ?? {}, [exportData])
+  const ExportRecipes = useMemo(() => exportData?.ExportRecipes ?? {}, [exportData])
+  const ExportKeys = useMemo(() => exportData?.ExportKeys ?? {}, [exportData])
 
   const masteryProgress = useMemo(() => {
     if (!inventoryData) return 0
@@ -517,6 +519,7 @@ export default function MirroredMonitoringProvider({ children }) {
         const parsed = parseWorldstate(ws, {
           dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName,
           ES, ENWRawRewards, ExportImages, ExportUpgrades: exportData?.ExportUpgrades,
+          ExportRecipes: exportData?.ExportRecipes, ExportKeys: exportData?.ExportKeys,
           archimedeaMap, descendiaDesc,
           completedChallengeIds: new Set(inventoryData?.account?.completedChallengeIds || []),
           locale,
@@ -524,7 +527,7 @@ export default function MirroredMonitoringProvider({ children }) {
         setWorldState(parsed)
       }
     } catch (err) { }
-  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, archimedeaMap, descendiaDesc, inventoryData?.account?.completedChallengeIds])
+  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, ExportRecipes, ExportKeys, archimedeaMap, descendiaDesc, inventoryData?.account?.completedChallengeIds])
 
   useEffect(() => {
     if (Object.keys(dict || {}).length > 0) {

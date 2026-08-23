@@ -1280,7 +1280,13 @@
     "history.timeline_chart_title": "Gain net cumulé",
     "history.summary_title": "Résumé",
     "history.log_title": "Journal détaillé",
-    "history.scalar_items": "Objets"
+    "history.scalar_items": "Objets",
+    "inventory": {
+      "badge_mastered": "Maîtrisé"
+    },
+    "dashboard": {
+      "baro_hide_owned": "Masquer les possédés"
+    }
   },
   "inventory": {
     "filled": "Plein",
@@ -1477,5 +1483,6 @@
     "updates": "Mises à jour",
     "version": "Version",
     "relic_picker_vaulted": "Include vaulted relics in picker"
-  }
+  },
+  "badge_mastered": "Maîtrisé"
 }

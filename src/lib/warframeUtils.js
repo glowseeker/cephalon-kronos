@@ -813,7 +813,7 @@ function nameFromPath(path = '', locale = 'en') {
 // the real dict key so resolveItemName localizes the item without an EN fallback.
 const ITEM_LEAF_ALIAS = {
   InfestedAladNavCoordinate: '/Lotus/Language/Items/InfestedAladNavCodeName',
-  // DE's official worldState API sends "InfestedAladCoordinate" (no "Nav")  - 
+  // DE's official worldState API sends "InfestedAladCoordinate" (no "Nav")  -
   // same item, same dict key.
   InfestedAladCoordinate: '/Lotus/Language/Items/InfestedAladNavCodeName',
 };

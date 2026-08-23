@@ -1281,7 +1281,13 @@
     "history.timeline_chart_title": "กำไรสะสมสุทธิ",
     "history.summary_title": "สรุป",
     "history.log_title": "บันทึกโลย์ละเอียด",
-    "history.scalar_items": "ไอเท็ม"
+    "history.scalar_items": "ไอเท็ม",
+    "inventory": {
+      "badge_mastered": "เชี่ยวชาญ"
+    },
+    "dashboard": {
+      "baro_hide_owned": "ซ่อนของที่มี"
+    }
   },
   "inventory": {
     "filled": "Filled",
@@ -1478,5 +1484,6 @@
     "updates": "Updates",
     "version": "Version",
     "relic_picker_vaulted": "Include vaulted relics in picker"
-  }
+  },
+  "badge_mastered": "เชี่ยวชาญ"
 }

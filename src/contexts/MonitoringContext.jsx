@@ -255,6 +255,8 @@ export function MonitoringProvider({ children }) {
   const ENWRawRewards = useMemo(() => exportData?.ExportNightwave?.rewards || [], [exportData])
   const ExportImages = useMemo(() => exportData?.ExportImages ?? {}, [exportData])
   const ExportTextIcons = useMemo(() => exportData?.ExportTextIcons ?? {}, [exportData])
+  const ExportRecipes = useMemo(() => exportData?.ExportRecipes ?? {}, [exportData])
+  const ExportKeys = useMemo(() => exportData?.ExportKeys ?? {}, [exportData])
 
   // Mastery progress (0-100) computed once and shared between the notification
   // logic and Mastery.jsx so neither has to recalculate independently.
@@ -283,7 +285,7 @@ export function MonitoringProvider({ children }) {
     const tableNames = [
       'ExportWeapons', 'ExportWarframes', 'ExportSentinels',
       'ExportResources', 'ExportArcanes', 'ExportUpgrades',
-      'ExportNightwave', 'ExportBoosterPacks', 'ExportRecipes', 'ExportCustoms', 'ExportGear', 'ExportFlavour', 'ExportBundles',
+      'ExportNightwave', 'ExportBoosterPacks', 'ExportRecipes', 'ExportCustoms', 'ExportGear', 'ExportFlavour', 'ExportBundles', 'ExportRelics', 'ExportKeys',
       // warframe-items pre-resolved maps
       'WI_Warframes', 'WI_Weapons', 'WI_Sentinels',
       'WI_Upgrades', 'WI_Arcanes', 'WI_Resources',
@@ -674,11 +676,11 @@ export function MonitoringProvider({ children }) {
       const wsStr = await invoke('fetch_url', { url: OFFICIAL_API }).catch(() => null) || await invoke('fetch_url', { url: ORACLE_API }).catch(() => null)
       const ws = wsStr ? JSON.parse(wsStr) : null
       if (ws && dict) {
-        const parsed = parseWorldstate(ws, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, ExportUpgrades: exportData?.ExportUpgrades, archimedeaMap, descendiaDesc, completedChallengeIds: new Set(inventoryData?.account?.completedChallengeIds || []), locale, i18nData: i18nRef.current })
+        const parsed = parseWorldstate(ws, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, ExportUpgrades: exportData?.ExportUpgrades, ExportRecipes: exportData?.ExportRecipes, ExportKeys: exportData?.ExportKeys, archimedeaMap, descendiaDesc, completedChallengeIds: new Set(inventoryData?.account?.completedChallengeIds || []), locale, i18nData: i18nRef.current })
         setWorldState(parsed)
       }
     } catch (err) { }
-  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, archimedeaMap, descendiaDesc, inventoryData?.account?.completedChallengeIds])
+  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, ExportRecipes, ExportKeys, archimedeaMap, descendiaDesc, inventoryData?.account?.completedChallengeIds])
 
   useEffect(() => {
     if (Object.keys(dict || {}).length > 0) {

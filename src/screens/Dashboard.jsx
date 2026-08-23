@@ -25,7 +25,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useUi } from '../contexts/UiContext'
 import { resolveGameTerm } from '../lib/gameTerm'
-import { PageLayout, Card, Button, CardHeader, Tabs, Modal, Tooltip } from '../components/UI';
+import { PageLayout, Card, Button, CardHeader, Tabs, Modal, Tooltip, Toggle } from '../components/UI';
 import ModCard from '../components/ModCard';
 import {
   Package, DollarSign, RefreshCw,
@@ -1578,6 +1578,44 @@ export default function Dashboard() {
   const BaroModal = () => {
     const vt = worldstate?.voidTrader;
     const inventory = vt?.inventory;
+    const [hideOwned, setHideOwned] = useState(false);
+
+    const getBaroItemStatus = useCallback((item) => {
+      if (!inventoryData || !item?.uniqueName) return { owned: false, mastered: false };
+      const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const itemLeaf = norm(item.uniqueName.split('/').pop());
+      for (const it of (inventoryData.all ?? [])) {
+        if (!it.owned) continue;
+        if (norm(it.unique_name).includes(itemLeaf) || itemLeaf.includes(norm(it.unique_name).split('/').pop()) || norm(it.name) === norm(item.item)) {
+          return { owned: true, mastered: !!it.mastered };
+        }
+      }
+      if (rawInventory) {
+        const walk = (node) => {
+          if (Array.isArray(node)) { for (const v of node) { const r = walk(v); if (r) return r; } }
+          else if (node && typeof node === 'object') { for (const v of Object.values(node)) { const r = walk(v); if (r) return r; } }
+          else if (typeof node === 'string' && node.startsWith('/Lotus')) {
+            if (norm(node.split('/').pop()) === itemLeaf) return { owned: true, mastered: false };
+          }
+          return null;
+        };
+        const rawResult = walk(rawInventory);
+        if (rawResult) return rawResult;
+      }
+      return { owned: false, mastered: false };
+    }, [inventoryData, rawInventory]);
+
+    const filteredInventory = useMemo(() => {
+      if (!inventory) return [];
+      return inventory.filter(item => {
+        if (!item.item && !item.ducats && !item.credits) return false;
+        if (hideOwned) {
+          const { owned } = getBaroItemStatus(item);
+          if (owned) return false;
+        }
+        return true;
+      });
+    }, [inventory, hideOwned, getBaroItemStatus]);
 
     return (
       <Modal
@@ -1585,27 +1623,44 @@ export default function Dashboard() {
         onClose={() => setShowBaroModal(false)}
         title={t('ui.dashboard.baro_inventory')}>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {inventory?.map((item, idx) =>
-            <div key={idx} className="bg-kronos-panel/40 p-2 rounded flex items-center gap-3 border border-transparent hover:border-kronos-accent/20 transition-all">
-              <div className="w-12 h-12 bg-black/40 rounded flex items-center justify-center p-1 flex-shrink-0">
-                <img src={resolveAnyImage(item, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-bold text-kronos-text uppercase truncate" title={item.item}>{item.item}</p>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-[10px] flex items-center gap-1 font-bold text-yellow-400">
-                    {iconSrc('Ducats') && <img src={iconSrc('Ducats')} className="w-3.5 h-3.5 object-contain" alt="" />}
-                    {item.ducats} <span className="text-kronos-dim text-[8px] uppercase">{t('ui.dashboard.ducats')}</span>
-                  </span>
-                  <span className="text-[10px] flex items-center gap-1 font-bold text-blue-400">
-                    {iconSrc('Credits') && <img src={iconSrc('Credits')} className="w-3.5 h-3.5 object-contain" alt="" />}
-                    {item.credits.toLocaleString()} <span className="text-kronos-dim text-[8px] uppercase">{t('ui.dashboard.credits')}</span>
-                  </span>
+        {inventoryData && (
+          <div className="mb-3">
+            <Toggle checked={hideOwned} onChange={setHideOwned} label={t('ui.dashboard.baro_hide_owned')} />
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {filteredInventory.map((item, idx) => {
+            const { owned, mastered } = getBaroItemStatus(item);
+            return (
+              <div key={idx} className={`relative bg-kronos-panel/40 p-3 rounded-lg flex flex-col items-center text-center border transition-all ${mastered ? 'border-purple-500/30 bg-purple-500/5' : owned ? 'border-green-500/30 bg-green-500/5' : 'border-transparent hover:border-kronos-accent/20'}`}>
+                {(owned || mastered) && (
+                  <div className={`absolute top-2 right-2 z-10 rounded-full px-1.5 py-0.5 flex items-center gap-1 ${mastered ? 'bg-purple-500/20 text-purple-400' : 'bg-green-500/20 text-green-400'}`}>
+                    <Check size={10} strokeWidth={3} />
+                    <span className="text-[9px] font-bold uppercase">{mastered ? t('ui.inventory.badge_mastered') : t('ui.inventory.badge_owned')}</span>
+                  </div>
+                )}
+                <div className="w-full aspect-square bg-black/40 rounded-lg flex items-center justify-center p-2 mb-2">
+                  <img src={item.icon ? (ExportImages?.[item.icon]?.contentHash ? `https://content.warframe.com/PublicExport${item.icon}!${ExportImages[item.icon].contentHash}` : `https://browse.wf${item.icon}`) : resolveAnyImage(item, EI, nameToImage, uniqueNameToName)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
+                </div>
+                <p className="text-xs font-bold text-kronos-text uppercase leading-tight w-full" title={item.item || item.uniqueName}>{item.item || item.uniqueName}</p>
+                <div className="flex items-center justify-center gap-2 mt-1.5">
+                  {item.ducats > 0 &&
+                    <span className="text-[11px] flex items-center gap-0.5 font-bold text-yellow-400">
+                      {iconSrc('Ducats') && <img src={iconSrc('Ducats')} className="w-3.5 h-3.5 object-contain" alt="" />}
+                      {item.ducats}
+                    </span>
+                  }
+                  {item.credits > 0 &&
+                    <span className="text-[11px] flex items-center gap-0.5 font-bold text-blue-400">
+                      {iconSrc('Credits') && <img src={iconSrc('Credits')} className="w-3.5 h-3.5 object-contain" alt="" />}
+                      {item.credits.toLocaleString()}
+                    </span>
+                  }
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })}
         </div>
       </Modal>);
 
@@ -1719,7 +1774,7 @@ export default function Dashboard() {
             {wishlist.map((item, idx) =>
               <div key={idx} className="bg-kronos-panel/40 p-3 rounded flex items-center gap-4 border border-transparent hover:border-kronos-accent/20 transition-all">
                 <div className="w-16 h-16 bg-black/40 rounded flex items-center justify-center p-1 flex-shrink-0">
-                  <img src={resolveAnyImage(item, EI, nameToImage)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
+                  <img src={resolveAnyImage(item, EI, nameToImage, uniqueNameToName)} alt="" className="max-w-full max-h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.onerror = null; }} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-kronos-text uppercase" title={item.name}>{item.name}</p>

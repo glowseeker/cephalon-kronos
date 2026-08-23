@@ -1281,7 +1281,13 @@
     "history.timeline_chart_title": "누적 순이익",
     "history.summary_title": "요약",
     "history.log_title": "상세 로그",
-    "history.scalar_items": "아이템"
+    "history.scalar_items": "아이템",
+    "inventory": {
+      "badge_mastered": "숙련"
+    },
+    "dashboard": {
+      "baro_hide_owned": "보유한 항목 숨기기"
+    }
   },
   "inventory": {
     "filled": "Filled",
@@ -1478,5 +1484,6 @@
     "updates": "Updates",
     "version": "Version",
     "relic_picker_vaulted": "Include vaulted relics in picker"
-  }
+  },
+  "badge_mastered": "숙련"
 }

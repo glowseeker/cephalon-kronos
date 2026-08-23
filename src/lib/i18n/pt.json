@@ -1281,7 +1281,13 @@
     "history.timeline_chart_title": "Lucro líquido acumulado",
     "history.summary_title": "Resumo",
     "history.log_title": "Registro detalhado",
-    "history.scalar_items": "Itens"
+    "history.scalar_items": "Itens",
+    "inventory": {
+      "badge_mastered": "Dominado"
+    },
+    "dashboard": {
+      "baro_hide_owned": "Ocultar possuídos"
+    }
   },
   "inventory": {
     "filled": "Filled",
@@ -1478,5 +1484,6 @@
     "updates": "Updates",
     "version": "Version",
     "relic_picker_vaulted": "Include vaulted relics in picker"
-  }
+  },
+  "badge_mastered": "Dominado"
 }

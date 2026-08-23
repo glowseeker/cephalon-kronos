@@ -1281,7 +1281,13 @@
     "history.timeline_chart_title": "Skumulowany czysty zysk",
     "history.summary_title": "Podsumowanie",
     "history.log_title": "Szczegółowy dziennik",
-    "history.scalar_items": "Przedmioty"
+    "history.scalar_items": "Przedmioty",
+    "inventory": {
+      "badge_mastered": "Opanowane"
+    },
+    "dashboard": {
+      "baro_hide_owned": "Ukryj posiadane"
+    }
   },
   "inventory": {
     "filled": "Filled",
@@ -1478,5 +1484,6 @@
     "updates": "Updates",
     "version": "Version",
     "relic_picker_vaulted": "Include vaulted relics in picker"
-  }
+  },
+  "badge_mastered": "Opanowane"
 }

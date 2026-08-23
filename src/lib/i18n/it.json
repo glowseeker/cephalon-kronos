@@ -1281,7 +1281,13 @@
     "history.timeline_chart_title": "Guadagno netto cumulativo",
     "history.summary_title": "Riepilogo",
     "history.log_title": "Registro dettagliato",
-    "history.scalar_items": "Oggetti"
+    "history.scalar_items": "Oggetti",
+    "inventory": {
+      "badge_mastered": "Padroneggiato"
+    },
+    "dashboard": {
+      "baro_hide_owned": "Nascondi posseduti"
+    }
   },
   "inventory": {
     "filled": "Filled",
@@ -1478,5 +1484,6 @@
     "updates": "Updates",
     "version": "Version",
     "relic_picker_vaulted": "Include vaulted relics in picker"
-  }
+  },
+  "badge_mastered": "Masterizzato"
 }

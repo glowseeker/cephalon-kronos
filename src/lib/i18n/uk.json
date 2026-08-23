@@ -1281,7 +1281,13 @@
     "history.timeline_chart_title": "Накопичений чистий прибуток",
     "history.summary_title": "Підсумок",
     "history.log_title": "Детальний журнал",
-    "history.scalar_items": "Предмети"
+    "history.scalar_items": "Предмети",
+    "inventory": {
+      "badge_mastered": "Опановано"
+    },
+    "dashboard": {
+      "baro_hide_owned": "Приховати наявні"
+    }
   },
   "inventory": {
     "filled": "Filled",
@@ -1478,5 +1484,6 @@
     "updates": "Updates",
     "version": "Version",
     "relic_picker_vaulted": "Include vaulted relics in picker"
-  }
+  },
+  "badge_mastered": "Освоєний"
 }
