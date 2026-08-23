@@ -1282,12 +1282,9 @@
     "history.summary_title": "Итого",
     "history.log_title": "Подробный журнал",
     "history.scalar_items": "Предметы",
-    "inventory": {
-      "badge_mastered": "Освоено"
-    },
-    "dashboard": {
-      "baro_hide_owned": "Скрыть имеющиеся"
-    }
+    "ui.dashboard.baro_hide_owned": "Скрыть имеющиеся",
+    "ui.dashboard.nightwave_stale_export": "Данные экспорта устарели, награды скоро обновятся",
+    "ui.inventory.badge_mastered": "Освоено"
   },
   "inventory": {
     "filled": "Filled",

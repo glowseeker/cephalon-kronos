@@ -479,6 +479,7 @@ export default function MirroredMonitoringProvider({ children }) {
   const ES = useMemo(() => exportData?.ExportSyndicates ?? {}, [exportData])
   const ENW = useMemo(() => toMap(exportData?.ExportNightwave, 'rewards'), [exportData])
   const ENWRawRewards = useMemo(() => exportData?.ExportNightwave?.rewards || [], [exportData])
+  const ENWAffiliationTag = useMemo(() => exportData?.ExportNightwave?.affiliationTag || null, [exportData])
   const ExportImages = useMemo(() => exportData?.ExportImages ?? {}, [exportData])
   const ExportTextIcons = useMemo(() => exportData?.ExportTextIcons ?? {}, [exportData])
   const ExportRecipes = useMemo(() => exportData?.ExportRecipes ?? {}, [exportData])
@@ -518,7 +519,7 @@ export default function MirroredMonitoringProvider({ children }) {
       if (ws && dict) {
         const parsed = parseWorldstate(ws, {
           dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName,
-          ES, ENWRawRewards, ExportImages, ExportUpgrades: exportData?.ExportUpgrades,
+          ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportUpgrades: exportData?.ExportUpgrades,
           ExportRecipes: exportData?.ExportRecipes, ExportKeys: exportData?.ExportKeys,
           archimedeaMap, descendiaDesc,
           completedChallengeIds: new Set(inventoryData?.account?.completedChallengeIds || []),
@@ -527,7 +528,7 @@ export default function MirroredMonitoringProvider({ children }) {
         setWorldState(parsed)
       }
     } catch (err) { }
-  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ExportImages, ExportRecipes, ExportKeys, archimedeaMap, descendiaDesc, inventoryData?.account?.completedChallengeIds])
+  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportRecipes, ExportKeys, archimedeaMap, descendiaDesc, inventoryData?.account?.completedChallengeIds])
 
   useEffect(() => {
     if (Object.keys(dict || {}).length > 0) {

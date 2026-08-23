@@ -1282,12 +1282,9 @@
     "history.summary_title": "Özet",
     "history.log_title": "Detaylı günlük",
     "history.scalar_items": "Öğeler",
-    "inventory": {
-      "badge_mastered": "Ustalaşılmış"
-    },
-    "dashboard": {
-      "baro_hide_owned": "Sahip olunanları gizle"
-    }
+    "ui.dashboard.baro_hide_owned": "Sahip olunanları gizle",
+    "ui.dashboard.nightwave_stale_export": "Disa aktarim verisi eski, oduller yakinda guncellenecek",
+    "ui.inventory.badge_mastered": "Ustalaşılmış"
   },
   "inventory": {
     "filled": "Filled",

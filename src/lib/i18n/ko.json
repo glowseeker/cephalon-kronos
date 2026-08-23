@@ -1282,12 +1282,9 @@
     "history.summary_title": "요약",
     "history.log_title": "상세 로그",
     "history.scalar_items": "아이템",
-    "inventory": {
-      "badge_mastered": "숙련"
-    },
-    "dashboard": {
-      "baro_hide_owned": "보유한 항목 숨기기"
-    }
+    "ui.dashboard.baro_hide_owned": "보유한 항목 숨기기",
+    "ui.dashboard.nightwave_stale_export": "내보내기 데이터가 오래됨, 보상이 곧 업데이트됩니다",
+    "ui.inventory.badge_mastered": "숙련"
   },
   "inventory": {
     "filled": "Filled",

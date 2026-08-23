@@ -340,7 +340,7 @@ export function extractNightwaveSeason(credName, locale = 'en') {
  *   - descendiaDesc   Descendia description map (key → description text)
  *   - completedChallengeIds  Set of Nightwave challenge UIDs the player has completed (for recovered challenges)
  */
-export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ExportImages, ExportUpgrades, ExportRecipes, ExportKeys, archimedeaMap, descendiaDesc, completedChallengeIds, locale = 'en', i18nData = null }) {
+export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportUpgrades, ExportRecipes, ExportKeys, archimedeaMap, descendiaDesc, completedChallengeIds, locale = 'en', i18nData = null }) {
 
   const nightwaveRewards = ENWRawRewards || []
   const imagesMap = ExportImages || {}
@@ -766,7 +766,10 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
       }))
     } : null,
 
-    nightwave: raw.SeasonInfo ? {
+    nightwave: raw.SeasonInfo ? (() => {
+      const wsAffTag = raw.SeasonInfo.AffiliationTag || ''
+      const exportStale = ENWAffiliationTag && wsAffTag && ENWAffiliationTag !== wsAffTag
+      return {
       id: raw.SeasonInfo._id?.$oid || raw.SeasonInfo._id,
       activation: raw.SeasonInfo.Activation,
       expiry: (() => {
@@ -778,12 +781,26 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
       season: raw.SeasonInfo.Season,
       phase: raw.SeasonInfo.Phase,
       params: raw.SeasonInfo.Params,
-      affiliationTag: raw.SeasonInfo.AffiliationTag,
+      affiliationTag: wsAffTag,
+      exportStale,
       credType: (() => {
         const credReward = nightwaveRewards.find(r => r.name?.includes('Nora') && r.name?.includes('Cred'))
         return credReward?.uniqueName || null
       })(),
       name: (() => {
+        // When the export is stale, try to derive the name from the worldstate
+        // affiliation tag (e.g. "RadioLegionAmirV2Syndicate" → "Amir V2").
+        if (exportStale && wsAffTag) {
+          const tagMatch = wsAffTag.match(/^RadioLegion(.+?)Syndicate$/)
+          if (tagMatch) {
+            const tagSeason = tagMatch[1]
+              .replace(/Intermission/gi, 'Intermission ')
+              .replace(/(\d+)/g, ' $1')
+              .replace(/\s+/g, ' ')
+              .trim()
+            if (tagSeason) return tagSeason
+          }
+        }
         const credReward = nightwaveRewards.find(r => r.name?.includes('Nora') && r.name?.includes('Cred'))
         if (credReward) {
           const credName = dict[credReward.name] || credReward.name || ''
@@ -795,7 +812,7 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         const legionKey = '/Lotus/Language/Syndicates/RadioLegionTitle'
         return dict?.[legionKey] || dict?.[legionKey.replace(/^\//, '')] || 'Nightwave'
       })(),
-      rewards: nightwaveRewards.slice(0, 90).map((r, idx) => {
+      rewards: exportStale ? [] : nightwaveRewards.slice(0, 90).map((r, idx) => {
         const iconPath = r.icon || null
         const eiImage = EI[r.uniqueName] || null
         const exportImageEntry = imagesMap[iconPath] || {}
@@ -884,7 +901,8 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
             }
           })
       })()
-    } : null,
+    }
+    })() : null,
 
     archimedeas: (raw.Conquests || []).map(c => ({
       id: c._id?.$oid || c._id,

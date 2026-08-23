@@ -1282,12 +1282,9 @@
     "history.summary_title": "สรุป",
     "history.log_title": "บันทึกโลย์ละเอียด",
     "history.scalar_items": "ไอเท็ม",
-    "inventory": {
-      "badge_mastered": "เชี่ยวชาญ"
-    },
-    "dashboard": {
-      "baro_hide_owned": "ซ่อนของที่มี"
-    }
+    "ui.dashboard.baro_hide_owned": "ซ่อนของที่มี",
+    "ui.dashboard.nightwave_stale_export": "ข้อมูลส่งออกล้าสมัย, รางวัลจะอัปเดตเร็วๆ นี้",
+    "ui.inventory.badge_mastered": "เชี่ยวชาญ"
   },
   "inventory": {
     "filled": "Filled",

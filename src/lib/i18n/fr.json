@@ -1281,12 +1281,9 @@
     "history.summary_title": "Résumé",
     "history.log_title": "Journal détaillé",
     "history.scalar_items": "Objets",
-    "inventory": {
-      "badge_mastered": "Maîtrisé"
-    },
-    "dashboard": {
-      "baro_hide_owned": "Masquer les possédés"
-    }
+    "ui.dashboard.baro_hide_owned": "Masquer les possédés",
+    "ui.dashboard.nightwave_stale_export": "Donnees d exportation obsoletes, recompenses a jour bientot",
+    "ui.inventory.badge_mastered": "Maîtrisé"
   },
   "inventory": {
     "filled": "Plein",

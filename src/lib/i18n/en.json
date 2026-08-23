@@ -1288,12 +1288,9 @@
     "history.summary_title": "Summary",
     "history.log_title": "Detailed Log",
     "history.scalar_items": "Items",
-    "inventory": {
-      "badge_mastered": "Mastered"
-    },
-    "dashboard": {
-      "baro_hide_owned": "Hide owned items"
-    }
+    "ui.dashboard.baro_hide_owned": "Hide owned items",
+    "ui.dashboard.nightwave_stale_export": "Export data outdated, rewards updating soon",
+    "ui.inventory.badge_mastered": "Mastered"
   },
   "inventory": {
     "filled": "Filled",

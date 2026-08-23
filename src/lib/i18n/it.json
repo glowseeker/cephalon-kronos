@@ -1282,12 +1282,9 @@
     "history.summary_title": "Riepilogo",
     "history.log_title": "Registro dettagliato",
     "history.scalar_items": "Oggetti",
-    "inventory": {
-      "badge_mastered": "Padroneggiato"
-    },
-    "dashboard": {
-      "baro_hide_owned": "Nascondi posseduti"
-    }
+    "ui.dashboard.baro_hide_owned": "Nascondi posseduti",
+    "ui.dashboard.nightwave_stale_export": "Dati di esportazione obsoleti, ricompense in aggiornamento",
+    "ui.inventory.badge_mastered": "Padroneggiato"
   },
   "inventory": {
     "filled": "Filled",

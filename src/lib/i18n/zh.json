@@ -1282,12 +1282,9 @@
     "history.summary_title": "摘要",
     "history.log_title": "详细日志",
     "history.scalar_items": "物品",
-    "inventory": {
-      "badge_mastered": "已精通"
-    },
-    "dashboard": {
-      "baro_hide_owned": "隐藏已拥有"
-    }
+    "ui.dashboard.baro_hide_owned": "隐藏已拥有",
+    "ui.dashboard.nightwave_stale_export": "导出数据已过时, 奖励即将更新",
+    "ui.inventory.badge_mastered": "已精通"
   },
   "inventory": {
     "filled": "Filled",

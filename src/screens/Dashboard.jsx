@@ -893,7 +893,27 @@ export default function Dashboard() {
     const nwStandingTotal = nwAffiliation?.Standing ?? 0;
     const currentRank = nwAffiliation?.Title ?? nw.phase ?? 0;
     const miscItems = hasInventory ? rawInventory?.MiscItems || [] : [];
-    const credCount = hasInventory ? miscItems.find((i) => i.ItemType === nw.credType)?.ItemCount ?? 0 : 0;
+    const credCount = hasInventory ? (() => {
+      const exact = miscItems.find((i) => i.ItemType === nw.credType);
+      if (exact) return exact.ItemCount ?? 0;
+      // When the export is stale, credType points to the old season's creds.
+      // Find the highest-numbered Nora*Intermission* creds as a fallback.
+      if (nw.exportStale) {
+        const WORD_NUMS = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19, twenty:20 };
+        let best = null, bestNum = -1;
+        for (const i of miscItems) {
+          const un = i.ItemType || '';
+          if (!un.includes('Nora') || !un.includes('Cred')) continue;
+          const m = un.match(/(?:Intermission|Season)(\w+?)(?:Creds)?$/i);
+          if (!m) continue;
+          const word = m[1].toLowerCase();
+          const num = WORD_NUMS[word] ?? parseInt(word, 10);
+          if (!isNaN(num) && num > bestNum) { bestNum = num; best = i; }
+        }
+        return best?.ItemCount ?? 0;
+      }
+      return 0;
+    })() : 0;
     const STANDING_PER_LEVEL = 10000;
     const standingInLevelRaw = hasInventory ? Math.max(0, nwStandingTotal - currentRank * STANDING_PER_LEVEL) : 0;
     // Handle overflow - if standing exceeds per-level max, flip to next rank
@@ -925,6 +945,9 @@ export default function Dashboard() {
           {/* Left: Status info */}
           <div className="w-1/4 bg-kronos-panel/40 p-3 rounded-lg border border-white/5 flex flex-col">
             <p className="text-sm font-bold text-kronos-accent uppercase tracking-tight text-center mb-3">{nw.name}</p>
+            {nw.exportStale && (
+              <p className="text-[10px] text-yellow-400/80 text-center mb-2 -mt-2">{t('ui.dashboard.nightwave_stale_export')}</p>
+            )}
             <div className="flex-1 flex flex-col justify-between">
               {hasInventory ?
                 <>

@@ -1282,12 +1282,9 @@
     "history.summary_title": "Podsumowanie",
     "history.log_title": "Szczegółowy dziennik",
     "history.scalar_items": "Przedmioty",
-    "inventory": {
-      "badge_mastered": "Opanowane"
-    },
-    "dashboard": {
-      "baro_hide_owned": "Ukryj posiadane"
-    }
+    "ui.dashboard.baro_hide_owned": "Ukryj posiadane",
+    "ui.dashboard.nightwave_stale_export": "Dane eksportu nieaktualne, nagrody wkrotce zaktualizowane",
+    "ui.inventory.badge_mastered": "Opanowane"
   },
   "inventory": {
     "filled": "Filled",

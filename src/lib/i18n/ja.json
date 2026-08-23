@@ -1282,12 +1282,9 @@
     "history.summary_title": "概要",
     "history.log_title": "詳細ログ",
     "history.scalar_items": "アイテム",
-    "inventory": {
-      "badge_mastered": "マスター"
-    },
-    "dashboard": {
-      "baro_hide_owned": "所持品を非表示"
-    }
+    "ui.dashboard.baro_hide_owned": "所持品を非表示",
+    "ui.dashboard.nightwave_stale_export": "エクスポートデータが古い, 報酬は間もなく更新されます",
+    "ui.inventory.badge_mastered": "マスター"
   },
   "inventory": {
     "filled": "Filled",

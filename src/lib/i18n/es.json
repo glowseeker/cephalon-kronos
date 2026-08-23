@@ -1282,12 +1282,9 @@
     "history.summary_title": "Resumen",
     "history.log_title": "Registro detallado",
     "history.scalar_items": "Objetos",
-    "inventory": {
-      "badge_mastered": "Dominado"
-    },
-    "dashboard": {
-      "baro_hide_owned": "Ocultar poseídos"
-    }
+    "ui.dashboard.baro_hide_owned": "Ocultar poseídos",
+    "ui.dashboard.nightwave_stale_export": "Datos de exportacion obsoletos, recompensas actualizandose pronto",
+    "ui.inventory.badge_mastered": "Dominado"
   },
   "inventory": {
     "filled": "Filled",
