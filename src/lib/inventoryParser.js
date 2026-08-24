@@ -2477,14 +2477,18 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
   }
 
   // ── Nightwave Challenge Progress ──
-  // raw.ChallengeProgress is an array of { Challenge, Progress, Completed } entries
-  // from the player profile export. We build a Set of completed challenge UIDs
-  // (the leaf segment of the Challenge path, e.g. "Challenge_XYZ" → "XYZ").
-  const completedChallengeIds = new Set()
+  // ChallengeProgress is an array of { Name, Progress, Completed } entries from
+  // the player profile export. The `Name` field is the challenge leaf UID
+  // (e.g. "SeasonDailyAimGlide"), and `Progress` indicates how far the player
+  // has progressed. We store a Map of leaf UID -> progress value so the
+  // worldstate parser can compare against ExportChallenges.requiredCount
+  // to determine actual completion status.
+  // SeasonChallengeHistory also exists but records ALL challenges ever encountered,
+  // not just completed ones, so it cannot be used as a completion indicator on its own.
+  const challengeProgress = new Map()
   for (const cp of (raw.ChallengeProgress ?? [])) {
-    if (cp.Completed && cp.Challenge) {
-      const uid = cp.Challenge.replace(/.*\//, '')
-      completedChallengeIds.add(uid)
+    if (cp.Name && typeof cp.Progress === 'number') {
+      challengeProgress.set(cp.Name, cp.Progress)
     }
   }
 
@@ -2544,7 +2548,8 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
       orokin_catalyst: catalystCount,
       nightwave_standing: nightwaveStanding,
       nightwave_title: nightwaveTitle,
-      completedChallengeIds: Array.from(completedChallengeIds),
+      completedChallengeIds: Array.from(challengeProgress.keys()),
+      challengeProgress: Object.fromEntries(challengeProgress),
       endo: raw.FusionPoints ?? 0,
     },
     wishlist,
