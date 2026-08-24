@@ -26,6 +26,7 @@
     "lucide-react": "^0.344.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1",
     "warframe-items": "^1.1269.87",
     "warframe-public-export-plus": "latest"

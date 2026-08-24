@@ -925,7 +925,12 @@ export default function Dashboard() {
       Weekly: t('ui.dashboard.challenge_weekly'),
       'Elite Weekly': t('ui.dashboard.challenge_elite_weekly'),
     }[cat] || cat);
-    const grouped = (nw.challenges || []).reduce((acc, c) => {
+    const allChallenges = nw.challenges || [];
+    const currentChallenges = allChallenges.filter(c => !c.expired);
+    const expiredIncomplete = allChallenges.filter(c => c.expired && !c.completed);
+    const currentCompleted = currentChallenges.filter(c => c.completed).length;
+
+    const grouped = currentChallenges.reduce((acc, c) => {
       let cat = 'Daily';
       if (c.isElite || c.xp >= 7000) cat = 'Elite Weekly'; else
         if (c.xp >= 4500) cat = 'Weekly';
@@ -1049,31 +1054,45 @@ export default function Dashboard() {
         </div>
 
         {/* Challenges Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-          {categories.flatMap((cat) =>
-            (grouped[cat] || []).map((c, idx) =>
-              <div key={`${cat}-${idx}`} className={`bg-kronos-panel/40 p-2 rounded border border-white/5 hover:border-kronos-accent/20 transition-all ${c.completed ? 'opacity-60' : ''}`}>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${cat === 'Elite Weekly' ? 'bg-yellow-500/20 text-yellow-400' : cat === 'Weekly' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
-                    {categoryLabel(cat)}
-                  </span>
-                  <span className="text-[10px] text-kronos-accent font-black">{c.xp.toLocaleString()}{t('ui.inventory.sort_xp')}</span>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-[10px] font-black uppercase text-kronos-accent tracking-widest">
+              {t('ui.dashboard.challenges', { completed: currentCompleted, total: currentChallenges.length })}
+            </h4>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {categories.flatMap((cat) =>
+              (grouped[cat] || []).map((c, idx) =>
+                <div key={`${cat}-${idx}`} className={`bg-kronos-panel/40 p-2 rounded border transition-all ${c.completed ? 'border-green-500/30 bg-green-500/5' : 'border-white/5 hover:border-kronos-accent/20'}`}>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${cat === 'Elite Weekly' ? 'bg-yellow-500/20 text-yellow-400' : cat === 'Weekly' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
+                      {categoryLabel(cat)}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {c.completed && (
+                        <svg className="w-3.5 h-3.5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      <span className="text-[10px] text-kronos-accent font-black">{c.xp.toLocaleString()}{t('ui.inventory.sort_xp')}</span>
+                    </div>
+                  </div>
+                  <p className="text-sm font-bold text-kronos-text leading-tight mb-1.5">{c.name}</p>
+                  <p className="text-xs text-kronos-dim/80 leading-relaxed">{c.desc}</p>
                 </div>
-                <p className="text-sm font-bold text-kronos-text leading-tight mb-1.5">{c.name}</p>
-                <p className="text-xs text-kronos-dim/80 leading-relaxed">{c.desc}</p>
-              </div>
-            )
-          )}
+              )
+            )}
+          </div>
         </div>
 
-        {/* Recovered Challenges - from previous weeks not yet completed */}
-        {nw.recovered && nw.recovered.length > 0 &&
+        {/* Recovered Challenges - expired weekly challenges not yet completed */}
+        {expiredIncomplete.length > 0 &&
           <div className="mt-4">
             <h4 className="text-[10px] font-black uppercase text-kronos-accent tracking-widest mb-2">
-              {t('ui.dashboard.nightwave_recovered', { count: nw.recovered.length })}
+              {t('ui.dashboard.nightwave_recovered', { count: expiredIncomplete.length })}
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-              {nw.recovered.map((c, idx) =>
+              {expiredIncomplete.map((c, idx) =>
                 <div key={`recovered-${idx}`} className="bg-kronos-panel/40 p-2 rounded border border-white/5 hover:border-kronos-accent/20 transition-all">
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${c.isElite ? 'bg-yellow-500/20 text-yellow-400' : 'bg-blue-500/20 text-blue-400'}`}>
@@ -1579,14 +1598,18 @@ export default function Dashboard() {
             {baroIcon ? <img src={baroIcon} className="w-5 h-5 object-contain" alt="" /> : <ShoppingBag size={16} className="text-kronos-accent flex-shrink-0" />}
             <p className="font-bold text-sm uppercase">{resolveGameTerm('/Lotus/Language/G1Quests/VoidTraderName', locale)}</p>
           </div>
-          {vt.active && vt.inventory?.length > 0 ?
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black text-kronos-text flex items-center gap-0.5">
+              {iconSrc('Ducats') && <img src={iconSrc('Ducats')} className="w-3.5 h-3.5 object-contain" alt="" />}
+              {inventoryData?.account?.ducats ?? 0}
+            </span>
+            {vt.active && vt.inventory?.length > 0 ?
             <button
               onClick={() => setShowBaroModal(true)}
               className="text-[10px] bg-kronos-accent/20 text-kronos-accent font-bold px-2 py-0.5 rounded uppercase hover:bg-kronos-accent/30 transition-colors">{t('nav.inventory')}
-
-
             </button> :
             null}
+          </div>
         </div>
         <div className="bg-kronos-panel/40 rounded p-2">
           <p className="text-sm font-bold text-kronos-text uppercase">{vt.node}</p>
@@ -1645,6 +1668,18 @@ export default function Dashboard() {
         isOpen={showBaroModal}
         onClose={() => setShowBaroModal(false)}
         title={t('ui.dashboard.baro_inventory')}>
+
+        {/* Player ducats + credits */}
+        <div className="flex items-center gap-4 mb-3 p-2 bg-kronos-panel/30 rounded-lg">
+          <span className="text-xs font-black text-kronos-text flex items-center gap-1">
+            {iconSrc('Ducats') && <img src={iconSrc('Ducats')} className="w-4 h-4 object-contain" alt="" />}
+            {inventoryData?.account?.ducats ?? 0}
+          </span>
+          <span className="text-xs font-black text-kronos-text flex items-center gap-1">
+            {iconSrc('Credits') && <img src={iconSrc('Credits')} className="w-4 h-4 object-contain" alt="" />}
+            {(inventoryData?.account?.credits ?? 0).toLocaleString()}
+          </span>
+        </div>
 
         {inventoryData && (
           <div className="mb-3">

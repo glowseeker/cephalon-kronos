@@ -2532,6 +2532,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
       mastery_rank: playerLevel,
       credits: raw.RegularCredits ?? 0,
       platinum: raw.PremiumCredits ?? 0,
+      ducats: (raw.MiscItems || []).find(i => i?.ItemType === '/Lotus/Types/Items/MiscItems/PrimeBucks')?.ItemCount ?? 0,
       riven_capacity: 15 + playerLevel + (rivenBin.Extra ?? 0),
       void_traces: voidTraces,
       void_traces_max: voidTracesMax,
@@ -2827,7 +2828,7 @@ export function parseInventory(raw, exports, dict, locale = 'en', i18nData = nul
  * → "Axi P Relic (Radiant)").
  * Called before parseInventory groups relics by base name.
  */
-function relicNameFromPath(path, ERel = {}) {
+export function relicNameFromPath(path, ERel = {}) {
   const leaf = path.split('/').at(-1) ?? path;
   const entry = ERel[path];
 

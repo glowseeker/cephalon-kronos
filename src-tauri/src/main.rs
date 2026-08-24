@@ -557,22 +557,34 @@ async fn diff_and_save_inventory(new_raw: Value) -> Result<Option<Value>, String
     let snapshot_str = serde_json::to_string(&new_raw).map_err(|e| e.to_string())?;
     fs::write(&snapshot_path, &snapshot_str).map_err(|e| e.to_string())?;
 
-    // If no previous snapshot, nothing to diff
-    let prev = match prev_raw {
-        Some(p) => p,
-        None => return Ok(None),
-    };
-
     // Build the diff
     let now_ms = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as u64;
 
-    let diff = diff_inventory(&prev, &new_raw, now_ms);
-    if diff.is_null() {
-        return Ok(None);
-    }
+    // If no previous snapshot, write a baseline entry so history always has at least one row.
+    let diff = match prev_raw {
+        Some(prev) => {
+            let d = diff_inventory(&prev, &new_raw, now_ms);
+            if d.is_null() {
+                return Ok(None);
+            }
+            d
+        }
+        None => serde_json::json!({
+            "timestamp": now_ms,
+            "increases": {},
+            "decreases": {},
+            "scalars": {},
+        }),
+    };
+
+    // Attach absolute group totals from the current inventory snapshot.
+    // Old history entries won't have this; the frontend handles the gap gracefully.
+    let mut diff_with_totals = diff.as_object().cloned().unwrap_or_default();
+    diff_with_totals.insert("totals".to_string(), compute_group_totals(&new_raw));
+    let diff = Value::Object(diff_with_totals);
 
     // Append diff to history log
     let history_entry = serde_json::json!({
@@ -698,8 +710,37 @@ fn diff_inventory(prev: &Value, cur: &Value, timestamp: u64) -> Value {
     let mut decreases: serde_json::Map<String, Value> = serde_json::Map::new();
     let mut scalars: serde_json::Map<String, Value> = serde_json::Map::new();
 
-    // Compare scalar fields (credits, etc.)
-    for field in ["RegularCredits", "PremiumCredits", "PlayerLevel", "DailyFocus", "RandomModBin", "FusionPoints"] {
+    // Compare scalar fields (credits, etc.) — always emit tracked scalars so the
+    // frontend can read absolute values even when nothing changed between scans.
+    const TRACKED_SCALARS: &[&str] = &["RegularCredits", "PremiumCredits", "FusionPoints"];
+    for field in TRACKED_SCALARS {
+        let prev_val = prev.get(field).and_then(|v| v.as_i64()).unwrap_or(0);
+        let cur_val = cur.get(field).and_then(|v| v.as_i64()).unwrap_or(0);
+        scalars.insert(field.to_string(), serde_json::json!({
+            "from": prev_val,
+            "to": cur_val,
+            "delta": cur_val - prev_val,
+        }));
+    }
+
+    // Ducats (PrimeBucks) live inside MiscItems, not as a top-level scalar.
+    fn misc_item_count(inv: &Value, item_type: &str) -> i64 {
+        inv.get("MiscItems")
+            .and_then(|v| v.as_array())
+            .and_then(|arr| arr.iter().find(|i| i.get("ItemType").and_then(|v| v.as_str()) == Some(item_type)))
+            .and_then(|i| i.get("ItemCount").and_then(|v| v.as_i64()))
+            .unwrap_or(0)
+    }
+    let prev_ducats = misc_item_count(prev, "/Lotus/Types/Items/MiscItems/PrimeBucks");
+    let cur_ducats = misc_item_count(cur, "/Lotus/Types/Items/MiscItems/PrimeBucks");
+    scalars.insert("PrimeBucks".to_string(), serde_json::json!({
+        "from": prev_ducats,
+        "to": cur_ducats,
+        "delta": cur_ducats - prev_ducats,
+    }));
+
+    // Also diff noise scalars but only record when changed (not charted)
+    for field in ["PlayerLevel", "DailyFocus", "RandomModBin"] {
         let prev_val = prev.get(field).and_then(|v| v.as_i64()).unwrap_or(0);
         let cur_val = cur.get(field).and_then(|v| v.as_i64()).unwrap_or(0);
         if prev_val != cur_val {
@@ -770,6 +811,62 @@ fn diff_inventory(prev: &Value, cur: &Value, timestamp: u64) -> Value {
         "increases": Value::Object(increases),
         "decreases": Value::Object(decreases),
         "scalars": Value::Object(scalars),
+    })
+}
+
+/// Categorize an item path into a group for history charting.
+/// Matches the frontend's ITEM_PATTERNS in History.jsx.
+fn item_path_group(item_path: &str) -> Option<&'static str> {
+    if item_path.contains("/Upgrades/Mods/") || item_path.contains("/Recipes/") {
+        Some("mods")
+    } else if item_path.contains("/Types/Resources/")
+        || item_path.contains("/Types/Items/Gems/")
+        || item_path.contains("/Types/Items/Research/")
+        || item_path.contains("/Types/Items/Deimos/")
+        || item_path.contains("/Types/Items/Tokens/")
+    {
+        Some("resources")
+    } else if item_path.contains("/Types/Items/MiscItems/")
+        || item_path.contains("/Types/Restoratives/")
+        || item_path.contains("/Types/Items/SyndicateDogTags/")
+        || item_path.contains("/Types/Gameplay/Shadowgrapher/")
+        || item_path.contains("/Types/Gameplay/Zariman/")
+    {
+        Some("items")
+    } else {
+        None
+    }
+}
+
+/// Compute absolute group totals from a full inventory snapshot.
+/// Returns `{ mods: N, resources: N, items: N }` where N is the sum of ItemCount.
+fn compute_group_totals(inv: &Value) -> Value {
+    let mut totals: std::collections::HashMap<&str, i64> = std::collections::HashMap::new();
+    let array_fields: &[(&str, &str, &str)] = &[
+        ("MiscItems", "ItemType", "ItemCount"),
+        ("Resources", "ItemType", "ItemCount"),
+        ("Consumables", "ItemType", "ItemCount"),
+        ("Recipes", "ItemType", "ItemCount"),
+        ("Upgrades", "uniqueName", "ItemCount"),
+    ];
+    for (field, key_field, count_field) in array_fields {
+        if let Some(items) = inv.get(field).and_then(|v| v.as_array()) {
+            for item in items {
+                if let (Some(path), Some(count)) = (
+                    item.get(key_field).and_then(|v| v.as_str()),
+                    item.get(count_field).and_then(|v| v.as_i64()),
+                ) {
+                    if let Some(group) = item_path_group(path) {
+                        *totals.entry(group).or_insert(0) += count;
+                    }
+                }
+            }
+        }
+    }
+    serde_json::json!({
+        "mods": totals.get("mods").copied().unwrap_or(0),
+        "resources": totals.get("resources").copied().unwrap_or(0),
+        "items": totals.get("items").copied().unwrap_or(0),
     })
 }
 

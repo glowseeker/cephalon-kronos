@@ -942,6 +942,11 @@ export function resolveItemName(path, dict, uniqueNameToName, locale = 'en') {
 
   if (!resolved) resolved = clean(path);
 
+  // Title-case ALL-CAPS dict values (e.g. "MOTHER TOKEN" → "Mother Token").
+  if (resolved && resolved === resolved.toUpperCase() && resolved.length > 3) {
+    resolved = resolved.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  }
+
   // Localized blueprint rendering. The game uses per-locale patterns:
   // prefix ("Schéma de X" fr, "Plano de X" es, "Чертёж X" ru) or suffix
   // ("X Blueprint" en, "X Blaupause" de, "X 設計図" ja…). Weapon parts resolve
@@ -1120,4 +1125,18 @@ export function formatLastUpdate(ts) {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+// ─── History chart item grouping (shared with Rust backend) ──────────
+export const ITEM_PATTERNS = {
+  mods: [/\/Upgrades\/Mods\//, /\/Recipes\//],
+  resources: [/\/Types\/Resources\//, /\/Types\/Items\/Gems\//, /\/Types\/Items\/Research\//, /\/Types\/Items\/Deimos\//, /\/Types\/Items\/Tokens\//],
+  items: [/\/Types\/Items\/MiscItems\//, /\/Types\/Restoratives\//, /\/Types\/Items\/SyndicateDogTags\//, /\/Types\/Gameplay\/Shadowgrapher\//, /\/Types\/Gameplay\/Zariman\//],
+}
+
+export function getItemGroup(key) {
+  for (const [group, patterns] of Object.entries(ITEM_PATTERNS)) {
+    if (patterns.some(p => p.test(key))) return group
+  }
+  return null
 }

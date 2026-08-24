@@ -1,551 +1,700 @@
 /**
  * History.jsx
  *
- * Inventory History screen - visualizes gains/losses over time from the
- * rolling inventory diff log maintained by the Rust backend.
+ * Inventory History screen with a multi-series chart showing absolute values,
+ * a draggable time scrubber, metric toggles, and a summary for the selected
+ * timeframe.
  *
- * DATA FLOW:
- *   - Rust call_api_helper() diffs each scan and appends to inventory_history.json
- *   - load_inventory_history(range, filter, search) returns filtered entries
- *   - Frontend renders a lightweight inline-SVG bar chart (no charting deps)
- *
- * FLASH FIX:
- *   - We keep `prevHistory` so the chart does not go blank while a new
- *     filter/range query is in flight. The content stays visible (dimmed
- *     with a spinner overlay) until the new data arrives, eliminating the
- *     "ugly flash" of empty / stale content when cycling filters.
+ * LAYOUT:
+ *   - Left: Multi-series chart + scrubber + metric/timeframe toggles
+ *   - Right: Summary for selected timespan only
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useUi } from '../contexts/UiContext'
 import { useMonitoring } from '../contexts/MonitoringContext'
-import { PageLayout, Card, Input, Button } from '../components/UI'
+import { PageLayout, Card } from '../components/UI'
+import { resolveItemName } from '../lib/warframeUtils'
+import { relicNameFromPath } from '../lib/inventoryParser'
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 
-const RANGE_TABS = ['1d', '1m', '1y', 'all']
-const FILTER_TABS = ['all', 'credits', 'plat', 'endo', 'mods', 'resources', 'items']
+const METRICS = [
+  { key: 'credit', label: 'history.metric_credit', color: '#3ABFF8', category: 'currency' },
+  { key: 'platinum', label: 'history.metric_platinum', color: '#9333EA', category: 'currency' },
+  { key: 'endo', label: 'history.metric_endo', color: '#34D399', category: 'currency' },
+  { key: 'ducats', label: 'history.metric_ducats', color: '#FBBF24', category: 'currency' },
+  { key: 'mods', label: 'history.metric_mods', color: '#EC4899', category: 'group' },
+  { key: 'resources', label: 'history.metric_resources', color: '#10B981', category: 'group' },
+  { key: 'items', label: 'history.metric_items', color: '#8B5CF6', category: 'group' },
+]
 
-// SVG color palette matching Kronos dark theme
-const CHART_COLORS = {
-  credit: '#3ABFF8',   // blue
-  plat: '#9333EA',     // purple
-  endo: '#34D399',     // teal/green
-  focus: '#F59E0B',    // amber
-  modbin: '#F97316',   // orange
-  mods: '#EC4899',     // pink
-  resources: '#10B981', // emerald
-  items: '#8B5CF6',    // violet
-  misc: '#60A5FA',     // light blue
-  recipes: '#FBBF24', // yellow
+const RANGES = [
+  { key: '24h', label: 'history.range_24h', ms: 86400000 },
+  { key: '7d', label: 'history.range_7d', ms: 7 * 86400000 },
+  { key: '1m', label: 'history.range_1m', ms: 30 * 86400000 },
+  { key: '1y', label: 'history.range_1y', ms: 365 * 86400000 },
+  { key: 'all', label: 'history.range_all', ms: Infinity },
+]
+
+const SCALAR_MAP = {
+  credit: ['RegularCredits'],
+  platinum: ['PremiumCredits'],
+  endo: ['FusionPoints'],
+  ducats: ['PrimeBucks'],
 }
 
-function getCategoryColor(key) {
-  if (key.includes('Credit') || key === 'RegularCredits') return CHART_COLORS.credit
-  if (key.includes('Premium')) return CHART_COLORS.plat
-  if (key.includes('Endo')) return CHART_COLORS.endo
-  if (key.includes('Focus')) return CHART_COLORS.focus
-  if (key.includes('ModBin') || key.includes('RandomModBin')) return CHART_COLORS.modbin
-  if (key === 'Upgrades' || key.includes('Upgrade')) return CHART_COLORS.mods
-  if (key === 'Resources') return CHART_COLORS.resources
-  if (key === 'MiscItems') return CHART_COLORS.misc
-  if (key === 'Recipes') return CHART_COLORS.recipes
-  if (key.includes('Consumable')) return CHART_COLORS.items
-  return '#9CA3AF' // gray for unknown
+// Group metrics: read absolute totals from diff.totals (computed at write-time in Rust).
+// Old history entries without .totals are skipped (gap accepted).
+function getGroupAbsoluteValue(diff, metricKey) {
+  if (!diff?.totals) return null
+  return typeof diff.totals[metricKey] === 'number' ? diff.totals[metricKey] : null
 }
 
-// Map raw diff keys to i18n scalar label keys
-function getScalarLabelKey(key) {
-  if (key === 'RegularCredits' || key === 'credit') return 'scalar_credit'
-  if (key === 'PremiumCredits' || key === 'plat') return 'scalar_platinum'
-  if (key === 'Endo' || key === 'endo') return 'scalar_endo'
-  if (key === 'DailyFocus' || key === 'focus') return 'scalar_focus'
-  if (key === 'RandomModBin' || key === 'modbin') return 'scalar_modbin'
-  if (key === 'Upgrades' || key === 'mods') return 'scalar_mods'
-  if (key === 'Resources' || key === 'resources') return 'scalar_resources'
-  if (key === 'MiscItems' || key === 'items' || key === 'Consumables' || key === 'Recipes') return 'scalar_items'
-  return null // unknown key, caller should fall back
+function getAbsoluteScalarValue(diff, metricKey) {
+  if (!diff) return null
+  const scalars = diff.scalars || {}
+  const fields = SCALAR_MAP[metricKey]
+  if (!fields || fields.length === 0) return null
+  for (const k of fields) {
+    const entry = scalars[k]
+    if (entry && typeof entry.to === 'number') return entry.to
+  }
+  return null
 }
 
-// Build a flat list of item deltas from history entries for chart rendering
-function useChartData(history, filter) {
-  return useMemo(() => {
-    if (!history || history.length === 0) return []
-
-    const items = []
-    for (const entry of history) {
-      const ts = entry.timestamp || 0
-      const diff = entry.diff || null
-      if (!diff) continue
-
-      const inc = diff.increases || {}
-      const dec = diff.decreases || {}
-      const scalars = diff.scalars || {}
-
-      // Add scalar deltas
-      for (const [key, val] of Object.entries(scalars)) {
-        if (!val || typeof val.delta !== 'number') continue
-        const delta = val.delta
-        if (delta === 0) continue
-        items.push({
-          key,
-          delta,
-          color: getCategoryColor(key),
-          ts,
-          label: key.replace(/([A-Z])/g, ' $1').trim(),
-        })
-      }
-
-      // Add item increases
-      for (const [key, val] of Object.entries(inc)) {
-        if (!val || typeof val.delta !== 'number') continue
-        items.push({
-          key,
-          delta: val.delta,
-          color: getCategoryColor(key),
-          ts,
-          label: key,
-        })
-      }
-
-      // Add item decreases
-      for (const [key, val] of Object.entries(dec)) {
-        if (!val || typeof val.delta !== 'number') continue
-        items.push({
-          key,
-          delta: val.delta,
-          color: getCategoryColor(key),
-          ts,
-          label: key,
-        })
-      }
-    }
-
-    // If a filter is active, filter by category
-    if (filter !== 'all') {
-      const filterMap = {
-        credits: ['RegularCredits', 'PremiumCredits'],
-        plat: ['PremiumCredits'],
-        endo: ['Endo'],
-        mods: ['Upgrades'],
-        resources: ['Resources', 'MiscItems'],
-        items: ['MiscItems', 'Consumables', 'Recipes'],
-      }
-      const allowed = filterMap[filter]
-      if (allowed) {
-        return items.filter(item => {
-          return allowed.some(a => item.key.includes(a) || item.label.toLowerCase().includes(a.toLowerCase()))
-        })
-      }
-    }
-
-    return items.sort((a, b) => a.ts - b.ts)
-  }, [history, filter])
+function formatCompact(n) {
+  if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + 'M'
+  if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1) + 'K'
+  return n.toLocaleString()
 }
 
-// Group deltas by timestamp
-function useScanGroups(chartData) {
-  return useMemo(() => {
-    const groups = {}
-    for (const d of chartData) {
-      if (!groups[d.ts]) groups[d.ts] = []
-      groups[d.ts].push(d)
-    }
-    return Object.entries(groups)
-      .sort((a, b) => Number(a[0]) - Number(b[0]))
-      .map(([ts, items]) => ({ ts: Number(ts), items }))
-  }, [chartData])
+function formatDateShort(ts) {
+  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-// Inline SVG bar chart
-function BarChart({ data, width = 800, height = 240 }) {
-  if (!data || data.length === 0) {
-    return (
-      <div className="text-center py-12 text-kronos-dim">
-        No data to display.
-      </div>
-    )
-  }
-
-  // Group by timestamp
-  const groups = {}
-  for (const d of data) {
-    if (!groups[d.ts]) groups[d.ts] = 0
-    groups[d.ts] += d.delta
-  }
-
-  const groupEntries = Object.entries(groups).sort((a, b) => Number(a[0]) - Number(b[0]))
-  if (groupEntries.length === 0) return null
-
-  const maxAbsTotal = Math.max(1, ...groupEntries.map(([_, total]) => Math.abs(Number(total))))
-  const groupWidth = Math.min(60, (width - 60) / groupEntries.length)
-  const gap = 8
-  const barMaxHeight = height - 60
-  const xAxisY = height - 20
-
-  // Format timestamp
-  function formatTime(ts) {
-    const d = new Date(ts)
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-  }
-
-  return (
-    <div className="w-full overflow-x-auto">
-      <svg width={width} height={height} className="w-full h-auto">
-        {/* Grid lines */}
-        <line x1={36} y1={xAxisY} x2={width} y2={xAxisY} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
-        <line x1={36} y1={xAxisY - barMaxHeight} x2={width} y2={xAxisY - barMaxHeight} stroke="rgba(255,255,255,0.03)" strokeWidth={1} />
-        <line x1={36} y1={(xAxisY + xAxisY - barMaxHeight) / 2} x2={width} y2={(xAxisY + xAxisY - barMaxHeight) / 2} stroke="rgba(255,255,255,0.03)" strokeWidth={1} />
-
-        {/* Bars */}
-        {groupEntries.map(([ts, total], gi) => {
-          const numTotal = Number(total)
-          const x = 40 + gi * (groupWidth + gap)
-          const barHeight = (Math.abs(numTotal) / maxAbsTotal) * barMaxHeight * 0.9
-          const y = numTotal >= 0 ? xAxisY - barHeight : xAxisY
-          const color = numTotal >= 0 ? '#34D399' : '#F87171'
-
-          return (
-            <g key={ts}>
-              <rect
-                x={x}
-                y={y}
-                width={Math.max(groupWidth - 2, 4)}
-                height={barHeight}
-                fill={color}
-                rx={2}
-              />
-              <text
-                x={x + (groupWidth - 2) / 2}
-                y={xAxisY + 14}
-                textAnchor="middle"
-                className="fill-kronos-dim text-[8px]"
-              >
-                {formatTime(Number(ts))}
-              </text>
-            </g>
-          )
-        })}
-      </svg>
-    </div>
-  )
+function formatDateFull(ts) {
+  return new Date(ts).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-// Timeline (cumulative) chart
-function TimelineChart({ data, width = 800, height = 200 }) {
-  if (!data || data.length === 0) return null
-
-  // Build cumulative net per group
-  const groups = {}
-  for (const d of data) {
-    if (!groups[d.ts]) groups[d.ts] = 0
-    groups[d.ts] += d.delta
-  }
-
-  const groupEntries = Object.entries(groups).sort((a, b) => Number(a[0]) - Number(b[0]))
-  if (groupEntries.length === 0) return null
-
-  const cumulative = []
-  let running = 0
-  for (const [ts, total] of groupEntries) {
-    running += Number(total)
-    cumulative.push({ ts: Number(ts), value: running })
-  }
-
-  const maxVal = Math.max(0.1, ...cumulative.map(c => Math.abs(c.value)))
-  const midY = height / 2
-  const halfHeight = height / 2 - 30
-
-  function xForIndex(i) {
-    if (cumulative.length === 1) return 40
-    return 40 + (i / (cumulative.length - 1)) * (width - 60)
-  }
-
-  function yForValue(val) {
-    return midY - (val / maxVal) * halfHeight
-  }
-
-  return (
-    <div className="w-full overflow-x-auto">
-      <svg width={width} height={height} className="w-full h-auto">
-        {/* Zero line */}
-        <line x1={36} y1={midY} x2={width} y2={midY} stroke="rgba(255,255,255,0.08)" strokeWidth={1} />
-
-        {/* Cumulative line */}
-        <polyline
-          points={cumulative.map((c, i) => `${xForIndex(i)},${yForValue(c.value)}`).join(' ')}
-          fill="none"
-          stroke="#3ABFF8"
-          strokeWidth={2}
-        />
-
-        {/* Data points */}
-        {cumulative.map((c, i) => (
-          <circle
-            key={c.ts}
-            cx={xForIndex(i)}
-            cy={yForValue(c.value)}
-            r={3}
-            fill="#3ABFF8"
-          />
-        ))}
-
-        {/* Y axis labels */}
-        <text x={8} y={midY - halfHeight + 4} textAnchor="middle" className="fill-kronos-dim text-[9px]">
-          +{maxVal.toLocaleString()}
-        </text>
-        <text x={8} y={midY + halfHeight - 4} textAnchor="middle" className="fill-kronos-dim text-[9px]">
-          -{maxVal.toLocaleString()}
-        </text>
-      </svg>
-    </div>
-  )
+function formatXTick(ts, span) {
+  const d = new Date(ts)
+  if (span < 86400000) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (span < 604800000) return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' })
 }
 
-function HistoryScreen() {
+function formatYTick(v) {
+  return formatCompact(Math.round(v))
+}
+
+// ─── Chart (Recharts) ──────────────────────────────────────────────
+function Chart({ allData, activeMetrics, trackedItems = [], startTime, endTime }) {
   const { t } = useUi()
-  const {
-    loadInventoryHistory,
-    historyRange,
-    setHistoryRange,
-    historyFilter,
-    setHistoryFilter,
-    historySearch,
-    setHistorySearch,
-  } = useMonitoring()
-  const [history, setHistory] = useState([])
-  const [loading, setLoading] = useState(false)
-  // Keep previous history so we don't flash empty while loading new data
-  const [prevHistory, setPrevHistory] = useState([])
-  // Use a ref to track the latest history so we can capture it for prevHistory
-  // without causing a useEffect -> setState -> useCallback -> useEffect loop
-  const historyRef = useRef(history)
-  historyRef.current = history
 
-  const loadHistory = useCallback(async () => {
-    // Capture current history before loading so we can keep it visible
-    // during the transition (eliminates the flash when cycling filters)
-    setPrevHistory(historyRef.current)
-    setLoading(true)
-    try {
-      const result = await loadInventoryHistory({
-        range: historyRange,
-        filter: historyFilter,
-        search: historySearch,
-      })
-      setHistory(result || [])
-    } catch (e) {
-      setHistory([])
-    } finally {
-      setLoading(false)
+  // Merge all series into a single array keyed by timestamp for Recharts
+  const { chartData, span } = useMemo(() => {
+    const span = (endTime - startTime) || 1
+    const byTs = new Map()
+    for (const mk of activeMetrics) {
+      const data = allData[mk] || []
+      for (const d of data) {
+        if (d.ts < startTime || d.ts > endTime) continue
+        let row = byTs.get(d.ts)
+        if (!row) { row = { ts: d.ts }; byTs.set(d.ts, row) }
+        row[mk] = d.value
+      }
     }
-  }, [loadInventoryHistory, historyRange, historyFilter, historySearch])
+    return { chartData: [...byTs.values()].sort((a, b) => a.ts - b.ts), span }
+  }, [allData, activeMetrics, startTime, endTime])
+
+  const hasHistory = Object.values(allData).some(arr => arr && arr.length > 0)
+  if (!hasHistory && activeMetrics.length === 0) {
+    return <div className="text-center py-16 text-kronos-dim">{t('history.no_data')}</div>
+  }
+
+  // Resolve color for each active metric key
+  const getColor = (mk) => {
+    const tracked = mk.startsWith('item:') ? trackedItems.find(ti => `item:${ti.key}` === mk) : null
+    return tracked?.color || METRICS.find(m => m.key === mk)?.color || '#9CA3AF'
+  }
+
+  const tickFormatter = (ts) => formatXTick(ts, span)
+
+  return (
+    <div className="w-full" style={{ height: 320 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+          <XAxis
+            dataKey="ts"
+            type="number"
+            domain={[startTime, endTime]}
+            tickFormatter={tickFormatter}
+            tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+            axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+            tickLine={false}
+            scale="time"
+          />
+          <YAxis
+            tickFormatter={formatYTick}
+            tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            width={55}
+          />
+          <Tooltip
+            content={<CustomTooltip span={span} activeMetrics={activeMetrics} trackedItems={trackedItems} />}
+          />
+          {activeMetrics.map(mk => (
+            <Area
+              key={mk}
+              type="monotone"
+              dataKey={mk}
+              stroke={getColor(mk)}
+              fill={getColor(mk)}
+              fillOpacity={0.08}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 3, strokeWidth: 0 }}
+              isAnimationActive={false}
+            />
+          ))}
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+function CustomTooltip({ active, payload, label, span, activeMetrics, trackedItems }) {
+  if (!active || !payload?.length) return null
+  const getColor = (mk) => {
+    const tracked = mk.startsWith('item:') ? trackedItems.find(ti => `item:${ti.key}` === mk) : null
+    return tracked?.color || METRICS.find(m => m.key === mk)?.color || '#9CA3AF'
+  }
+  const getName = (mk) => {
+    const tracked = mk.startsWith('item:') ? trackedItems.find(ti => `item:${ti.key}` === mk) : null
+    if (tracked) return tracked.name
+    const m = METRICS.find(m => m.key === mk)
+    return m ? m.key.charAt(0).toUpperCase() + m.key.slice(1) : mk
+  }
+  return (
+    <div className="bg-kronos-panel border border-white/10 rounded-lg p-2.5 text-xs shadow-lg">
+      <p className="text-kronos-dim mb-1">{formatDateFull(label)}</p>
+      {payload.filter(p => p.value != null).map((p, i) => (
+        <div key={i} className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getColor(p.dataKey) }} />
+          <span className="text-kronos-dim">{getName(p.dataKey)}</span>
+          <span className="font-black ml-auto" style={{ color: getColor(p.dataKey) }}>
+            {typeof p.value === 'number' ? p.value.toLocaleString() : p.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Scrubber ───────────────────────────────────────────────────────
+function Scrubber({ data, trackMin, trackMax, startTime, endTime, onChange }) {
+  const trackRef = useRef(null)
+  const [dragging, setDragging] = useState(null)
+
+  const minTs = trackMin || 0
+  const maxTs = trackMax || Date.now()
+  const span = maxTs - minTs || 1
+
+  function tsToPct(ts) { return ((ts - minTs) / span) * 100 }
+  function pctToTs(pct) { return minTs + (pct / 100) * span }
+
+  const startPct = Math.max(0, Math.min(100, tsToPct(startTime)))
+  const endPct = Math.max(0, Math.min(100, tsToPct(endTime)))
+
+  const handleMouseDown = useCallback((which) => (e) => {
+    e.preventDefault()
+    setDragging(which)
+  }, [])
 
   useEffect(() => {
-    loadHistory()
-  }, [loadHistory])
-
-  const chartData = useChartData(history, historyFilter)
-  const prevChartData = useChartData(prevHistory, historyFilter)
-  // Use previous data while loading to avoid flash, but recompute when new data arrives
-  const displayData = loading ? prevChartData : chartData
-
-  // Compute totals from the data currently displayed
-  const totals = useMemo(() => {
-    const inc = { credit: 0, platinum: 0, endo: 0, focus: 0, modbin: 0, mods: 0, resources: 0, items: 0 }
-    const dec = { credit: 0, platinum: 0, endo: 0, focus: 0, modbin: 0, mods: 0, resources: 0, items: 0 }
-
-    for (const item of displayData) {
-      const cat = item.key
-      if (cat === 'RegularCredits') { inc.credit += item.delta > 0 ? item.delta : 0; dec.credit += item.delta < 0 ? -item.delta : 0 }
-      else if (cat === 'PremiumCredits') { inc.platinum += item.delta > 0 ? item.delta : 0; dec.platinum += item.delta < 0 ? -item.delta : 0 }
-      else if (cat === 'Endo') { inc.endo += item.delta > 0 ? item.delta : 0; dec.endo += item.delta < 0 ? -item.delta : 0 }
-      else if (cat === 'DailyFocus') { inc.focus += item.delta > 0 ? item.delta : 0; dec.focus += item.delta < 0 ? -item.delta : 0 }
-      else if (cat === 'RandomModBin') { inc.modbin += item.delta > 0 ? item.delta : 0; dec.modbin += item.delta < 0 ? -item.delta : 0 }
-      else if (cat === 'Upgrades') { inc.mods += item.delta > 0 ? item.delta : 0; dec.mods += item.delta < 0 ? -item.delta : 0 }
-      else if (cat === 'Resources') { inc.resources += item.delta > 0 ? item.delta : 0; dec.resources += item.delta < 0 ? -item.delta : 0 }
-      else if (cat === 'MiscItems' || cat === 'Consumables' || cat === 'Recipes') { inc.items += item.delta > 0 ? item.delta : 0; dec.items += item.delta < 0 ? -item.delta : 0 }
+    if (!dragging) return
+    const onMove = (e) => {
+      const rect = trackRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
+      const ts = pctToTs(pct)
+      if (dragging === 'start') {
+        onChange(Math.min(ts, endTime - 60000), endTime)
+      } else if (dragging === 'end') {
+        onChange(startTime, Math.max(ts, startTime + 60000))
+      }
     }
+    const onUp = () => setDragging(null)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [dragging, startTime, endTime, minTs, maxTs, onChange])
 
-    return { inc, dec }
-  }, [displayData])
+  // Pre-compute sparkline max to avoid spreading huge arrays into Math.max()
+  const sparklineMax = useMemo(() => {
+    let max = 1
+    for (const d of data) { const v = Math.abs(d.value); if (v > max) max = v }
+    return max
+  }, [data])
 
-  const netTotal = displayData.reduce((sum, d) => sum + d.delta, 0)
+  return (
+    <div className="w-full select-none flex items-center gap-2">
+      <span className="text-[10px] text-kronos-dim whitespace-nowrap flex-shrink-0">{formatDateShort(minTs)}</span>
+      <div className="relative flex-1">
+        {/* Handle dates above track */}
+        <div className="absolute -top-4 h-4" style={{ left: 0, right: 0, pointerEvents: 'none' }}>
+          {startPct > 0 && (
+            <div className="absolute text-[10px] text-kronos-dim whitespace-nowrap -translate-x-1/2"
+              style={{ left: `${startPct}%` }}>{formatDateShort(startTime)}</div>
+          )}
+          {endPct < 100 && (
+            <div className="absolute text-[10px] text-kronos-dim whitespace-nowrap -translate-x-1/2"
+              style={{ left: `${endPct}%` }}>{formatDateShort(endTime)}</div>
+          )}
+        </div>
+        <div ref={trackRef} className="relative h-6 bg-white/5 rounded cursor-pointer">
+          {/* Selected region */}
+          <div className="absolute top-0 bottom-0 bg-kronos-accent/25 rounded"
+            style={{ left: `${startPct}%`, width: `${Math.max(0, endPct - startPct)}%` }} />
+
+          {/* Mini sparkline */}
+          {data.length > 1 && (
+            <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+              <polyline
+                points={data.map(d => {
+                  const y = 6 + (1 - Math.abs(d.value) / sparklineMax) * 18
+                  return `${tsToPct(d.ts)},${y}`
+                }).join(' ')}
+                fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            </svg>
+          )}
+
+          {/* Left handle */}
+          <div className="absolute z-10 cursor-ew-resize"
+            style={{ left: `${startPct}%`, top: 0, bottom: 0, width: 0 }}
+            onMouseDown={handleMouseDown('start')}>
+            <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-kronos-accent rounded-full hover:scale-125 transition-shadow shadow-lg shadow-kronos-accent/50" />
+          </div>
+          {/* Right handle */}
+          <div className="absolute z-10 cursor-ew-resize"
+            style={{ left: `${endPct}%`, top: 0, bottom: 0, width: 0 }}
+            onMouseDown={handleMouseDown('end')}>
+            <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-kronos-accent rounded-full hover:scale-125 transition-shadow shadow-lg shadow-kronos-accent/50" />
+          </div>
+        </div>
+      </div>
+      <span className="text-[10px] text-kronos-dim whitespace-nowrap flex-shrink-0">{formatDateShort(maxTs)}</span>
+    </div>
+  )
+}
+
+// ─── Log ────────────────────────────────────────────────────────────
+const LOG_MAX = 200
+
+function Log({ history, startTime, endTime, t, dict, uniqueNameToName, exportData }) {
+  const entries = useMemo(() => {
+    return history
+      .filter(e => e.timestamp >= startTime && e.timestamp <= endTime && e.diff)
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, LOG_MAX)
+  }, [history, startTime, endTime])
+
+  const nameCache = useRef({})
+  const ERel = exportData?.ExportRelics || {}
+  function resolveName(key) {
+    if (nameCache.current[key]) return nameCache.current[key]
+    let resolved = null
+    // Relics: ExportRelics has era/category/quality but no locTag — use dedicated parser first
+    if (key.includes('/Projections/')) {
+      const full = relicNameFromPath(key, ERel)
+      resolved = full.replace(/\s*\((Intact|Exceptional|Flawless|Radiant)\)$/, '').replace(/\s*Relic$/, '').trim()
+    }
+    if (!resolved) resolved = resolveItemName(key, dict, uniqueNameToName)
+    if (!resolved) resolved = key.split('/').pop() || key
+    nameCache.current[key] = resolved
+    return resolved
+  }
+
+  function flattenDiffs(diff) {
+    const items = []
+    const scalars = diff?.scalars || {}
+    for (const [k, v] of Object.entries(scalars)) {
+      if (v.delta === 0) continue
+      const metric = METRICS.find(m => SCALAR_MAP[m.key]?.includes(k))
+      if (!metric) continue
+      items.push({ type: 'scalar', key: k, display: t(metric.label), delta: v.delta })
+    }
+    const inc = diff?.increases || {}
+    for (const [k, v] of Object.entries(inc)) {
+      if (!v || v.delta === 0) continue
+      items.push({ type: 'increase', key: k, display: resolveName(k), delta: v.delta })
+    }
+    const dec = diff?.decreases || {}
+    for (const [k, v] of Object.entries(dec)) {
+      if (!v || v.delta === 0) continue
+      items.push({ type: 'decrease', key: k, display: resolveName(k), delta: v.delta })
+    }
+    return items
+  }
+
+  const allChanges = useMemo(() => {
+    const changeMap = {}
+    for (const entry of entries) {
+      const changes = flattenDiffs(entry.diff)
+      for (const c of changes) {
+        const key = `${c.type}:${c.key}`
+        if (!changeMap[key]) changeMap[key] = { ...c, delta: 0 }
+        changeMap[key].delta += c.delta
+      }
+    }
+    return Object.values(changeMap).filter(c => c.delta !== 0).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+  }, [entries])
+
+  return (
+    <div className="flex flex-col h-full">
+      <h4 className="text-xs font-black uppercase text-kronos-accent tracking-widest mb-2">
+        {t('history.timespan_summary')}
+      </h4>
+      <div className="space-y-1 flex-1 overflow-y-auto custom-scrollbar">
+        {allChanges.length === 0 && (
+          <p className="text-xs text-kronos-dim">{t('history.no_changes')}</p>
+        )}
+        {allChanges.map((c, i) => (
+          <div key={`${c.key}-${i}`} className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: c.delta > 0 ? '#34D399' : '#F87171' }} />
+            <span className="text-xs text-kronos-dim truncate flex-1">{c.display}</span>
+            <span className={`text-xs font-black ${c.delta > 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {c.delta > 0 ? '+' : ''}{c.delta.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Screen ────────────────────────────────────────────────────
+function HistoryScreen() {
+  const { t } = useUi()
+  const { loadInventoryHistory, dict, uniqueNameToName, exportData } = useMonitoring()
+  const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [activeMetrics, setActiveMetrics] = useState(new Set(['credit']))
+  const [range, setRange] = useState('all')
+  const [startTime, setStartTime] = useState(0)
+  const [endTime, setEndTime] = useState(Date.now())
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    loadInventoryHistory({ range: 'all', filter: 'all', search: '' })
+      .then(result => { if (!cancelled) setHistory(result || []) })
+      .catch(() => { if (!cancelled) setHistory([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [loadInventoryHistory])
+
+  const [trackedItems, setTrackedItems] = useState([]) // [{key, name, color}]
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
+  const searchRef = useRef(null)
+  const searchTimerRef = useRef(null)
+
+  // Resolve display names lazily for search
+  const resolveSearchName = useCallback((key) => {
+    if (key.includes('/Projections/')) {
+      const ERel = exportData?.ExportRelics || {}
+      const full = relicNameFromPath(key, ERel)
+      return full.replace(/\s*\((Intact|Exceptional|Flawless|Radiant)\)$/, '').replace(/\s*Relic$/, '').trim()
+    }
+    return resolveItemName(key, dict, uniqueNameToName) || key.split('/').pop() || key
+  }, [dict, uniqueNameToName, exportData])
+
+  // Collect all unique item keys from history diffs for search.
+  // Names are pre-resolved so the search loop only does string matching.
+  const allItemKeys = useMemo(() => {
+    const keys = new Map() // key -> display name
+    for (const e of history) {
+      const diff = e.diff
+      if (!diff) continue
+      for (const k of Object.keys(diff.increases || {})) {
+        if (!keys.has(k)) keys.set(k, resolveSearchName(k))
+      }
+      for (const k of Object.keys(diff.decreases || {})) {
+        if (!keys.has(k)) keys.set(k, resolveSearchName(k))
+      }
+    }
+    return keys
+  }, [history, resolveSearchName])
+
+  // Search results
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return []
+    const q = searchQuery.toLowerCase()
+    const results = []
+    for (const [key, name] of allItemKeys) {
+      if (name.toLowerCase().includes(q)) {
+        results.push({ key, name })
+        if (results.length >= 20) break
+      }
+    }
+    return results
+  }, [searchQuery, allItemKeys])
+
+  // Colors for tracked items
+  const TRACKED_COLORS = ['#F472B6', '#38BDF8', '#A3E635', '#FB923C', '#C084FC', '#22D3EE', '#FBBF24']
+
+  const addTrackedItem = useCallback((item) => {
+    if (trackedItems.some(t => t.key === item.key)) return
+    const color = TRACKED_COLORS[trackedItems.length % TRACKED_COLORS.length]
+    setTrackedItems(prev => [...prev, { key: item.key, name: item.name, color }])
+    setSearchInput('')
+    setSearchQuery('')
+    setShowSearch(false)
+  }, [trackedItems])
+
+  const removeTrackedItem = useCallback((key) => {
+    setTrackedItems(prev => prev.filter(t => t.key !== key))
+  }, [])
+
+  // Close search dropdown on outside click
+  useEffect(() => {
+    if (!showSearch) return
+    const handler = (e) => { if (searchRef.current && !searchRef.current.contains(e.target)) setShowSearch(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showSearch])
+
+  // Persistent cache: once a metric is computed, it stays cached even when toggled off,
+  // avoiding expensive recomputation when toggling metrics on/off. Must be invalidated
+  // whenever `history` actually changes (new sync data), not just when this memo re-runs —
+  // otherwise new inventory syncs never reach the chart.
+  const dataCacheRef = useRef({ fingerprint: null, data: {} })
+  const historyFingerprint = history.length
+    ? `${history.length}:${history[history.length - 1].timestamp}`
+    : '0'
+  if (dataCacheRef.current.fingerprint !== historyFingerprint) {
+    dataCacheRef.current = { fingerprint: historyFingerprint, data: {} }
+  }
+  const allData = useMemo(() => {
+    const cache = dataCacheRef.current.data
+    const sorted = [...history].filter(e => e.timestamp && e.diff).sort((a, b) => a.timestamp - b.timestamp)
+    const result = {}
+    // Built-in metrics
+    for (const m of METRICS) {
+      if (cache[m.key]) { result[m.key] = cache[m.key]; continue }
+      if (!activeMetrics.has(m.key)) { result[m.key] = []; continue }
+      let series
+      if (SCALAR_MAP[m.key] && SCALAR_MAP[m.key].length > 0) {
+        series = []
+        for (const entry of sorted) {
+          const absVal = getAbsoluteScalarValue(entry.diff, m.key)
+          if (absVal !== null) {
+            series.push({ ts: entry.timestamp, value: absVal })
+          } else {
+            const lastValue = series.length > 0 ? series[series.length - 1].value : 0
+            series.push({ ts: entry.timestamp, value: lastValue })
+          }
+        }
+      } else {
+        series = []
+        for (const entry of sorted) {
+          const absVal = getGroupAbsoluteValue(entry.diff, m.key)
+          if (absVal !== null) {
+            series.push({ ts: entry.timestamp, value: absVal })
+          }
+        }
+      }
+      cache[m.key] = series
+      result[m.key] = series
+    }
+    // Tracked item metrics: read the 'to' value from diff.increases/diff.decreases
+    for (const t of trackedItems) {
+      const cacheKey = `item:${t.key}`
+      if (cache[cacheKey]) { result[cacheKey] = cache[cacheKey]; continue }
+      const series = []
+      let lastVal = null
+      for (const entry of sorted) {
+        const diff = entry.diff
+        const inc = diff?.increases?.[t.key]
+        const dec = diff?.decreases?.[t.key]
+        const entry_ = inc || dec
+        if (entry_ && typeof entry_.to === 'number') {
+          lastVal = entry_.to
+        }
+        if (lastVal !== null) {
+          series.push({ ts: entry.timestamp, value: lastVal })
+        }
+      }
+      cache[cacheKey] = series
+      result[cacheKey] = series
+    }
+    return result
+  }, [history, activeMetrics, trackedItems])
+
+  // Downsample chart data to at most MAX_CHART_POINTS using LTTB-like decimation
+  const downsampledData = useMemo(() => {
+    const result = {}
+    const MAX = 500
+    for (const mk of Object.keys(allData)) {
+      const d = allData[mk]
+      if (!d || d.length <= MAX) { result[mk] = d; continue }
+      const step = (d.length - 2) / (MAX - 2)
+      const out = [d[0]]
+      let prevIndex = 0
+      for (let i = 1; i < MAX - 1; i++) {
+        const nextIndex = Math.round(1 + i * step)
+        // Pick the point with the largest absolute delta from neighbors
+        let bestIdx = prevIndex + 1
+        let bestArea = 0
+        const a = d[prevIndex]
+        const c = d[Math.min(nextIndex, d.length - 1)]
+        for (let j = prevIndex + 1; j < nextIndex && j < d.length; j++) {
+          const b = d[j]
+          const area = Math.abs((a.ts - c.ts) * (b.value - a.value) - (a.ts - b.ts) * (c.value - a.value))
+          if (area > bestArea) { bestArea = area; bestIdx = j }
+        }
+        out.push(d[bestIdx])
+        prevIndex = bestIdx
+      }
+      out.push(d[d.length - 1])
+      result[mk] = out
+    }
+    return result
+  }, [allData])
+
+  const allTimestamps = useMemo(() => {
+    return history.filter(e => e.timestamp).map(e => e.timestamp).sort((a, b) => a - b)
+  }, [history])
+
+  const initializedRef = useRef(false)
+  useEffect(() => {
+    if (!initializedRef.current && allTimestamps.length > 0) {
+      initializedRef.current = true
+      setStartTime(allTimestamps[0])
+      setEndTime(allTimestamps[allTimestamps.length - 1])
+    }
+  }, [allTimestamps])
+
+  const applyRange = useCallback((rangeKey) => {
+    setRange(rangeKey)
+    const r = RANGES.find(r => r.key === rangeKey)
+    if (!r) return
+    if (r.ms === Infinity) {
+      setStartTime(allTimestamps[0] || 0)
+      setEndTime(allTimestamps[allTimestamps.length - 1] || Date.now())
+    } else {
+      const now = Date.now()
+      setStartTime(now - r.ms)
+      setEndTime(now)
+    }
+  }, [allTimestamps])
+
+  const presetBounds = useMemo(() => {
+    const dataMin = allTimestamps[0] || 0
+    const dataMax = allTimestamps[allTimestamps.length - 1] || Date.now()
+    const r = RANGES.find(r => r.key === range)
+    if (!r || r.ms === Infinity) return { min: dataMin, max: dataMax }
+    const now = Date.now()
+    return { min: now - r.ms, max: now }
+  }, [range, allTimestamps])
+
+  const toggleMetric = useCallback((key) => {
+    setActiveMetrics(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }, [])
 
   return (
     <PageLayout title={t('history.title')} titleKey="history.title">
-      {/* Range Tabs */}
-      <div className="flex gap-2 mb-4">
-        {RANGE_TABS.map(r => (
-          <Button
-            key={r}
-            onClick={() => setHistoryRange(r)}
-            className={`px-3 py-1 text-xs font-black uppercase ${historyRange === r ? 'bg-kronos-accent text-kronos-bg' : 'bg-white/5 text-kronos-dim'}`}
-          >
-            {t(`history.range_${r}`)}
-          </Button>
-        ))}
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-4 flex-wrap">
-        {FILTER_TABS.map(f => (
-          <Button
-            key={f}
-            onClick={() => setHistoryFilter(f)}
-            className={`px-3 py-1 text-xs font-black uppercase ${historyFilter === f ? 'bg-kronos-accent text-kronos-bg' : 'bg-white/5 text-kronos-dim'}`}
-          >
-            {t(`history.filter_${f}`)}
-          </Button>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div className="mb-4">
-        <Input
-          placeholder={t('history.search_placeholder')}
-          value={historySearch}
-          onChange={(e) => setHistorySearch(e.target.value)}
-          className="w-full max-w-md"
-        />
-      </div>
-
-      {!loading && (history.length === 0 || chartData.length === 0) ? (
-        <Card className="p-8 text-center">
-          <p className="text-kronos-dim">{t('history.no_data')}</p>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {/* Bar chart: net gain per scan - key changes on filter/range so React
-              doesn't attempt to diff between incompatible datasets (prevents flash) */}
-          <Card className="p-4 relative">
-            <h3 className="text-sm font-black uppercase tracking-tight text-kronos-accent mb-2">
-              {t('history.bar_chart_title')}
-            </h3>
-            {loading && prevChartData.length > 0 && (
+      <div className="flex flex-col lg:flex-row gap-4 h-full">
+        <div className="flex-1 min-w-0 flex flex-col gap-3">
+          {/* Chart card */}
+          <Card className="p-4 flex-1 relative min-h-[400px] flex flex-col">
+            {loading && (
               <div className="absolute inset-0 bg-kronos-bg/80 flex items-center justify-center z-10 rounded-lg">
                 <div className="w-6 h-6 border-2 border-kronos-accent/20 border-t-kronos-accent rounded-full animate-spin" />
               </div>
             )}
-            <BarChart
-              key={`bar-${historyRange}-${historyFilter}-${historySearch}`}
-              data={displayData}
-            />
-          </Card>
-
-          {/* Timeline chart: cumulative net */}
-          <Card className="p-4 relative">
-            <h3 className="text-sm font-black uppercase tracking-tight text-kronos-accent mb-2">
-              {t('history.timeline_chart_title')}
-            </h3>
-            {loading && prevChartData.length > 0 && (
-              <div className="absolute inset-0 bg-kronos-bg/80 flex items-center justify-center z-10 rounded-lg">
-                <div className="w-6 h-6 border-2 border-kronos-accent/20 border-t-kronos-accent rounded-full animate-spin" />
-              </div>
-            )}
-            <TimelineChart
-              key={`timeline-${historyRange}-${historyFilter}-${historySearch}`}
-              data={displayData}
-            />
-          </Card>
-
-          {/* Totals summary */}
-          <Card className="p-4">
-            <h3 className="text-sm font-black uppercase tracking-tight text-kronos-accent mb-3">
-              {t('history.summary_title')}
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(totals.inc).map(([key, val]) => {
-                const decVal = totals.dec[key]
-                const net = val - decVal
-                if (val === 0 && decVal === 0) return null
-                return (
-                  <div key={key} className="flex flex-col gap-1">
-                    <span className="text-xs text-kronos-dim">{t(`history.scalar_${key}`)}</span>
-                    <div className="flex gap-2 text-sm">
-                      {val > 0 && <span className="text-green-400">+{val.toLocaleString()}</span>}
-                      {decVal > 0 && <span className="text-red-400">-{decVal.toLocaleString()}</span>}
-                      <span className={`font-black ${net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {net >= 0 ? '+' : ''}{net.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
+            {/* Metric toggles + search inside card */}
+            <div className="flex gap-1 mb-2">
+              {METRICS.map(m => (
+                <button key={m.key} onClick={() => toggleMetric(m.key)}
+                  className={`flex-1 px-2 py-1.5 text-[11px] font-bold uppercase rounded text-center transition-all ${activeMetrics.has(m.key) ? 'text-kronos-bg' : 'bg-white/5 text-kronos-dim hover:bg-white/10'}`}
+                  style={activeMetrics.has(m.key) ? { backgroundColor: m.color } : {}}>
+                  {t(m.label)}
+                </button>
+              ))}
             </div>
-          </Card>
-
-          {/* Detailed log: individual entries */}
-          <Card className="p-4">
-            <h3 className="text-sm font-black uppercase tracking-tight text-kronos-accent mb-3">
-              {t('history.log_title')}
-            </h3>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {history.map((entry, i) => {
-                const ts = entry.timestamp || 0
-                const date = new Date(ts).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-                const time = new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-                const diff = entry.diff
-
-                if (!diff) return null
-
-                const incKeys = Object.keys(diff.increases || {})
-                const decKeys = Object.keys(diff.decreases || {})
-                const scalarKeys = Object.keys(diff.scalars || {})
-
-                return (
-                  <div key={i} className="flex items-center gap-3 text-sm border-b border-white/5 pb-2">
-                    <span className="text-xs text-kronos-dim min-w-[100px]">{date} {time}</span>
-                    <div className="flex-1 flex flex-wrap gap-2">
-                      {scalarKeys.map(k => {
-                        const v = diff.scalars[k]
-                        const delta = v.delta
-                        if (delta === 0) return null
-                        return (
-                          <span key={k} className="flex items-center gap-1">
-                            <span
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: getCategoryColor(k) }}
-                            />
-                            <span className={delta > 0 ? 'text-green-400' : 'text-red-400'}>
-                              {(() => { const labelKey = getScalarLabelKey(k); return labelKey ? t(`history.scalar_${labelKey}`) : t(`history.scalar_${k}`) })()}: {delta > 0 ? '+' : ''}{delta.toLocaleString()}
-                            </span>
-                          </span>
-                        )
-                      })}
-                      {incKeys.map(k => {
-                        const v = diff.increases[k]
-                        return (
-                          <span key={`inc-${k}`} className="flex items-center gap-1">
-                            <span
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: getCategoryColor(k) }}
-                            />
-                            <span className="text-green-400">
-                              {k}: +{v.delta.toLocaleString()}
-                            </span>
-                          </span>
-                        )
-                      })}
-                      {decKeys.map(k => {
-                        const v = diff.decreases[k]
-                        return (
-                          <span key={`dec-${k}`} className="flex items-center gap-1">
-                            <span
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: getCategoryColor(k) }}
-                            />
-                            <span className="text-red-400">
-                              {k}: -{Math.abs(v.delta).toLocaleString()}
-                            </span>
-                          </span>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
+            {/* Tracked items tags */}
+            {trackedItems.length > 0 && (
+              <div className="flex gap-1 flex-wrap mb-2">
+                {trackedItems.map(t => (
+                  <span key={t.key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold text-kronos-bg" style={{ backgroundColor: t.color }}>
+                    {t.name}
+                    <button onClick={() => removeTrackedItem(t.key)} className="opacity-70 hover:opacity-100 ml-0.5">&times;</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* Search bar */}
+            <div className="relative mb-3" ref={searchRef}>
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setSearchInput(val)
+                  setShowSearch(true)
+                  clearTimeout(searchTimerRef.current)
+                  searchTimerRef.current = setTimeout(() => setSearchQuery(val), 150)
+                }}
+                onFocus={() => setShowSearch(true)}
+                placeholder={t('history.search_placeholder')}
+                className="w-full px-3 py-1.5 text-xs bg-white/5 border border-white/10 rounded text-kronos-text placeholder:text-kronos-dim/50 focus:outline-none focus:border-kronos-accent/50"
+              />
+              {showSearch && searchResults.length > 0 && (
+                <div className="absolute z-20 top-full mt-1 w-full bg-kronos-panel border border-white/10 rounded-lg shadow-lg max-h-48 overflow-y-auto custom-scrollbar">
+                  {searchResults.map(r => (
+                    <button key={r.key} onClick={() => addTrackedItem(r)}
+                      className="w-full px-3 py-1.5 text-xs text-left text-kronos-text hover:bg-white/10 transition-colors truncate">
+                      {r.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Chart allData={downsampledData} activeMetrics={[...activeMetrics, ...trackedItems.map(t => `item:${t.key}`)]}
+              trackedItems={trackedItems} startTime={startTime} endTime={endTime} />
+            <div className="mt-3">
+              <Scrubber data={(downsampledData.credit?.length ? downsampledData.credit : downsampledData[activeMetrics.values().next().value]) || []} trackMin={presetBounds.min} trackMax={presetBounds.max} startTime={startTime} endTime={endTime}
+                onChange={(s, e) => { setStartTime(s); setEndTime(e); setRange('custom') }} />
+            </div>
+            {/* Timeframe toggles under scrubber */}
+            <div className="flex gap-1 mt-2">
+              {RANGES.map(r => (
+                <button key={r.key} onClick={() => applyRange(r.key)}
+                  className={`flex-1 px-2 py-1 text-[11px] font-bold uppercase rounded text-center transition-all ${range === r.key ? 'bg-kronos-accent text-kronos-bg' : 'bg-white/5 text-kronos-dim hover:bg-white/10'}`}>
+                  {t(r.label)}
+                </button>
+              ))}
             </div>
           </Card>
         </div>
-      )}
+
+        <div className="lg:w-[380px] xl:w-[440px] flex-shrink-0">
+          <Card className="p-4 lg:h-[calc(100vh-8rem)] flex flex-col">
+            <Log history={history} startTime={startTime} endTime={endTime}
+              t={t} dict={dict} uniqueNameToName={uniqueNameToName} exportData={exportData} />
+          </Card>
+        </div>
+      </div>
     </PageLayout>
   )
 }

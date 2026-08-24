@@ -858,6 +858,10 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         const standing = challengeEntry.standing || c.xpAmount || c.XP || 0
         const challengeId = c.Challenge.replace(/.*\//, '')
         const completed = completedChallengeIds?.has(challengeId) || false
+        const expiryMs = c.Expiry?.$date?.$numberLong
+          ? parseInt(c.Expiry.$date.$numberLong, 10)
+          : (c.Expiry ? new Date(c.Expiry).getTime() : 0)
+        const expired = expiryMs > 0 && Date.now() > expiryMs
         return {
           id: c._id?.$oid || c._id,
           uid: challengeId,
@@ -868,7 +872,8 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
           xp: standing,
           isElite: standing >= 7000,
           icon: challengeEntry.icon || null,
-          completed
+          completed,
+          expired
         }
       }),
       // Recovered challenges: active challenges from previous weeks that
