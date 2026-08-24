@@ -56,7 +56,10 @@ MechCombatOnly: The player is forced to use Necramech against Rogue Necramechs.
 ShockingLeech: Leech, Shock, or Venomous Eximus variant.
 Oraxia: Defeat Oraxia boss.
 HeavyWeaponsOnly: Enemies are heavily resistant to all damage not dealt by Archguns or Rockets.
-ArbitersNightmareLich: Defeat a Sister of Parvos ## 6. Docs update (readme+wiki+architecture.md+webpage) (preferably one last time after all feature issues are done)or Kuva Lich.
+ArbitersNightmareLich: Defeat a Sister of Parvos or Kuva Lich.
+RocketsOnly: Enemies are heavily resistant to all damage not dealt by Rockets.
+NecroMechWeakpoints: Enemies are heavily resistant to damage applied outside of weak spots, with Necramech weak points revealed.
+GrenadesOnly: Enemies are heavily resistant to all damage not dealt by Grenades.
 
 # Mission Type: Description
 DT_EXTERMINATE: Kill a specific number of enemies.

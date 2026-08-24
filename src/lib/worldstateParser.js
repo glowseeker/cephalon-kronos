@@ -113,6 +113,9 @@ const DESCENDIA_PENANCES = {
   Oraxia: 'Oraxia',
   HeavyWeaponsOnly: 'Heavy Weapons Only',
   ArbitersNightmareLich: "Arbiter's Nightmare Lich",
+  RocketsOnly: 'Rockets Only',
+  NecroMechWeakpoints: 'Necramech Weakpoints',
+  GrenadesOnly: 'Grenades Only',
 }
 
 // ─── Environment Cycle Parsers ────────────────────────────────────────────────
@@ -338,7 +341,10 @@ export function extractNightwaveSeason(credName, locale = 'en') {
  *   - ExportUpgrades  ExportUpgrades table
  *   - archimedeaMap   Archimedea localized name map
  *   - descendiaDesc   Descendia description map (key → description text)
- *   - completedChallengeIds  Set of Nightwave challenge UIDs the player has completed (for recovered challenges)
+ *   - completedChallengeIds  Set of Nightwave challenge instance IDs the player has completed
+ *     (from SeasonChallengeHistory `id` field, matched against worldstate
+ *      ActiveChallenges[]._id.$oid). Used for marking completed challenges and
+ *      computing recovered challenges.
  */
 export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportUpgrades, ExportRecipes, ExportKeys, archimedeaMap, descendiaDesc, completedChallengeIds, locale = 'en', i18nData = null }) {
 
@@ -857,7 +863,8 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
         const challengeEntry = EC?.[c.Challenge] || {}
         const standing = challengeEntry.standing || c.xpAmount || c.XP || 0
         const challengeId = c.Challenge.replace(/.*\//, '')
-        const completed = completedChallengeIds?.has(challengeId) || false
+        const instanceId = c._id?.$oid || c._id
+        const completed = completedChallengeIds?.has(String(instanceId)) || false
         const expiryMs = c.Expiry?.$date?.$numberLong
           ? parseInt(c.Expiry.$date.$numberLong, 10)
           : (c.Expiry ? new Date(c.Expiry).getTime() : 0)
@@ -889,8 +896,8 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
               ? parseInt(c.Expiry.$date.$numberLong, 10)
               : (c.Expiry ? new Date(c.Expiry).getTime() : 0)
             if (!expiryMs) return false
-            const challengeId = c.Challenge.replace(/.*\//, '')
-            return !completedChallengeIds.has(challengeId) && (Date.now() - expiryMs > weekMs)
+            const instanceId = c._id?.$oid || c._id
+            return !completedChallengeIds.has(String(instanceId)) && (Date.now() - expiryMs > weekMs)
           })
           .map(c => {
             const challengeEntry = EC?.[c.Challenge] || {}
