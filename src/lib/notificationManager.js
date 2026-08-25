@@ -86,9 +86,7 @@ const TRIGGER_DEFINITIONS = [
     id: 'chat',
     label: 'Incoming Messages',
     labelKey: 'ui.notif_mgr.trig_chat',
-    columns: [
-      { key: '', label: 'Will only show notifications when Warframe is not focused.', labelKey: 'ui.notif_mgr.chat_hint' },
-    ],
+    columns: [],
     defaultConfig: {},
   },
   {
