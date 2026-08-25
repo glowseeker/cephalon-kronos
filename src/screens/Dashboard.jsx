@@ -525,7 +525,13 @@ export default function Dashboard() {
     if (rawInventory) {
       const walk = (node) => {
         if (Array.isArray(node)) { for (const v of node) walk(v) }
-        else if (node && typeof node === 'object') { for (const v of Object.values(node)) walk(v) }
+        else if (node && typeof node === 'object') {
+          for (const [k, v] of Object.entries(node)) {
+            // Wishlist entries are wanted-but-not-owned; skip them so wishlisted
+            // shawzins and cosmetics are not falsely marked as owned on sales cards.
+            if (k !== 'Wishlist') walk(v)
+          }
+        }
         else if (typeof node === 'string' && node.startsWith('/Lotus')) leaves.add(norm(leaf(node)))
       }
       walk(rawInventory)
