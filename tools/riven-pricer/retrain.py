@@ -60,16 +60,18 @@ MODEL_FILES = [
 
 
 def run_py(script, cwd=None, args=None):
-    cmd = [str(PYTHON), str(script)] + (args or [])
+    cmd = [str(PYTHON), "-u", str(script)] + (args or [])
     print(f"\n── Running: {script.name} {(' '.join(args) if args else '')}──")
-    result = subprocess.run(cmd, cwd=cwd or script.parent, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(result.stderr)
-        print(f"ERROR: {script.name} failed (exit {result.returncode})")
+    proc = subprocess.Popen(cmd, cwd=cwd or script.parent, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    for line in proc.stdout:
+        print(f"  {line}", end="")
+    stderr = proc.stderr.read()
+    proc.wait()
+    if proc.returncode != 0:
+        print(stderr)
+        print(f"ERROR: {script.name} failed (exit {proc.returncode})")
         sys.exit(1)
-    for line in result.stdout.splitlines():
-        print(f"  {line}")
-    return result
+    return proc
 
 
 def ensure_venv(pipeline_dir: Path):
