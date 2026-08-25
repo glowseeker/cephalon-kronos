@@ -16,11 +16,12 @@ use std::sync::{Arc, Mutex};
 use serde_json::Value;
 use serde::Serialize;
 
+#[macro_use]
+mod logger;
 mod log_scanner;
 mod ocr;
 mod ocr_engine;
 mod overlay_utils;
-mod logger;
 mod pricer;
 mod mem_reader;
 
@@ -126,7 +127,7 @@ fn resolve_bundled_path(app_handle: &tauri::AppHandle, relative: &str) -> Option
 /// Simple command to proxy frontend logs to the terminal/stdout.
 #[tauri::command]
 fn log_terminal(message: String) {
-    eprintln!("[JS] {}", message);
+    elog!("[JS] {}", message);
 }
 
 // --- Export Management ---
@@ -281,7 +282,7 @@ fn decompress_lzma(bytes: &[u8]) -> Result<String, String> {
 #[tauri::command]
 async fn check_exports(locale: String, force: Option<bool>) -> Result<String, String> {
     let _t0 = std::time::Instant::now();
-    eprintln!("[RUST][STARTUP] check_exports start, locale={}", locale);
+    elog!("[RUST][STARTUP] check_exports start, locale={}", locale);
     let force = force.unwrap_or(false);
     let export_dir = resolve_path("data/export");
     if !export_dir.exists() {
@@ -344,7 +345,7 @@ async fn check_exports(locale: String, force: Option<bool>) -> Result<String, St
     if needs_update {
         match download_locale_upgrades(&client, &export_dir, &locale).await {
             Ok(_) => updated_count += 1,
-            Err(e) => eprintln!("Warning: could not download DE locale upgrades: {}", e),
+            Err(e) => elog!("Warning: could not download DE locale upgrades: {}", e),
         }
     }
     // TXT data files - refresh every 6 hours; failures are non-fatal
@@ -355,7 +356,7 @@ async fn check_exports(locale: String, force: Option<bool>) -> Result<String, St
         if needs_update {
             match download_file(&client, url, &path).await {
                 Ok(_) => updated_count += 1,
-                Err(e) => eprintln!("Warning: could not download {}: {}", file_name, e),
+                Err(e) => elog!("Warning: could not download {}: {}", file_name, e),
             }
         }
     }
@@ -368,12 +369,12 @@ async fn check_exports(locale: String, force: Option<bool>) -> Result<String, St
         if needs_update {
             match download_file(&client, url, &path).await {
                 Ok(_) => updated_count += 1,
-                Err(e) => eprintln!("Warning: could not download {}: {}", file_name, e),
+                Err(e) => elog!("Warning: could not download {}: {}", file_name, e),
             }
         }
     }
 
-    eprintln!("[RUST][STARTUP] check_exports end after {}ms, {} files updated", _t0.elapsed().as_millis(), updated_count);
+    elog!("[RUST][STARTUP] check_exports end after {}ms, {} files updated", _t0.elapsed().as_millis(), updated_count);
     Ok(format!("Updated {} files", updated_count))
 }
 
@@ -384,7 +385,7 @@ async fn check_exports(locale: String, force: Option<bool>) -> Result<String, St
 #[tauri::command]
 async fn check_pricer_models() -> Result<String, String> {
     let _t0 = std::time::Instant::now();
-    eprintln!("[RUST][STARTUP] check_pricer_models start");
+    elog!("[RUST][STARTUP] check_pricer_models start");
     let models_dir = crate::pricer::get_models_dir();
     if !models_dir.exists() {
         std::fs::create_dir_all(&models_dir).map_err(|e| e.to_string())?;
@@ -412,7 +413,7 @@ async fn check_pricer_models() -> Result<String, String> {
             downloaded += 1;
         }
     }
-    eprintln!("[RUST][STARTUP] check_pricer_models end after {}ms", _t0.elapsed().as_millis());
+    elog!("[RUST][STARTUP] check_pricer_models end after {}ms", _t0.elapsed().as_millis());
     Ok(format!("Downloaded {} pricer model files", downloaded))
 }
 
@@ -468,7 +469,7 @@ async fn check_ocr_models() -> Result<String, String> {
         if !rec_path.exists() {
             let url = format!("{}/{}", base, rec_name);
             if let Err(e) = download_file(&client, &url, &rec_path).await {
-                eprintln!("[OCR MODELS] Failed to download {}: {}", rec_name, e);
+                elog!("[OCR MODELS] Failed to download {}: {}", rec_name, e);
             } else {
                 downloaded += 1;
             }
@@ -476,7 +477,7 @@ async fn check_ocr_models() -> Result<String, String> {
         if !keys_path.exists() {
             let url = format!("{}/{}", base, keys_name);
             if let Err(e) = download_file(&client, &url, &keys_path).await {
-                eprintln!("[OCR MODELS] Failed to download {}: {}", keys_name, e);
+                elog!("[OCR MODELS] Failed to download {}: {}", keys_name, e);
             } else {
                 downloaded += 1;
             }
@@ -889,7 +890,7 @@ async fn call_api_helper(_app_handle: tauri::AppHandle) -> Result<Value, String>
     .map_err(|e| format!("Scan task error: {e}"))?
     .ok_or_else(|| "Could not find auth token in Warframe memory - try logging in first".to_string())?;
 
-    eprintln!("[inventory] auth token found, fetching inventory...");
+    elog!("[inventory] auth token found, fetching inventory...");
 
     // Fetch inventory from Warframe's mobile API.
     let url = format!("https://mobile.warframe.com/api/inventory.php{authz}");
@@ -935,7 +936,7 @@ async fn call_api_helper(_app_handle: tauri::AppHandle) -> Result<Value, String>
 #[tauri::command]
 async fn load_all_exports(app_handle: tauri::AppHandle, locale: String) -> Result<Vec<(String, String)>, String> {
     let _t0 = std::time::Instant::now();
-    eprintln!("[RUST][STARTUP] load_all_exports start, locale={}", locale);
+    elog!("[RUST][STARTUP] load_all_exports start, locale={}", locale);
     let export_dir = resolve_path("data/export");
 
     // Pre-resolve all paths (fast metadata ops, non-blocking)
@@ -1002,8 +1003,8 @@ async fn load_all_exports(app_handle: tauri::AppHandle, locale: String) -> Resul
         result.push(("ExportUpgradesLocalized".to_string(), text));
     }
 
-    eprintln!("[STARTUP-TIMING] load_all_exports: {} files in {}ms", result.len(), _t0.elapsed().as_millis());
-    eprintln!("[RUST][STARTUP] load_all_exports end after {}ms", _t0.elapsed().as_millis());
+    elog!("[STARTUP-TIMING] load_all_exports: {} files in {}ms", result.len(), _t0.elapsed().as_millis());
+    elog!("[RUST][STARTUP] load_all_exports end after {}ms", _t0.elapsed().as_millis());
     Ok(result)
 }
 
@@ -1014,7 +1015,7 @@ async fn load_all_exports(app_handle: tauri::AppHandle, locale: String) -> Resul
 #[tauri::command]
 async fn load_all_exports_via_file(app_handle: tauri::AppHandle, locale: String) -> Result<(String, usize), String> {
     let t0 = std::time::Instant::now();
-    eprintln!("[RUST][STARTUP] load_all_exports_via_file start, locale={}", locale);
+    elog!("[RUST][STARTUP] load_all_exports_via_file start, locale={}", locale);
     let export_dir = resolve_path("data/export");
 
     // Pre-resolve all paths
@@ -1096,7 +1097,7 @@ async fn load_all_exports_via_file(app_handle: tauri::AppHandle, locale: String)
     let temp_path = export_dir.join("exports_concat.dat");
     fs::write(&temp_path, concatenated.as_bytes()).map_err(|e| format!("Failed to write concatenated exports: {}", e))?;
 
-    eprintln!("[RUST][STARTUP] load_all_exports_via_file end after {}ms, {} files, temp file {} bytes", t0.elapsed().as_millis(), file_count, concatenated.len());
+    elog!("[RUST][STARTUP] load_all_exports_via_file end after {}ms, {} files, temp file {} bytes", t0.elapsed().as_millis(), file_count, concatenated.len());
     Ok((temp_path.to_string_lossy().to_string(), file_count))
 }
 
@@ -1347,7 +1348,7 @@ fn extract_bundled_assets(app_handle: &tauri::AppHandle) {
 #[tauri::command]
 async fn check_media_assets() -> Result<String, String> {
     let _t0 = std::time::Instant::now();
-    eprintln!("[RUST][STARTUP] check_media_assets start");
+    elog!("[RUST][STARTUP] check_media_assets start");
     let client = reqwest::Client::new();
     let mut downloaded = 0u32;
     let base_url = "https://raw.githubusercontent.com/glowseeker/cephalon-kronos/master/src-tauri/data/export";
@@ -1389,7 +1390,7 @@ async fn check_media_assets() -> Result<String, String> {
         }
     }
 
-    eprintln!("[RUST][STARTUP] check_media_assets end after {}ms, {} downloaded", _t0.elapsed().as_millis(), downloaded);
+    elog!("[RUST][STARTUP] check_media_assets end after {}ms, {} downloaded", _t0.elapsed().as_millis(), downloaded);
     Ok(format!("Downloaded {} media assets", downloaded))
 }
 
@@ -1598,7 +1599,7 @@ async fn ensure_card_images(
                 });
             }
             if let Err(e) = make_fully_opaque(file) {
-                eprintln!("ensure_card_images: skip corrupt {:?}: {e}", file);
+                elog!("ensure_card_images: skip corrupt {:?}: {e}", file);
             }
             if let Ok(rel) = file.strip_prefix(&fix_root) {
                 processed.insert(rel.to_string_lossy().replace('\\', "/"));
@@ -1741,7 +1742,7 @@ fn composite_card_overlays_inner(card_root: &std::path::Path) {
         let overlay_path = card_root.join(overlay_rel);
         if card_path.exists() && overlay_path.exists() {
             if let Err(e) = composite_overlay(&card_path, &overlay_path) {
-                eprintln!("composite_overlay {}: {e}", card_rel);
+                elog!("composite_overlay {}: {e}", card_rel);
             }
         }
         done.insert(key);
@@ -2211,7 +2212,7 @@ fn hide_overlay_window(
 #[tauri::command]
 fn toggle_sidebar(app_handle: tauri::AppHandle) -> Result<(), String> {
     if overlay_utils::SIDEBAR_TOGGLING.swap(true, Ordering::SeqCst) {
-        eprintln!("[SIDEBAR-TOGGLE] SKIPPED (already toggling)");
+        elog!("[SIDEBAR-TOGGLE] SKIPPED (already toggling)");
         return Ok(());
     }
 
@@ -2229,7 +2230,7 @@ fn toggle_sidebar(app_handle: tauri::AppHandle) -> Result<(), String> {
             let _ = main_win.emit("sidebar-mode-changed", serde_json::json!({ "active": false }));
         }
         let _ = app_handle.emit("sidebar-visible", serde_json::json!({ "visible": false }));
-        eprintln!("[SIDEBAR-TOGGLE] EXIT done");
+        elog!("[SIDEBAR-TOGGLE] EXIT done");
         Ok(())
     } else {
         sidebar_stamp(&state);
@@ -2263,7 +2264,7 @@ fn toggle_sidebar(app_handle: tauri::AppHandle) -> Result<(), String> {
         let show_result = overlay_utils::show_sidebar_internal(&app_handle, &side, entry_width);
         overlay_utils::SIDEBAR_TOGGLING.store(false, Ordering::SeqCst);
         if let Err(e) = &show_result {
-            eprintln!("[SIDEBAR-TOGGLE] show_sidebar_internal FAILED: {e}");
+            elog!("[SIDEBAR-TOGGLE] show_sidebar_internal FAILED: {e}");
             // Roll back saved state so a subsequent toggle doesn't try to
             // "hide" a window that was never shown.
             let mut saved = state.sidebar_saved.lock().unwrap();
@@ -2276,7 +2277,7 @@ fn toggle_sidebar(app_handle: tauri::AppHandle) -> Result<(), String> {
             let _ = main_win.emit("sidebar-mode-changed", serde_json::json!({ "active": true, "side": side }));
         }
         let _ = app_handle.emit("sidebar-visible", serde_json::json!({ "visible": true }));
-        eprintln!("[SIDEBAR-TOGGLE] ENTER done side={}", side);
+        elog!("[SIDEBAR-TOGGLE] ENTER done side={}", side);
         Ok(())
     }
 }
@@ -2353,9 +2354,9 @@ fn load_all_exports_inner(app_handle: &tauri::AppHandle) -> Option<serde_json::V
         match std::fs::File::open(&path) {
             Ok(file) => match serde_json::from_reader(std::io::BufReader::new(file)) {
                 Ok(json) => { result.insert(key.to_string(), json); }
-                Err(e) => eprintln!("[load_all_exports_inner] failed to parse {} ({}b): {}", key, path.metadata().map(|m| m.len()).unwrap_or(0), e),
+                Err(e) => elog!("[load_all_exports_inner] failed to parse {} ({}b): {}", key, path.metadata().map(|m| m.len()).unwrap_or(0), e),
             },
-            Err(e) => eprintln!("[load_all_exports_inner] failed to open {}: {}", key, e),
+            Err(e) => elog!("[load_all_exports_inner] failed to open {}: {}", key, e),
         }
     }
 
@@ -2367,9 +2368,9 @@ fn load_all_exports_inner(app_handle: &tauri::AppHandle) -> Option<serde_json::V
         match std::fs::File::open(&path) {
             Ok(file) => match serde_json::from_reader(std::io::BufReader::new(file)) {
                 Ok(json) => { result.insert(key.to_string(), json); }
-                Err(e) => eprintln!("[load_all_exports_inner] failed to parse {} ({}b): {}", key, path.metadata().map(|m| m.len()).unwrap_or(0), e),
+                Err(e) => elog!("[load_all_exports_inner] failed to parse {} ({}b): {}", key, path.metadata().map(|m| m.len()).unwrap_or(0), e),
             },
-            Err(e) => eprintln!("[load_all_exports_inner] failed to open {}: {}", key, e),
+            Err(e) => elog!("[load_all_exports_inner] failed to open {}: {}", key, e),
         }
     }
 
@@ -2386,9 +2387,9 @@ fn load_all_exports_inner(app_handle: &tauri::AppHandle) -> Option<serde_json::V
             match std::fs::File::open(&locale_path) {
                 Ok(file) => match serde_json::from_reader(std::io::BufReader::new(file)) {
                     Ok(json) => { result.insert("ExportUpgradesLocalized".to_string(), json); }
-                    Err(e) => eprintln!("[load_all_exports_inner] failed to parse {}: {}", locale_file, e),
+                    Err(e) => elog!("[load_all_exports_inner] failed to parse {}: {}", locale_file, e),
                 },
-                Err(e) => eprintln!("[load_all_exports_inner] failed to open {}: {}", locale_file, e),
+                Err(e) => elog!("[load_all_exports_inner] failed to open {}: {}", locale_file, e),
             }
         }
     }
@@ -2553,14 +2554,14 @@ async fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) ->
                 const SND_ASYNC: u32 = 0x00000001;
                 const SND_NODEFAULT: u32 = 0x00000002;
                 
-                eprintln!("[Audio] Playing via PlaySoundW: {}", clean_path);
+                elog!("[Audio] Playing via PlaySoundW: {}", clean_path);
                 PlaySoundW(wide_path.as_ptr(), std::ptr::null_mut(), SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
             }
         }
         
         #[cfg(target_os = "macos")]
         {
-            eprintln!("[Audio] Playing via afplay: {}", path_str);
+            elog!("[Audio] Playing via afplay: {}", path_str);
             let _ = std::process::Command::new("afplay")
                 .arg(&path_str)
                 .spawn();
@@ -2568,7 +2569,7 @@ async fn play_notification_sound(app_handle: tauri::AppHandle, sound: String) ->
         
         #[cfg(target_os = "linux")]
         {
-            eprintln!("[Audio] Playing via native player: {}", path_str);
+            elog!("[Audio] Playing via native player: {}", path_str);
             let played = std::process::Command::new("pw-play")
                 .arg(&path_str)
                 .stdout(std::process::Stdio::null())
@@ -2882,7 +2883,7 @@ async fn register_one_via_plugin(app: &AppHandle, shortcut: &str, action: &str) 
             if event.state() != ShortcutState::Pressed {
                 return;
             }
-            eprintln!("[Hotkeys] Triggered: {} -> {}", shortcut_owned, action_owned);
+            elog!("[Hotkeys] Triggered: {} -> {}", shortcut_owned, action_owned);
             let app_c = app_c.clone();
             let action_c = action_owned.clone();
             tauri::async_runtime::spawn(async move {
@@ -2899,11 +2900,11 @@ async fn dispatch_hotkey_action(app: AppHandle, action: &str) {
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as u64;
     let last = state.sidebar_last_op.swap(now, Ordering::Relaxed);
     if now.saturating_sub(last) < 100 {
-        eprintln!("[Hotkeys] Ignoring duplicate trigger for: {}", action);
+        elog!("[Hotkeys] Ignoring duplicate trigger for: {}", action);
         return;
     }
 
-    eprintln!("[Hotkeys] Triggered: {}", action);
+    elog!("[Hotkeys] Triggered: {}", action);
     match action {
         "manual_ocr" => {
             let _ = crate::ocr::trigger_manual_ocr(app, None).await;
@@ -2940,14 +2941,14 @@ async fn dispatch_hotkey_action(app: AppHandle, action: &str) {
             let _ = toggle_sidebar(app);
         }
         _ => {
-            eprintln!("[Hotkeys] Unknown action: {}", action);
+            elog!("[Hotkeys] Unknown action: {}", action);
         }
     }
 }
 
 #[tauri::command]
 fn log_timing(label: String) {
-    eprintln!("[TIMING FRONTEND] {}", label);
+    elog!("[TIMING FRONTEND] {}", label);
 }
 
 /// Save a JSON settings object to data/user/settings.json.
@@ -2983,7 +2984,7 @@ fn get_monitoring_active(app_handle: tauri::AppHandle) -> bool {
 
 #[tauri::command]
 fn set_sidebar_width(app_handle: tauri::AppHandle, width: f64, side: String, persist: bool) -> Result<(), String> {
-    eprintln!("[set_sidebar_width] called width={}, side={}, persist={}", width, side, persist);
+    elog!("[set_sidebar_width] called width={}, side={}, persist={}", width, side, persist);
     if persist {
         let settings_dir = resolve_path("data/user");
         let path = settings_dir.join("settings.json");
@@ -3032,7 +3033,7 @@ fn set_sidebar_width(app_handle: tauri::AppHandle, width: f64, side: String, per
                 "right" => mon_x + mon_w as i32 - phys_w as i32,
                 _       => mon_x,
             };
-            eprintln!("[set_sidebar_width] computed: phys_w={}, target_x={}, mon_y={}, mon_h={}, mon_x={}, mon_w={}", phys_w, target_x, mon_y, mon_h, mon_x, mon_w);
+            elog!("[set_sidebar_width] computed: phys_w={}, target_x={}, mon_y={}, mon_h={}, mon_x={}, mon_w={}", phys_w, target_x, mon_y, mon_h, mon_x, mon_w);
             let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: phys_w, height: mon_h }));
             let _ = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x: target_x, y: mon_y }));
         }
@@ -3195,11 +3196,11 @@ fn is_warframe_focused() -> bool {
 /// Returns None if the model isn't loaded (e.g. no pricer-models present).
 #[tauri::command]
 fn estimate_riven_price(input: pricer::RivenInput) -> Option<f32> {
-    eprintln!("[PRICER CMD] estimate_riven_price called: weapon='{}'", input.weapon_name);
+    elog!("[PRICER CMD] estimate_riven_price called: weapon='{}'", input.weapon_name);
     let result = pricer::estimate_price(&input);
     match &result {
-        Some(p) => eprintln!("[PRICER CMD] estimate_riven_price OK: price={}", p),
-        None => eprintln!("[PRICER CMD] estimate_riven_price returned None"),
+        Some(p) => elog!("[PRICER CMD] estimate_riven_price OK: price={}", p),
+        None => elog!("[PRICER CMD] estimate_riven_price returned None"),
     }
     result
 }
@@ -3207,12 +3208,12 @@ fn estimate_riven_price(input: pricer::RivenInput) -> Option<f32> {
 /// Full estimate: price + grade + reroll expected value.
 #[tauri::command]
 fn estimate_riven_full(input: pricer::RivenInput) -> Option<pricer::RivenFullEstimate> {
-    eprintln!("[PRICER CMD] estimate_riven_full called: weapon='{}' pos1={:?} pos2={:?} pos3={:?} neg={:?} rolls={}", 
+    elog!("[PRICER CMD] estimate_riven_full called: weapon='{}' pos1={:?} pos2={:?} pos3={:?} neg={:?} rolls={}", 
         input.weapon_name, input.positive1, input.positive2, input.positive3, input.negative, input.re_rolls);
     let result = pricer::estimate_full(&input);
     match &result {
-        Some(est) => eprintln!("[PRICER CMD] estimate_riven_full OK: price={} grade={}", est.price, est.grade),
-        None => eprintln!("[PRICER CMD] estimate_riven_full returned None"),
+        Some(est) => elog!("[PRICER CMD] estimate_riven_full OK: price={} grade={}", est.price, est.grade),
+        None => elog!("[PRICER CMD] estimate_riven_full returned None"),
     }
     result
 }
@@ -3220,9 +3221,9 @@ fn estimate_riven_full(input: pricer::RivenInput) -> Option<pricer::RivenFullEst
 /// Batch estimate: price every riven in one call.
 #[tauri::command]
 fn estimate_riven_full_batch(inputs: Vec<pricer::RivenInput>) -> Vec<Option<pricer::RivenFullEstimate>> {
-    eprintln!("[PRICER CMD] called with {} inputs", inputs.len());
+    elog!("[PRICER CMD] called with {} inputs", inputs.len());
     let result = pricer::estimate_full_batch(&inputs);
-    eprintln!("[PRICER CMD] done, {} results", result.len());
+    elog!("[PRICER CMD] done, {} results", result.len());
     result
 }
 
@@ -3248,22 +3249,22 @@ pub(crate) fn ensure_gtk_overlay_wrapper(window: &tauri::WebviewWindow) -> Resul
         let widget: gtk::Widget = pwv.inner().upcast();
         let box_widget = match widget.parent() {
             Some(p) => p,
-            None => { eprintln!("[GTK-WRAP] {label}: webview has no parent yet"); return; }
+            None => { elog!("[GTK-WRAP] {label}: webview has no parent yet"); return; }
         };
         let window_container = match box_widget.parent() {
             Some(p) => p,
-            None => { eprintln!("[GTK-WRAP] {label}: GtkBox has no parent yet"); return; }
+            None => { elog!("[GTK-WRAP] {label}: GtkBox has no parent yet"); return; }
         };
         if window_container.type_().name() == "GtkOverlay" {
-            eprintln!("[GTK-WRAP] {label}: already wrapped"); return;
+            elog!("[GTK-WRAP] {label}: already wrapped"); return;
         }
         let vbox = match box_widget.dynamic_cast::<gtk::Box>() {
             Ok(b) => b,
-            Err(_) => { eprintln!("[GTK-WRAP] {label}: parent is not GtkBox"); return; }
+            Err(_) => { elog!("[GTK-WRAP] {label}: parent is not GtkBox"); return; }
         };
         let win_container = match window_container.dynamic_cast::<gtk::Container>() {
             Ok(c) => c,
-            Err(_) => { eprintln!("[GTK-WRAP] {label}: grandparent is not Container"); return; }
+            Err(_) => { elog!("[GTK-WRAP] {label}: grandparent is not Container"); return; }
         };
         let overlay = gtk::Overlay::new();
         overlay.set_hexpand(true);
@@ -3272,7 +3273,7 @@ pub(crate) fn ensure_gtk_overlay_wrapper(window: &tauri::WebviewWindow) -> Resul
         win_container.add(&overlay);
         overlay.add(&vbox);
         overlay.show();
-        eprintln!("[GTK-WRAP] {label}: wrapped successfully");
+        elog!("[GTK-WRAP] {label}: wrapped successfully");
     }).map_err(|e| e.to_string())
 }
 
@@ -3786,7 +3787,7 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
                             *state.main_window_monitor.lock() = Some(monitor.clone());
                             let pos = monitor.position();
                             let size = monitor.size();
-                            eprintln!("[MONITOR-CACHE] main window monitor cached: {}x{}+{}+{}",
+                            elog!("[MONITOR-CACHE] main window monitor cached: {}x{}+{}+{}",
                                 size.width, size.height, pos.x, pos.y);
                         }
                     }
@@ -3820,22 +3821,22 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
                         }
                         #[cfg(any(debug_assertions, feature = "devtools"))]
                         let _ = main_win.open_devtools();
-                        eprintln!("[DEBUG] Force-showed main window after 5s (frontend-ready not received)");
+                        elog!("[DEBUG] Force-showed main window after 5s (frontend-ready not received)");
                     }
                 }
             });
             // Download PP-OCRv5 models in background (needed by ocr_engine)
             tauri::async_runtime::spawn(async move {
                 match check_ocr_models().await {
-                    Ok(msg) => eprintln!("[OCR MODELS] {}", msg),
-                    Err(e) => eprintln!("[OCR MODELS] Download failed: {}", e),
+                    Ok(msg) => elog!("[OCR MODELS] {}", msg),
+                    Err(e) => elog!("[OCR MODELS] Download failed: {}", e),
                 }
             });
             // Download riven pricing model in background (needed by pricer)
             tauri::async_runtime::spawn(async move {
                 match check_pricer_models().await {
-                    Ok(msg) => eprintln!("[PRICER MODELS] {}", msg),
-                    Err(e) => eprintln!("[PRICER MODELS] Download failed: {}", e),
+                    Ok(msg) => elog!("[PRICER MODELS] {}", msg),
+                    Err(e) => elog!("[PRICER MODELS] Download failed: {}", e),
                 }
                 // Eager-init the pricer so it's ready when the user first
                 // navigates to the Rivens tab or opens a riven overlay.
@@ -3854,8 +3855,8 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
                 std::thread::sleep(std::time::Duration::from_millis(500));
                 if let Some(cache_path) = detect_cache_inner() {
                     match extract_card_images_inner(&ah4, &cache_path) {
-                        Ok(count) => eprintln!("[MOD IMAGES] {} card images available", count),
-                        Err(e) => eprintln!("[MOD IMAGES] Extraction failed: {}", e),
+                        Ok(count) => elog!("[MOD IMAGES] {} card images available", count),
+                        Err(e) => elog!("[MOD IMAGES] Extraction failed: {}", e),
                     }
                 }
             });
@@ -3891,7 +3892,7 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
                                 let _ = std::fs::write(&path, serde_json::to_string_pretty(&s).unwrap());
                             }
                         }
-                        eprintln!("[OCR] Screenshot probe: {}", if status.is_ok() { "granted" } else { "denied" });
+                        elog!("[OCR] Screenshot probe: {}", if status.is_ok() { "granted" } else { "denied" });
                     });
                 }
             }

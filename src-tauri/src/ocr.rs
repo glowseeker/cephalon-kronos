@@ -74,7 +74,7 @@ fn ocr_card_image(
     }
 
     let crop = full.crop_imm(cx, cy, cw, ch);
-    eprintln!("[OCR] ocr_card_image: crop bounds cx={} cy={} cw={} ch={} (full {}x{})", cx, cy, cw, ch, sw, sh);
+    elog!("[OCR] ocr_card_image: crop bounds cx={} cy={} cw={} ch={} (full {}x{})", cx, cy, cw, ch, sw, sh);
 
     if save_crop {
         let pos_name = format!("{:?}", position).to_lowercase();
@@ -140,7 +140,7 @@ fn ocr_card_image(
     }
 
     let combined = merged.join(" | ");
-    eprintln!("[OCR] ocr_card_image RESULT: position={:?} text='{}'", position, combined);
+    elog!("[OCR] ocr_card_image RESULT: position={:?} text='{}'", position, combined);
     crate::logger::log_to_disk(app, &format!("[RIVEN OCR] Card {:?}: {:?}", position, combined));
 
     Ok(RivenOcrResult { text: combined })
@@ -152,22 +152,22 @@ pub fn ocr_riven_card(
     position: RivenCardPosition,
     game_locale: String,
 ) -> Result<RivenOcrResult, String> {
-    eprintln!("[OCR] ocr_riven_card START: position={:?} game_locale={}", position, game_locale);
-    eprintln!("[OCR] getting target monitor...");
+    elog!("[OCR] ocr_riven_card START: position={:?} game_locale={}", position, game_locale);
+    elog!("[OCR] getting target monitor...");
     let Some(monitor) = get_target_monitor(&app) else {
-        eprintln!("[OCR] ERROR: No target monitor found");
+        elog!("[OCR] ERROR: No target monitor found");
         return Err("No target monitor".to_string());
     };
-    eprintln!("[OCR] target monitor: {}x{}", 
+    elog!("[OCR] target monitor: {}x{}", 
         monitor.width().unwrap_or(0), monitor.height().unwrap_or(0));
-    eprintln!("[OCR] capturing monitor image...");
+    elog!("[OCR] capturing monitor image...");
     let image = capture_monitor_image(&app, &monitor)?;
-    eprintln!("[OCR] capture_monitor_image returned image: {}x{}", image.width(), image.height());
-    eprintln!("[OCR] cropping + preprocessing + running OCR...");
+    elog!("[OCR] capture_monitor_image returned image: {}x{}", image.width(), image.height());
+    elog!("[OCR] cropping + preprocessing + running OCR...");
     let result = ocr_card_image(&app, DynamicImage::ImageRgba8(image), position, false, &game_locale);
     match &result {
-        Ok(r) => eprintln!("[OCR] ocr_card_image OK, text length: {}", r.text.len()),
-        Err(e) => eprintln!("[OCR] ocr_card_image FAILED: {}", e),
+        Ok(r) => elog!("[OCR] ocr_card_image OK, text length: {}", r.text.len()),
+        Err(e) => elog!("[OCR] ocr_card_image FAILED: {}", e),
     }
     result
 }
@@ -219,7 +219,7 @@ fn try_grim(app: &AppHandle, monitor: &Monitor) -> Option<image::RgbaImage> {
         .unwrap_or(false);
 
     if !ok {
-        eprintln!("[OCR] grim fallback failed (not installed or wlr-screencopy unavailable)");
+        elog!("[OCR] grim fallback failed (not installed or wlr-screencopy unavailable)");
         return None;
     }
     std::thread::sleep(Duration::from_millis(200));
@@ -229,7 +229,7 @@ fn try_grim(app: &AppHandle, monitor: &Monitor) -> Option<image::RgbaImage> {
             Some(img.to_rgba8())
         }
         Err(e) => {
-            eprintln!("[OCR] grim capture load failed: {}", e);
+            elog!("[OCR] grim capture load failed: {}", e);
             crate::logger::log_to_disk(app, &format!("[OCR] grim capture load failed: {}", e));
             None
         }
@@ -266,7 +266,7 @@ fn try_spectacle(app: &AppHandle, monitor: &Monitor) -> Option<image::RgbaImage>
             Some(cropped.to_rgba8())
         }
         Err(e) => {
-            eprintln!("[OCR] spectacle capture load failed: {}", e);
+            elog!("[OCR] spectacle capture load failed: {}", e);
             crate::logger::log_to_disk(app, &format!("[OCR] spectacle capture load failed: {}", e));
             None
         }
@@ -303,7 +303,7 @@ fn try_import(app: &AppHandle, monitor: &Monitor) -> Option<image::RgbaImage> {
             Some(cropped.to_rgba8())
         }
         Err(e) => {
-            eprintln!("[OCR] import capture load failed: {}", e);
+            elog!("[OCR] import capture load failed: {}", e);
             crate::logger::log_to_disk(app, &format!("[OCR] import capture load failed: {}", e));
             None
         }
@@ -320,91 +320,91 @@ fn is_kde_kwin() -> bool {
 }
 
 pub(crate) fn capture_monitor_image(app: &AppHandle, monitor: &Monitor) -> Result<image::RgbaImage, String> {
-    eprintln!("[OCR] capture_monitor_image START");
+    elog!("[OCR] capture_monitor_image START");
     #[cfg(target_os = "linux")]
     {
         let is_wayland = std::env::var("XDG_SESSION_TYPE")
             .map(|v| v == "wayland")
             .unwrap_or(false);
-        eprintln!("[OCR] is_wayland={}", is_wayland);
+        elog!("[OCR] is_wayland={}", is_wayland);
 
         if is_wayland {
-            eprintln!("[OCR] Wayland: trying grim...");
+            elog!("[OCR] Wayland: trying grim...");
             if let Some(img) = try_grim(app, monitor) {
                 if is_valid_capture(&img) {
-                    eprintln!("[OCR] grim: SUCCESS, buffer {}x{}", img.width(), img.height());
+                    elog!("[OCR] grim: SUCCESS, buffer {}x{}", img.width(), img.height());
                     return Ok(img);
                 }
-                eprintln!("[OCR] grim: blank/invalid buffer");
+                elog!("[OCR] grim: blank/invalid buffer");
             } else {
-                eprintln!("[OCR] grim: not available");
+                elog!("[OCR] grim: not available");
             }
         }
 
-        eprintln!("[OCR] trying xcap Monitor::capture_image...");
+        elog!("[OCR] trying xcap Monitor::capture_image...");
         if let Ok(img) = monitor.capture_image() {
             if is_valid_capture(&img) {
-                eprintln!("[OCR] xcap Monitor: SUCCESS, buffer {}x{}", img.width(), img.height());
+                elog!("[OCR] xcap Monitor: SUCCESS, buffer {}x{}", img.width(), img.height());
                 return Ok(img);
             }
-            eprintln!("[OCR] xcap Monitor: blank/invalid buffer");
+            elog!("[OCR] xcap Monitor: blank/invalid buffer");
         } else {
-            eprintln!("[OCR] xcap Monitor::capture_image FAILED");
+            elog!("[OCR] xcap Monitor::capture_image FAILED");
         }
 
         // Fallback: capture the Warframe XWayland window directly via XCB
-        eprintln!("[OCR] trying xcap Window capture (Warframe XWayland)...");
+        elog!("[OCR] trying xcap Window capture (Warframe XWayland)...");
         if let Ok(windows) = xcap::Window::all() {
             let warframe = windows.iter().find(|w| {
                 w.title().as_deref().unwrap_or("").contains("Warframe")
             }).cloned();
             if let Some(w) = warframe {
-                eprintln!("[OCR] Found Warframe window: title={:?}", w.title());
+                elog!("[OCR] Found Warframe window: title={:?}", w.title());
                 if let Ok(img) = w.capture_image() {
                     if is_valid_capture(&img) {
-                        eprintln!("[OCR] xcap Window (Warframe): SUCCESS, buffer {}x{}", img.width(), img.height());
+                        elog!("[OCR] xcap Window (Warframe): SUCCESS, buffer {}x{}", img.width(), img.height());
                         return Ok(img);
                     }
-                    eprintln!("[OCR] xcap Window (Warframe): blank/invalid buffer");
+                    elog!("[OCR] xcap Window (Warframe): blank/invalid buffer");
                 } else {
-                    eprintln!("[OCR] xcap Window (Warframe)::capture_image FAILED");
+                    elog!("[OCR] xcap Window (Warframe)::capture_image FAILED");
                 }
             } else {
-                eprintln!("[OCR] No Warframe window found (checked {} windows)", windows.len());
+                elog!("[OCR] No Warframe window found (checked {} windows)", windows.len());
             }
         } else {
-            eprintln!("[OCR] xcap::Window::all() FAILED");
+            elog!("[OCR] xcap::Window::all() FAILED");
         }
 
         if is_wayland {
             if is_kde_kwin() {
-                eprintln!("[OCR] Wayland+KDE: trying spectacle...");
+                elog!("[OCR] Wayland+KDE: trying spectacle...");
                 if let Some(img) = try_spectacle(app, monitor) {
                     if is_valid_capture(&img) {
-                        eprintln!("[OCR] spectacle: SUCCESS, buffer {}x{}", img.width(), img.height());
+                        elog!("[OCR] spectacle: SUCCESS, buffer {}x{}", img.width(), img.height());
                         return Ok(img);
                     }
-                    eprintln!("[OCR] spectacle: blank/invalid buffer");
+                    elog!("[OCR] spectacle: blank/invalid buffer");
                 } else {
-                    eprintln!("[OCR] spectacle: FAILED");
+                    elog!("[OCR] spectacle: FAILED");
                 }
             } else {
-                eprintln!("[OCR] Wayland but not KDE KWin, skipping spectacle");
+                elog!("[OCR] Wayland but not KDE KWin, skipping spectacle");
             }
         } else {
-            eprintln!("[OCR] X11: trying import...");
+            elog!("[OCR] X11: trying import...");
             if let Some(img) = try_import(app, monitor) {
                 if is_valid_capture(&img) {
-                    eprintln!("[OCR] import: SUCCESS, buffer {}x{}", img.width(), img.height());
+                    elog!("[OCR] import: SUCCESS, buffer {}x{}", img.width(), img.height());
                     return Ok(img);
                 }
-                eprintln!("[OCR] import: blank/invalid buffer");
+                elog!("[OCR] import: blank/invalid buffer");
             } else {
-                eprintln!("[OCR] import: FAILED");
+                elog!("[OCR] import: FAILED");
             }
         }
 
-        eprintln!("[OCR] ALL CAPTURE METHODS EXHAUSTED");
+        elog!("[OCR] ALL CAPTURE METHODS EXHAUSTED");
         crate::logger::log_to_disk(app, "[OCR] Capture failed (all methods exhausted or returned invalid data)");
         return Err("capture failed (all methods exhausted or returned invalid data)".to_string());
     }
@@ -517,7 +517,7 @@ fn get_requiem_templates() -> &'static Vec<RequiemTemplate> {
 macro_rules! ocr_log {
     ($app:expr, $($arg:tt)*) => {{
         let msg = format!($($arg)*);
-        eprintln!("{}", msg);
+        elog!("{}", msg);
         crate::logger::log_to_disk($app, &msg);
     }};
 }
@@ -635,7 +635,7 @@ fn identify_requiem_mod(_app: &AppHandle, slot_crop: &DynamicImage, slot_idx: us
         }
         let ncc = (dot / (t_sq.sqrt() * p_sq.sqrt()).max(1e-8)) as f32;
 
-        eprintln!("[OCR] Slot {} Requiem '{}' pearson: {:.3}", slot_idx, t.name, ncc);
+        elog!("[OCR] Slot {} Requiem '{}' pearson: {:.3}", slot_idx, t.name, ncc);
         results.push((t.name, ncc));
     }
 
@@ -643,7 +643,7 @@ fn identify_requiem_mod(_app: &AppHandle, slot_crop: &DynamicImage, slot_idx: us
     let (best_name, best_score) = results.first().copied().unwrap_or(("none", -1.0));
     let margin = if results.len() > 1 { best_score - results[1].1 } else { 1.0 };
 
-    eprintln!("[OCR] Slot {} requiem best: {} at pearson {:.3}, margin: {:.3}",
+    elog!("[OCR] Slot {} requiem best: {} at pearson {:.3}, margin: {:.3}",
         slot_idx, best_name, best_score, margin);
 
     if best_score > 0.40 && margin >= 0.010 {
@@ -1448,7 +1448,7 @@ pub async fn trigger_manual_ocr(app: AppHandle, _squad_size: Option<usize>) -> R
         .map(|d| d.as_millis())
         .unwrap_or(0);
     let msg = format!("[SHORTCUT] trigger_manual_ocr called at {}", now);
-    eprintln!("{}", msg);
+    elog!("{}", msg);
     crate::logger::log_to_disk(&app, &msg);
     ICON_SCAN_ACTIVE.store(true, Ordering::SeqCst);
     detect_slot_count_from_icons(app, true);
@@ -1462,7 +1462,7 @@ pub async fn start_debug_ocr_session(app: AppHandle) -> Result<(), String> {
         .map(|d| d.as_millis())
         .unwrap_or(0);
     let msg = format!("[DEBUG] start_debug_ocr_session called at {}", now);
-    eprintln!("{}", msg);
+    elog!("{}", msg);
     crate::logger::log_to_disk(&app, &msg);
     ICON_SCAN_ACTIVE.store(true, Ordering::SeqCst);
     std::thread::sleep(std::time::Duration::from_secs(5));

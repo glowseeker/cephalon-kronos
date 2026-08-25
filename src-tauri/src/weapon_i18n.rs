@@ -51,11 +51,11 @@ fn resolve_file(app: &tauri::AppHandle, relative: &str) -> Option<std::path::Pat
 fn wfcd_vocab_weapons(app: &tauri::AppHandle) -> HashMap<String, String> {
     let mut map: HashMap<String, String> = HashMap::new();
     let Some(wfcd_path) = resolve_file(app, "data/assets/wfcd/wfcd-combined.json") else {
-        eprintln!("[WEAPON-I18N] wfcd-combined.json not found");
+        elog!("[WEAPON-I18N] wfcd-combined.json not found");
         return map;
     };
     let Some(wfcd) = read_json_file(&wfcd_path) else {
-        eprintln!("[WEAPON-I18N] wfcd-combined.json unreadable");
+        elog!("[WEAPON-I18N] wfcd-combined.json unreadable");
         return map;
     };
 
@@ -100,7 +100,7 @@ fn build_map(app: &tauri::AppHandle, locale: &str) -> Vec<WeaponNamePair> {
     let vocab: Vec<String> = match vocab_path.and_then(|p| read_json_file(&p)) {
         Some(serde_json::Value::Object(obj)) => obj.keys().cloned().collect(),
         _ => {
-            eprintln!("[WEAPON-I18N] items_data.json missing; no pricer vocab");
+            elog!("[WEAPON-I18N] items_data.json missing; no pricer vocab");
             return Vec::new();
         }
     };

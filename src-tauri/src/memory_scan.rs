@@ -70,7 +70,7 @@ pub fn scan_auth(pid: u32) -> Option<String> {
 
         None
     })();
-    eprintln!("[AUTH_SCAN] full walk took {:?}, found={}", start.elapsed(), result.is_some());
+    elog!("[AUTH_SCAN] full walk took {:?}, found={}", start.elapsed(), result.is_some());
     SCAN_IN_PROGRESS.store(false, Ordering::SeqCst);
     result
 }

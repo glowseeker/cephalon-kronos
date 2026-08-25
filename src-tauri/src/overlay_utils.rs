@@ -310,7 +310,7 @@ pub fn install_x_error_handler() {
         event: *mut XErrorEvent,
     ) -> i32 {
         let ev = &*event;
-        eprintln!(
+        elog!(
             "[X11] non-fatal X error: code={} request={} minor={}",
             ev.error_code, ev.request_code, ev.minor_code,
         );
@@ -754,7 +754,7 @@ pub fn show_sidebar_internal(
         let _ = win.set_skip_taskbar(true);
         if !was_visible {
             if let Err(e) = win.show() {
-                eprintln!("[SIDEBAR] win.show() failed: {}", e);
+                elog!("[SIDEBAR] win.show() failed: {}", e);
             }
         }
 

@@ -95,19 +95,19 @@ fn init_pricer_inner() -> Option<RivenPricer> {
     let ranking_path = dir.join("weapon_ranking_information.json");
 
     if !dir.exists() || !onnx_path.exists() || !weapon_vocab_path.exists() || !attr_vocab_path.exists() {
-        eprintln!("[PRICER] model files not yet available (download may still be in progress)");
+        elog!("[PRICER] model files not yet available (download may still be in progress)");
         return None;
     }
 
-    eprintln!("[PRICER] dir exists: {}", dir.exists());
-    eprintln!("[PRICER] onnx_path: {:?}", onnx_path);
+    elog!("[PRICER] dir exists: {}", dir.exists());
+    elog!("[PRICER] onnx_path: {:?}", onnx_path);
 
     let onnx_t0 = std::time::Instant::now();
     let raw = match tract_onnx::onnx().model_for_path(&onnx_path) {
         Ok(m) => m,
-        Err(e) => { eprintln!("[PRICER] model_for_path failed: {e:?}"); return None; }
+        Err(e) => { elog!("[PRICER] model_for_path failed: {e:?}"); return None; }
     };
-    eprintln!("[PRICER] ONNX model loaded in {:?} ms", onnx_t0.elapsed().as_millis());
+    elog!("[PRICER] ONNX model loaded in {:?} ms", onnx_t0.elapsed().as_millis());
 
     let with_shapes = raw
         .with_input_fact(0, InferenceFact::dt_shape(i32::datum_type(), tvec![1, 1]))
@@ -118,7 +118,7 @@ fn init_pricer_inner() -> Option<RivenPricer> {
         Ok(m) => match m.into_optimized() {
             Ok(t) => t,
             Err(e) => {
-                eprintln!("[PRICER] into_optimized failed: {e:?}, trying into_typed");
+                elog!("[PRICER] into_optimized failed: {e:?}, trying into_typed");
                 match tract_onnx::onnx()
                     .model_for_path(&onnx_path)
                     .and_then(|m| m.with_input_fact(0, InferenceFact::dt_shape(i32::datum_type(), tvec![1, 1])))
@@ -127,25 +127,25 @@ fn init_pricer_inner() -> Option<RivenPricer> {
                     .and_then(|m| m.into_typed())
                 {
                     Ok(t) => t,
-                    Err(e) => { eprintln!("[PRICER] into_typed on retry failed: {e:?}"); return None; }
+                    Err(e) => { elog!("[PRICER] into_typed on retry failed: {e:?}"); return None; }
                 }
             }
         },
         Err(e) => {
-            eprintln!("[PRICER] set_input_fact failed: {e:?}, trying without input facts");
+            elog!("[PRICER] set_input_fact failed: {e:?}, trying without input facts");
             match tract_onnx::onnx()
                 .model_for_path(&onnx_path)
                 .and_then(|m| m.into_optimized())
             {
                 Ok(t) => t,
-                Err(e) => { eprintln!("[PRICER] into_optimized (w/o facts) failed: {e:?}"); return None; }
+                Err(e) => { elog!("[PRICER] into_optimized (w/o facts) failed: {e:?}"); return None; }
             }
         }
     };
 
     let model = match typed.into_runnable() {
         Ok(m) => m,
-        Err(e) => { eprintln!("[PRICER] into_runnable failed: {e:?}"); return None; }
+        Err(e) => { elog!("[PRICER] into_runnable failed: {e:?}"); return None; }
     };
 
     let weapon_vocab: Vec<String> = match serde_json::from_reader(
@@ -249,7 +249,7 @@ fn init_pricer_inner() -> Option<RivenPricer> {
         }
     };
 
-    eprintln!("[PRICER INIT] weapon_rankings loaded: {} entries", weapon_rankings.len());
+    elog!("[PRICER INIT] weapon_rankings loaded: {} entries", weapon_rankings.len());
 
     Some(RivenPricer {
         model: Mutex::new(model),
@@ -268,17 +268,17 @@ fn init_pricer_inner() -> Option<RivenPricer> {
 // firing in parallel on mount) block on the OnceLock rather than each
 // running init_pricer_inner() and thrashing the blocking pool.
 fn get_pricer() -> Option<&'static RivenPricer> {
-    eprintln!("[PRICER] get_pricer called");
+    elog!("[PRICER] get_pricer called");
     let opt = PRICER.get_or_init(|| {
-        eprintln!("[PRICER] init_pricer_inner starting...");
+        elog!("[PRICER] init_pricer_inner starting...");
         let r = init_pricer_inner();
         match &r {
-            Some(p) => eprintln!("[PRICER] init_pricer_inner: pricer loaded, {} weapons in vocab", p.weapon_vocab.len()),
-            None => eprintln!("[PRICER] init_pricer_inner: FAILED to load pricer"),
+            Some(p) => elog!("[PRICER] init_pricer_inner: pricer loaded, {} weapons in vocab", p.weapon_vocab.len()),
+            None => elog!("[PRICER] init_pricer_inner: FAILED to load pricer"),
         }
         r
     });
-    eprintln!("[PRICER] get_pricer: pricer is {}", if opt.is_some() { "Some" } else { "None" });
+    elog!("[PRICER] get_pricer: pricer is {}", if opt.is_some() { "Some" } else { "None" });
     opt.as_ref()
 }
 
@@ -288,7 +288,7 @@ pub fn estimate_price(input: &RivenInput) -> Option<f32> {
 }
 
 pub fn estimate_full(input: &RivenInput) -> Option<RivenFullEstimate> {
-    eprintln!("[PRICER] input weapon_name='{}' positive1={:?} positive2={:?} positive3={:?} negative={:?}", 
+    elog!("[PRICER] input weapon_name='{}' positive1={:?} positive2={:?} positive3={:?} negative={:?}", 
     input.weapon_name, input.positive1, input.positive2, input.positive3, input.negative);
     let pricer = get_pricer()?;
     let (price, _) = run_inference(pricer, input)?;
@@ -299,7 +299,7 @@ pub fn estimate_full(input: &RivenInput) -> Option<RivenFullEstimate> {
         .unwrap_or(&key);
 
     let rank_entry = pricer.weapon_rankings.get(url_name);
-    eprintln!("[PRICER] weapon='{}' url='{}' rank_found={}", input.weapon_name, url_name, rank_entry.is_some());
+    elog!("[PRICER] weapon='{}' url='{}' rank_found={}", input.weapon_name, url_name, rank_entry.is_some());
     let rank_data = rank_entry;
 
     let expected_value = rank_data.map(|r| r.expected_value as f32).unwrap_or(price);
@@ -348,7 +348,7 @@ pub fn estimate_full_batch(inputs: &[RivenInput]) -> Vec<Option<RivenFullEstimat
     let results: Vec<Option<RivenFullEstimate>> = inputs.iter().map(|i| {
         estimate_full(i)
     }).collect();
-    eprintln!("[PRICER BATCH] done {}", results.len());
+    elog!("[PRICER BATCH] done {}", results.len());
     results
 }
 
@@ -364,7 +364,7 @@ fn run_inference(pricer: &RivenPricer, input: &RivenInput) -> Option<(f32, f32)>
         // emit a population-average price with no weapon_rank, which the UI
         // shows as a fake value with "weapon rank n/a". Report nothing.
         None => {
-            eprintln!("[PRICER] unknown weapon '{}' (url '{}')  -  no estimate", input.weapon_name, url_name);
+            elog!("[PRICER] unknown weapon '{}' (url '{}')  -  no estimate", input.weapon_name, url_name);
             return None;
         }
     };
@@ -379,14 +379,14 @@ fn run_inference(pricer: &RivenPricer, input: &RivenInput) -> Option<(f32, f32)>
                 .unwrap_or(&key);
             attr_indices[i] = *pricer.attr_vocab.get(url)
                 .unwrap_or(&pricer.mask_index);
-            eprintln!("[PRICER] attr[{}] = '{}' -> url '{}' -> idx {}", i, attr, url, attr_indices[i]);
+            elog!("[PRICER] attr[{}] = '{}' -> url '{}' -> idx {}", i, attr, url, attr_indices[i]);
         } else {
-            eprintln!("[PRICER] attr[{}] = None (mask)", i);
+            elog!("[PRICER] attr[{}] = None (mask)", i);
         }
     }
 
     let re_rolled: f32 = if input.re_rolls > 0 { 1.0 } else { 0.0 };
-    eprintln!("[PRICER] re_rolled={}", re_rolled);
+    elog!("[PRICER] re_rolled={}", re_rolled);
 
     // Build input tensors for tract
     // weapon_idx: shape [1, 1] int32
@@ -399,18 +399,18 @@ fn run_inference(pricer: &RivenPricer, input: &RivenInput) -> Option<(f32, f32)>
     let attr_tensor: Tensor = tract_ndarray::arr2(&[[
         attr_indices[0], attr_indices[1], attr_indices[2], attr_indices[3]
     ]]).into_tensor();
-    eprintln!("[PRICER] input tensors: weapon_idx={}, re_rolled={}, attrs=[{}, {}, {}, {}]",
+    elog!("[PRICER] input tensors: weapon_idx={}, re_rolled={}, attrs=[{}, {}, {}, {}]",
         weapon_idx, re_rolled, attr_indices[0], attr_indices[1], attr_indices[2], attr_indices[3]);
 
-    eprintln!("[PRICER] acquiring model mutex...");
+    elog!("[PRICER] acquiring model mutex...");
     let model_guard = match pricer.model.lock() {
         Ok(g) => g,
         Err(e) => {
-            eprintln!("[PRICER] model mutex POISONED: {:?}", e);
+            elog!("[PRICER] model mutex POISONED: {:?}", e);
             return None;
         }
     };
-    eprintln!("[PRICER] model mutex acquired, running inference...");
+    elog!("[PRICER] model mutex acquired, running inference...");
 
     // tract takes inputs positionally in the order the ONNX model declares them:
     // weapon_idx, re_rolled, attr_indices
@@ -420,11 +420,11 @@ fn run_inference(pricer: &RivenPricer, input: &RivenInput) -> Option<(f32, f32)>
         attr_tensor.into(),
     ]) {
         Ok(o) => {
-            eprintln!("[PRICER] model.run() succeeded");
+            elog!("[PRICER] model.run() succeeded");
             o
         }
         Err(e) => {
-            eprintln!("[PRICER] model.run() FAILED: {:?}", e);
+            elog!("[PRICER] model.run() FAILED: {:?}", e);
             return None;
         }
     };
@@ -432,11 +432,11 @@ fn run_inference(pricer: &RivenPricer, input: &RivenInput) -> Option<(f32, f32)>
     let output = match outputs[0].to_array_view::<f32>() {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("[PRICER] to_array_view FAILED: {:?}", e);
+            elog!("[PRICER] to_array_view FAILED: {:?}", e);
             return None;
         }
     };
     let log_price = output[[0, 0]];
-    eprintln!("[PRICER] model output: log_price={}", log_price);
+    elog!("[PRICER] model output: log_price={}", log_price);
     Some((log_price.exp() - 1.0, log_price))
 }
