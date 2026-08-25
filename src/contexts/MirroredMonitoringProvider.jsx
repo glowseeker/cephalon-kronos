@@ -82,7 +82,6 @@ export default function MirroredMonitoringProvider({ children }) {
   const [nextRetryAt, setNextRetryAt] = useState(0)
   const [spIncursions, setSpIncursions] = useState(null)
   const [arbys, setArbys] = useState(null)
-  const [descendiaDesc, setDescendiaDesc] = useState({})
   const [archonModifiers, setArchonModifiers] = useState(null)
   const [arbitrationModifiers, setArbitrationModifiers] = useState(null)
   const [cardImagesPath, setCardImagesPath] = useState('')
@@ -160,25 +159,12 @@ export default function MirroredMonitoringProvider({ children }) {
           exports.WI_Supplement = wiSupplement
         }
 
-        const [spiRes, arbRes, descRes] = await Promise.allSettled([
+        const [spiRes, arbRes] = await Promise.allSettled([
           invoke('load_txt_file', { name: 'sp-incursions.txt' }),
           invoke('load_txt_file', { name: 'arbys.txt' }),
-          invoke('load_txt_file', { name: 'descendia.txt' }),
         ])
         if (spiRes.status === 'fulfilled' && spiRes.value) setSpIncursions(spiRes.value)
         if (arbRes.status === 'fulfilled' && arbRes.value) setArbys(arbRes.value)
-        if (descRes.status === 'fulfilled' && descRes.value) {
-          const descMap = {}
-          for (const line of descRes.value.split('\n')) {
-            const trimmed = line.trim()
-            if (!trimmed || trimmed.startsWith('#')) continue
-            const sepIdx = trimmed.indexOf(': ')
-            if (sepIdx > 0) {
-              descMap[trimmed.slice(0, sepIdx)] = trimmed.slice(sepIdx + 2)
-            }
-          }
-          setDescendiaDesc(descMap)
-        }
 
         // Set exports once (after wfcd enhancement) — single render pass.
         setExportData(exports)
@@ -521,14 +507,14 @@ export default function MirroredMonitoringProvider({ children }) {
           dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName,
           ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportUpgrades: exportData?.ExportUpgrades,
           ExportRecipes: exportData?.ExportRecipes, ExportKeys: exportData?.ExportKeys,
-          archimedeaMap, descendiaDesc,
+          archimedeaMap,
           challengeProgress: new Map(Object.entries(inventoryData?.account?.challengeProgress || {})),
           locale,
         })
         setWorldState(parsed)
       }
     } catch (err) { }
-  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportRecipes, ExportKeys, archimedeaMap, descendiaDesc, inventoryData?.account?.challengeProgress])
+  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportRecipes, ExportKeys, archimedeaMap, inventoryData?.account?.challengeProgress])
 
   useEffect(() => {
     if (Object.keys(dict || {}).length > 0) {

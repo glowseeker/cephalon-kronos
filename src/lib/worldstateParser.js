@@ -340,12 +340,11 @@ export function extractNightwaveSeason(credName, locale = 'en') {
  *   - ExportImages    ExportImages table
  *   - ExportUpgrades  ExportUpgrades table
  *   - archimedeaMap   Archimedea localized name map
- *   - descendiaDesc   Descendia description map (key → description text)
  *   - challengeProgress   Map of Nightwave challenge leaf UID → player progress value
  *     (from ChallengeProgress Name/Progress). The worldstate parser compares
  *     progress against ExportChallenges.requiredCount to determine completion.
  */
-export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportUpgrades, ExportRecipes, ExportKeys, archimedeaMap, descendiaDesc, challengeProgress, locale = 'en', i18nData = null }) {
+export function parseWorldstate(raw, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, bountyCycle, ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportUpgrades, ExportRecipes, ExportKeys, archimedeaMap, challengeProgress, locale = 'en', i18nData = null }) {
 
   const nightwaveRewards = ENWRawRewards || []
   const imagesMap = ExportImages || {}
@@ -717,12 +716,12 @@ function resolveRelicEra(eraName, dict, locale = 'en') {
           missionType: (resolvedType !== rawType) ? resolvedType : (DESCENDIA_MISSION_TYPES[rawType] || rawType),
           missionTypeRaw: rawType,
           missionTypeI18nKey: missionTypeI18nKey,
-          missionTypeDesc: (descendiaDesc || {})[rawType] || '',
+          missionTypeDesc: '',
           missionTypeDescI18nKey: `descendia_mission_type_desc_${toSnake(rawType)}`,
           penance: (resolvedPenance !== rawPenance) ? resolvedPenance : (DESCENDIA_PENANCES[rawPenance] || rawPenance),
           penanceRaw: rawPenance,
           penanceI18nKey: penanceI18nKey,
-          penanceDesc: (descendiaDesc || {})[rawPenance] || '',
+          penanceDesc: '',
           penanceDescI18nKey: `descendia_penance_desc_${toSnake(rawPenance)}`,
           arena: levelName,
           level: resolveNode(c.Level, dict, ERg, locale),

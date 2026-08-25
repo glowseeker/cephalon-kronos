@@ -198,7 +198,6 @@ export function MonitoringProvider({ children }) {
   const [statusText, setStatusText] = useState('Initializing…')
   const [spIncursions, setSpIncursions] = useState(null)
   const [arbys, setArbys] = useState(null)
-  const [descendiaDesc, setDescendiaDesc] = useState({})
 
   const [archonModifiers, setArchonModifiers] = useState(null)
   const [arbitrationModifiers, setArbitrationModifiers] = useState(null)
@@ -545,7 +544,7 @@ export function MonitoringProvider({ children }) {
         // uncached). loadSettings runs first so gameLocale is resolved.
         setStatusText('Checking updates & assets…')
         const startupT0 = performance.now()
-        const [updatesRes, exportsRes, localeRes, mediaRes, pricerRes, spiRes, arbRes, descRes] = await Promise.allSettled([
+        const [updatesRes, exportsRes, localeRes, mediaRes, pricerRes, spiRes, arbRes] = await Promise.allSettled([
           (async () => { const t = performance.now(); const r = await invoke('check_exports', { locale: localeRef.current, force: false }); invoke('log_terminal', { message: `[STARTUP] check_exports took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
           (async () => { const t = performance.now(); const r = await invoke('load_all_exports_via_file', { locale: localeRef.current }); invoke('log_terminal', { message: `[STARTUP] load_all_exports took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
           (async () => { const t = performance.now(); const r = await loadLocale(localeRef.current); invoke('log_terminal', { message: `[STARTUP] loadLocale took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
@@ -553,7 +552,6 @@ export function MonitoringProvider({ children }) {
           (async () => { const t = performance.now(); const r = await invoke('check_pricer_models'); invoke('log_terminal', { message: `[STARTUP] check_pricer_models took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
           (async () => { const t = performance.now(); const r = await invoke('load_txt_file', { name: 'sp-incursions.txt' }); invoke('log_terminal', { message: `[STARTUP] load_txt_file sp-incursions took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
           (async () => { const t = performance.now(); const r = await invoke('load_txt_file', { name: 'arbys.txt' }); invoke('log_terminal', { message: `[STARTUP] load_txt_file arbys took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
-          (async () => { const t = performance.now(); const r = await invoke('load_txt_file', { name: 'descendia.txt' }); invoke('log_terminal', { message: `[STARTUP] load_txt_file descendia took ${(performance.now() - t).toFixed(0)}ms` }).catch(() => {}); return r })(),
         ])
         invoke('log_terminal', { message: `[STARTUP] allSettled resolved in ${(performance.now() - startupT0).toFixed(0)}ms` }).catch(() => {})
         const parseT0 = performance.now()
@@ -630,20 +628,6 @@ export function MonitoringProvider({ children }) {
         setSpIncursions(spiText || '')
         setArbys(arbText || '')
         invoke('log_terminal', { message: `[STARTUP] setExportData + derivables triggered at ${setExportT0 - startupT0}` }).catch(() => {})
-        // Parse descendia descriptions
-        const descText = descRes.status === 'fulfilled' ? descRes.value : null
-        if (descText) {
-          const descMap = {}
-          for (const line of descText.split('\n')) {
-            const trimmed = line.trim()
-            if (!trimmed || trimmed.startsWith('#')) continue
-            const sepIdx = trimmed.indexOf(': ')
-            if (sepIdx > 0) {
-              descMap[trimmed.slice(0, sepIdx)] = trimmed.slice(sepIdx + 2)
-            }
-          }
-          setDescendiaDesc(descMap)
-        }
 
         // Sync monitoring state with other windows
         invoke('get_monitoring_active').then((active) => {
@@ -677,11 +661,11 @@ export function MonitoringProvider({ children }) {
       const wsStr = await invoke('fetch_url', { url: OFFICIAL_API }).catch(() => null) || await invoke('fetch_url', { url: ORACLE_API }).catch(() => null)
       const ws = wsStr ? JSON.parse(wsStr) : null
       if (ws && dict) {
-        const parsed = parseWorldstate(ws, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportUpgrades: exportData?.ExportUpgrades, ExportRecipes: exportData?.ExportRecipes, ExportKeys: exportData?.ExportKeys, archimedeaMap, descendiaDesc, challengeProgress: new Map(Object.entries(inventoryData?.account?.challengeProgress || {})), locale, i18nData: i18nRef.current })
+        const parsed = parseWorldstate(ws, { dict, suppDict, ERg, EC, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportUpgrades: exportData?.ExportUpgrades, ExportRecipes: exportData?.ExportRecipes, ExportKeys: exportData?.ExportKeys, archimedeaMap, challengeProgress: new Map(Object.entries(inventoryData?.account?.challengeProgress || {})), locale, i18nData: i18nRef.current })
         setWorldState(parsed)
       }
     } catch (err) { }
-  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportRecipes, ExportKeys, archimedeaMap, descendiaDesc, inventoryData?.account?.challengeProgress])
+  }, [dict, suppDict, EC, ERg, EI, nameToImage, uniqueNameToName, ES, ENWRawRewards, ENWAffiliationTag, ExportImages, ExportRecipes, ExportKeys, archimedeaMap, inventoryData?.account?.challengeProgress])
 
   useEffect(() => {
     if (Object.keys(dict || {}).length > 0) {

@@ -1419,8 +1419,7 @@ export default function Dashboard() {
   const [showDescendiaModal, setShowDescendiaModal] = useState(false);
   const [expandedWeek, setExpandedWeek] = useState(0);
 
-  // Prefer the per-locale i18n description (game terms); fall back to the
-  // English desc shipped in descendia.txt, then to the short label.
+  // i18n description (game terms); fall back to the short label.
   const penanceDesc = (s) => (s.penanceDescI18nKey ? t(`ui.dashboard.${s.penanceDescI18nKey}`) : s.penanceDesc) || s.penance;
   const missionTypeDesc = (s) => (s.missionTypeDescI18nKey ? t(`ui.dashboard.${s.missionTypeDescI18nKey}`) : s.missionTypeDesc) || s.missionType;
 
