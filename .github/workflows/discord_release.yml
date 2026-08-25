@@ -1,7 +1,7 @@
 name: Notify Discord on Release
 on:
   release:
-    types: [published]
+    types: [published, edited]
 
 jobs:
   discord_notification:
@@ -15,26 +15,28 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           RELEASE_URL: ${{ github.event.release.html_url }}
         run: |
-          # Safe fallback for title using bash syntax
+          # Fallback values for empty variables
           TITLE_TEXT="New Release: ${RELEASE_NAME:-$RELEASE_TAG}"
+          BODY_TEXT="${RELEASE_BODY:-No release notes provided.}"
+          URL_TEXT="${RELEASE_URL:-https://github.com}"
 
-          # Construct JSON using ENV variables inside jq instead of inline bash interpolation
+          # Construct JSON: jq truncates body to max 2000 chars and enforces non-empty strings
           PAYLOAD=$(jq -n \
             --arg title "$TITLE_TEXT" \
-            --arg url "$RELEASE_URL" \
-            --arg desc "$RELEASE_BODY" \
+            --arg url "$URL_TEXT" \
+            --arg desc "$BODY_TEXT" \
             '{
               embeds: [{
-                title: $title,
+                title: (if $title == "" then "New Release" else $title end),
                 url: $url,
-                description: $desc,
+                description: ($desc | .[0:2000]),
                 color: 5814783,
                 footer: { text: "Cephalon Kronos Update" }
               }]
             }')
 
-          # Send payload and force curl to fail the step if Discord rejects it (e.g., HTTP 400/401/403)
-          curl -fail -sS -X POST \
+          # Send payload
+          curl --fail -sS -X POST \
                -H "Content-Type: application/json" \
                -d "$PAYLOAD" \
                "$DISCORD_WEBHOOK"
