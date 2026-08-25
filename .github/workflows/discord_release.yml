@@ -15,10 +15,12 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           RELEASE_URL: ${{ github.event.release.html_url }}
         run: |
-          # 1. Construct the JSON payload safely using jq
-          # This handles all escaping for you automatically
+          # Safe fallback for title using bash syntax
+          TITLE_TEXT="New Release: ${RELEASE_NAME:-$RELEASE_TAG}"
+
+          # Construct JSON using ENV variables inside jq instead of inline bash interpolation
           PAYLOAD=$(jq -n \
-            --arg title "New Release: ${RELEASE_NAME:-$RELEASE_TAG}" \
+            --arg title "$TITLE_TEXT" \
             --arg url "$RELEASE_URL" \
             --arg desc "$RELEASE_BODY" \
             '{
@@ -31,7 +33,8 @@ jobs:
               }]
             }')
 
-          # 2. Send the payload
-          curl -X POST -H "Content-Type: application/json" \
+          # Send payload and force curl to fail the step if Discord rejects it (e.g., HTTP 400/401/403)
+          curl -fail -sS -X POST \
+               -H "Content-Type: application/json" \
                -d "$PAYLOAD" \
                "$DISCORD_WEBHOOK"
