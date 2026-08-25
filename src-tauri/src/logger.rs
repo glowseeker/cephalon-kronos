@@ -8,7 +8,7 @@ pub fn log_to_disk(_app: &AppHandle, message: &str) {
     let mut path = root.join("data/user");
     let _ = std::fs::create_dir_all(&path);
     
-    path.push("overlay_debug.log");
+    path.push("debug.log");
     
     let wall_time = Local::now().format("%H:%M:%S%.3f").to_string();
     let line = format!("[{}] {}", wall_time, message);

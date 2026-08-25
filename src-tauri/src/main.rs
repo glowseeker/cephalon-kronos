@@ -3699,9 +3699,7 @@ fn reflow_wiki_tab(webview: tauri::Webview, label: String, x: f64, y: f64, width
             std::env::set_var("GST_DEBUG", "*:0");
         }
     }
-    // Clear old debug log on startup so it doesn't grow infinitely
-    let log_path = resolve_path("data/user/debug.log");
-    let _ = std::fs::write(&log_path, "");
+
 
     // Load settings at startup to get saved notif_sound and notif_position
     let saved_settings = std::fs::read_to_string(resolve_path("data/user/settings.json"))
