@@ -11,15 +11,24 @@ from warframe_marketplace_predictor.shtuff.storage_handling import save_json, re
 
 
 # If anything breaks, surely it was a cosmic bit flip.
+#
+# NOTE: Warframe Market migrated from v1 (https://api.warframe.market/v1/) to
+# v2 (https://api.warframe.market/v2/).  The old v1 endpoints /riven/items and
+# /riven/attributes now return 404.  The v2 equivalents are:
+#   v1/riven/items      -> v2/riven/weapons
+#   v1/riven/attributes -> v2/riven/attributes
+# The v1/auctions/search endpoint still works for fetching live riven auction
+# listings, so that path is unchanged.
 
 
-def fetch_data(url: str, delay: float = 0.1) -> Dict:
+def fetch_data(url: str, delay: float = 0.1, timeout: float = 30.0) -> Dict:
     """
     Fetches data from a given URL, with retries in case of rate limiting or failure.
 
     Args:
         url (str): The API endpoint to fetch data from.
         delay (float): The delay in seconds before retrying on rate limits. Defaults to 0.1.
+        timeout (float): Request timeout in seconds. Defaults to 30.0.
 
     Returns:
         Dict: JSON data fetched from the API or an empty dictionary in case of an error.
@@ -29,14 +38,14 @@ def fetch_data(url: str, delay: float = 0.1) -> Dict:
         return dict()
 
     try:
-        response = requests.get(url, headers={"accept": "application/json"})
+        response = requests.get(url, headers={"accept": "application/json"}, timeout=timeout)
         # Handle rate-limiting (status code 429)
         if response.status_code == 429:  # Too Many Requests
             print("Rate limited. Retrying...")
             time.sleep(delay)
-            return fetch_data(url, min(60.0, delay * 2))
+            return fetch_data(url, min(60.0, delay * 2), timeout)
 
-        # Raise an exception for other HTTP errors
+        # Handle HTTP errors
         response.raise_for_status()
         return response.json()
 
@@ -48,32 +57,92 @@ def fetch_data(url: str, delay: float = 0.1) -> Dict:
     return dict()  # Fallback in case of any error
 
 
-def download_items_data(the_url: str = "https://api.warframe.market/v1/riven/items") -> None:
+def download_items_data(the_url: str = "https://api.warframe.market/v2/riven/weapons") -> None:
     """
-    Downloads item data from the API and saves mappings between item names and their URL representations.
+    Downloads riven-capable weapon data from the API and saves mappings between
+    item names and their URL representations.
+
+    Uses the v2 riven weapons endpoint. Each entry is normalised to the field
+    shape expected by DataHandler.load_items() (item_name, url_name, group).
+    Extra v2 fields (disposition, rivenType, etc.) are preserved for downstream
+    consumers.
 
     Args:
-        the_url (str): The API endpoint to fetch item data from. Defaults to Warframe Riven items API.
+        the_url (str): The API endpoint to fetch item data from.
     """
-    items_data = fetch_data(the_url)["payload"]["items"]
-    item_name_items_data = {x["item_name"]: x for x in items_data}
+    raw = fetch_data(the_url)
+    items_data = raw.get("data", []) if isinstance(raw, dict) else []
+    item_name_items_data = {}
+    for x in items_data:
+        url_name = x.get("slug", "")
+        item_name = x.get("i18n", {}).get("en", {}).get("name", url_name)
+        # Normalise to the field names the rest of the pipeline expects
+        normalised = {
+            "item_name": item_name,
+            "url_name": url_name,
+            "group": x.get("group", ""),
+            "thumbnail": None,
+        }
+        # Preserve any additional v2 fields (disposition, rivenType, etc.)
+        normalised.update({k: v for k, v in x.items()
+                           if k not in ("slug", "i18n") and k not in normalised})
+        item_name_items_data[item_name] = normalised
+
     save_json(items_data_file_path, item_name_items_data)
+    print(f"Downloaded and saved items data ({len(item_name_items_data)} weapons).\n")
 
-    print("Downloaded and saved items data. \n")
 
-
-def download_attributes_data(the_url: str = "https://api.warframe.market/v1/riven/attributes") -> None:
+def download_attributes_data(the_url: str = "https://api.warframe.market/v2/riven/attributes") -> None:
     """
     Downloads attribute data from the API and saves it.
 
-    Args:
-        the_url (str): The API endpoint to fetch attribute data from. Defaults to Warframe Riven attributes API.
-    """
-    attributes_data = fetch_data(the_url)["payload"]["attributes"]
-    attributes_data_mapped = {x["url_name"]: x for x in attributes_data if x["url_name"] not in ["has", "none"]}
-    save_json(attributes_data_file_path, attributes_data_mapped)
+    Uses the v2 riven attributes endpoint. Each entry is normalised to the field
+    shape expected by DataHandler.load_attributes() and the downstream
+    effect_to_url mapping in export_to_onnx.py (url_name, effect).
 
-    print("Downloaded and saved attributes data.\n")
+    If a local attributes_data.json already exists with richer v1 fields
+    (e.g. units, negative_only), those are preserved and only url_name/effect
+    are refreshed from the v2 source.
+
+    Args:
+        the_url (str): The API endpoint to fetch attribute data from.
+    """
+    raw = fetch_data(the_url)
+    attributes_data = raw.get("data", []) if isinstance(raw, dict) else []
+
+    # Normalise v2 entries to the v1-compatible shape (url_name, effect)
+    normalised = {}
+    for x in attributes_data:
+        url_name = x.get("slug", "")
+        if url_name in ("has", "none", ""):
+            continue
+        normalised[url_name] = {
+            "url_name": url_name,
+            "effect": x.get("i18n", {}).get("en", {}).get("name", url_name),
+            "group": x.get("group", "default"),
+            "prefix": x.get("prefix", ""),
+            "suffix": x.get("suffix", ""),
+            "id": x.get("id", ""),
+        }
+
+    # Merge with existing data to preserve v1-only fields (units, negative_only,
+    # exclusive_to, positive_only, search_only, etc.) that downstream code relies on
+    existing = read_json(attributes_data_file_path) if isinstance(read_json(attributes_data_file_path), dict) else {}
+    merged = {}
+    for url_name, entry in normalised.items():
+        base = existing.get(url_name, {})
+        base.update({
+            "url_name": url_name,
+            "effect": entry["effect"],
+            "group": entry["group"],
+            "prefix": entry["prefix"],
+            "suffix": entry["suffix"],
+            "id": entry["id"],
+        })
+        merged[url_name] = base
+
+    save_json(attributes_data_file_path, merged)
+    print(f"Downloaded and saved attributes data ({len(merged)} attributes).\n")
 
 
 def download_marketplace_database(overwrite: bool = True) -> None:
@@ -103,8 +172,9 @@ def download_marketplace_database(overwrite: bool = True) -> None:
             the_url += f"&weapon_url_name={weapon_name}"
             the_url += f"&sort_by={price_ordering}"
             try:
-                auctions = fetch_data(the_url)["payload"]["auctions"]
-            except KeyError as e:
+                fetched = fetch_data(the_url)
+                auctions = fetched["payload"]["auctions"] if isinstance(fetched, dict) else []
+            except (KeyError, TypeError) as e:
                 print(e)
                 print(f"Skipping {weapon_name}_{price_ordering}...")
                 continue
