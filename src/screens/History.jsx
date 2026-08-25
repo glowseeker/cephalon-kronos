@@ -23,7 +23,6 @@ const METRICS = [
   { key: 'endo', label: 'history.metric_endo', color: '#34D399', category: 'currency' },
   { key: 'ducats', label: 'history.metric_ducats', color: '#FBBF24', category: 'currency' },
   { key: 'mods', label: 'history.metric_mods', color: '#EC4899', category: 'group' },
-  { key: 'resources', label: 'history.metric_resources', color: '#10B981', category: 'group' },
   { key: 'items', label: 'history.metric_items', color: '#8B5CF6', category: 'group' },
 ]
 
@@ -47,6 +46,15 @@ const SCALAR_MAP = {
 function getGroupAbsoluteValue(diff, metricKey) {
   if (!diff?.totals) return null
   return typeof diff.totals[metricKey] === 'number' ? diff.totals[metricKey] : null
+}
+
+// Items the user has requested to hide from history diffs.
+// museumdogtag is a donation counter for Drusus' Leverian (not a real inventory item).
+const HIDDEN_ITEM_PATHS = [
+  '/Lotus/Types/Items/SyndicateDogTags/MuseumDogTag',
+]
+function isHiddenItem(key) {
+  return HIDDEN_ITEM_PATHS.some(p => key === p || key.includes(p))
 }
 
 function getAbsoluteScalarValue(diff, metricKey) {
@@ -328,11 +336,13 @@ function Log({ history, startTime, endTime, t, dict, uniqueNameToName, exportDat
     const inc = diff?.increases || {}
     for (const [k, v] of Object.entries(inc)) {
       if (!v || v.delta === 0) continue
+      if (isHiddenItem(k)) continue
       items.push({ type: 'increase', key: k, display: resolveName(k), delta: v.delta })
     }
     const dec = diff?.decreases || {}
     for (const [k, v] of Object.entries(dec)) {
       if (!v || v.delta === 0) continue
+      if (isHiddenItem(k)) continue
       items.push({ type: 'decrease', key: k, display: resolveName(k), delta: v.delta })
     }
     return items
@@ -421,10 +431,10 @@ function HistoryScreen() {
       const diff = e.diff
       if (!diff) continue
       for (const k of Object.keys(diff.increases || {})) {
-        if (!keys.has(k)) keys.set(k, resolveSearchName(k))
+        if (!isHiddenItem(k) && !keys.has(k)) keys.set(k, resolveSearchName(k))
       }
       for (const k of Object.keys(diff.decreases || {})) {
-        if (!keys.has(k)) keys.set(k, resolveSearchName(k))
+        if (!isHiddenItem(k) && !keys.has(k)) keys.set(k, resolveSearchName(k))
       }
     }
     return keys

@@ -72,20 +72,27 @@ def run_py(script, cwd=None, args=None):
     return result
 
 
-def ensure_venv():
-    if VENV.exists():
-        return
-    base_python = find_python311()
-    print(f"\n── Setting up Python 3.11 venv at {VENV} (base: {base_python}) ──")
-    subprocess.run([base_python, "-m", "venv", str(VENV)], check=True)
+def ensure_venv(pipeline_dir: Path):
+    if not VENV.exists():
+        base_python = find_python311()
+        print(f"\n── Setting up Python 3.11 venv at {VENV} (base: {base_python}) ──")
+        subprocess.run([base_python, "-m", "venv", str(VENV)], check=True)
+        subprocess.run(
+            [str(PYTHON), "-m", "pip", "install", "--upgrade", "pip"],
+            check=True,
+        )
+        subprocess.run(
+            [str(PYTHON), "-m", "pip", "install",
+             "tensorflow", "pandas", "scikit-learn", "tqdm",
+             "tf2onnx", "onnxruntime", "prettytable"],
+            check=True,
+        )
+    # Always (re)install the project package itself, so edits to
+    # pipeline code / setup.py are picked up even if the venv pre-exists.
+    # Without this, pipeline scripts fail with ModuleNotFoundError.
     subprocess.run(
-        [str(PYTHON), "-m", "pip", "install", "--upgrade", "pip"],
-        check=True,
-    )
-    subprocess.run(
-        [str(PYTHON), "-m", "pip", "install",
-         "tensorflow", "pandas", "scikit-learn", "tqdm",
-         "tf2onnx", "onnxruntime", "prettytable"],
+        [str(PYTHON), "-m", "pip", "install", "-e", "."],
+        cwd=pipeline_dir,
         check=True,
     )
 
@@ -111,8 +118,7 @@ def retrain():
     print("═" * 50)
     print(f"Pipeline: {pipeline_dir}")
 
-    ensure_venv()
-
+    ensure_venv(pipeline_dir)
     run_py(pipeline_dir / "tool_setup_and_maintenance" / "download_data.py", cwd=pipeline_dir)
     run_py(pipeline_dir / "tool_setup_and_maintenance" / "create_marketplace_dataframe.py", cwd=pipeline_dir)
     run_py(pipeline_dir / "training" / "trainers" / "train_price_model.py", cwd=pipeline_dir)

@@ -1130,8 +1130,18 @@ export function formatLastUpdate(ts) {
 // ─── History chart item grouping (shared with Rust backend) ──────────
 export const ITEM_PATTERNS = {
   mods: [/\/Upgrades\/Mods\//, /\/Recipes\//],
-  resources: [/\/Types\/Resources\//, /\/Types\/Items\/Gems\//, /\/Types\/Items\/Research\//, /\/Types\/Items\/Deimos\//, /\/Types\/Items\/Tokens\//],
-  items: [/\/Types\/Items\/MiscItems\//, /\/Types\/Restoratives\//, /\/Types\/Items\/SyndicateDogTags\//, /\/Types\/Gameplay\/Shadowgrapher\//, /\/Types\/Gameplay\/Zariman\//],
+  items: [
+    /\/Types\/Resources\//,
+    /\/Types\/Items\/Gems\//,
+    /\/Types\/Items\/Research\//,
+    /\/Types\/Items\/Deimos\//,
+    /\/Types\/Items\/Tokens\//,
+    /\/Types\/Items\/MiscItems\//,
+    /\/Types\/Restoratives\//,
+    /\/Types\/Items\/SyndicateDogTags\//,
+    /\/Types\/Gameplay\/Shadowgrapher\//,
+    /\/Types\/Gameplay\/Zariman\//,
+  ],
 }
 
 export function getItemGroup(key) {

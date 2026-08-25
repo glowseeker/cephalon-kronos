@@ -674,12 +674,14 @@ async fn load_inventory_history(range: Option<String>, filter: Option<String>, s
                         diff.get("increases").and_then(|d| d.get("Upgrades")).is_some()
                             || diff.get("decreases").and_then(|d| d.get("Upgrades")).is_some()
                     }
-                    "resources" | "items" => {
+                    "items" => {
                         let has_misc = diff.get("increases").and_then(|d| d.get("MiscItems")).is_some()
                             || diff.get("decreases").and_then(|d| d.get("MiscItems")).is_some();
                         let has_resources = diff.get("increases").and_then(|d| d.get("Resources")).is_some()
                             || diff.get("decreases").and_then(|d| d.get("Resources")).is_some();
-                        has_misc || has_resources
+                        let has_consumables = diff.get("increases").and_then(|d| d.get("Consumables")).is_some()
+                            || diff.get("decreases").and_then(|d| d.get("Consumables")).is_some();
+                        has_misc || has_resources || has_consumables
                     }
                     _ => true,
                 };
@@ -815,7 +817,7 @@ fn diff_inventory(prev: &Value, cur: &Value, timestamp: u64) -> Value {
 }
 
 /// Categorize an item path into a group for history charting.
-/// Matches the frontend's ITEM_PATTERNS in History.jsx.
+/// Matches the frontend's METRICS category in History.jsx.
 fn item_path_group(item_path: &str) -> Option<&'static str> {
     if item_path.contains("/Upgrades/Mods/") || item_path.contains("/Recipes/") {
         Some("mods")
@@ -824,9 +826,7 @@ fn item_path_group(item_path: &str) -> Option<&'static str> {
         || item_path.contains("/Types/Items/Research/")
         || item_path.contains("/Types/Items/Deimos/")
         || item_path.contains("/Types/Items/Tokens/")
-    {
-        Some("resources")
-    } else if item_path.contains("/Types/Items/MiscItems/")
+        || item_path.contains("/Types/Items/MiscItems/")
         || item_path.contains("/Types/Restoratives/")
         || item_path.contains("/Types/Items/SyndicateDogTags/")
         || item_path.contains("/Types/Gameplay/Shadowgrapher/")
@@ -865,7 +865,6 @@ fn compute_group_totals(inv: &Value) -> Value {
     }
     serde_json::json!({
         "mods": totals.get("mods").copied().unwrap_or(0),
-        "resources": totals.get("resources").copied().unwrap_or(0),
         "items": totals.get("items").copied().unwrap_or(0),
     })
 }

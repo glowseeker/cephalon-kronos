@@ -45,6 +45,7 @@ src-tauri/data/bin/*
 tools/riven-pricer/.venv/
 __pycache__/
 *.pyc
+*.egg-info/
 
 # Ignore target and Cargo.lock
 src-tauri/target/
