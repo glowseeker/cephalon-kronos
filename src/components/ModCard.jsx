@@ -384,7 +384,13 @@ const ModCard = memo(function ModCard({ mod, framesPath, iconsPath, cardImagesPa
     if (mod.levelStats && Array.isArray(mod.levelStats)) {
       const max = mod.levelStats[mod.levelStats.length - 1];
       if (max && Array.isArray(max.stats)) {
-        const joined = max.stats.map((s) => s.replace(/<LINE_SEPARATOR>[\r\n]*/g, '')).join('\n');
+        let stats = max.stats.map((s) => s.replace(/<LINE_SEPARATOR>[\r\n]*/g, '').replace(/\\n/g, '\n'));
+        // warframe-items embeds "+1 Arcane Revive" inside the main stat text
+        // AND as a standalone entry at max rank – deduplicate.
+        if (stats.length > 1 && stats.some((s) => s !== '+1 Arcane Revive' && s.includes('+1 Arcane Revive'))) {
+          stats = stats.filter((s) => s !== '+1 Arcane Revive');
+        }
+        const joined = stats.join('\n');
         // DE ships augment descriptions with a redundant "<Name> Augment: "
         // prefix baked into the localized stats; strip it (the title already
         // shows the mod name).
