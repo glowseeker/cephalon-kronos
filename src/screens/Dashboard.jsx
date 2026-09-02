@@ -1533,22 +1533,59 @@ export default function Dashboard() {
                 </button>
 
                 {isExpanded &&
-                  <div className="px-3 pb-3 space-y-1.5 animate-in slide-in-from-top-2 duration-200">
-                    {set.stages.map((s) =>
-                      <div key={s.index} className={`p-2 rounded flex justify-between items-center gap-2 ${s.isCheckpoint ? 'bg-kronos-accent/10 border border-kronos-accent/20' : 'bg-black/20'}`}>
-                        <div className="min-w-0">
-                          <Tooltip content={missionTypeDesc(s)} position="top">
-                            <p className="text-[10px] font-bold text-kronos-text uppercase truncate">{s.missionTypeI18nKey ? t(`ui.dashboard.${s.missionTypeI18nKey}`) : s.missionType}{s.isBoss ? ` - ${resolveGameTerm('/Lotus/Language/CircleOfHell/CoHProtoframeDevil', locale)}` : ''}</p>
-                          </Tooltip>
-                          <Tooltip content={penanceDesc(s)} position="bottom">
-                            <p className="text-[9px] text-kronos-dim truncate uppercase">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
-                          </Tooltip>
-                        </div>
-                        <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${s.isCheckpoint ? 'text-kronos-accent bg-kronos-accent/20' : 'text-kronos-dim bg-kronos-panel/40'}`}>
-                          {s.isCheckpoint ? `${t('ui.dashboard.checkpoint')} ${s.index}` : `${t('ui.dashboard.inf')} ${s.index}`}
-                        </span>
-                      </div>
-                    )}
+                  <div className="px-3 pb-3 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                    {set.stages.map((s) => {
+                      if (s.isMarie) {
+                        return (
+                          <div key={s.index} className="p-2 rounded bg-kronos-accent/15 border border-kronos-accent/25 flex items-center gap-2">
+                            <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] font-bold text-kronos-accent uppercase">{t('ui.dashboard.marie_sanctuary')}</p>
+                              <Tooltip content={penanceDesc(s)} position="top">
+                                <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
+                              </Tooltip>
+                            </div>
+                          </div>);
+                      }
+                      if (s.isLyon) {
+                        return (
+                          <div key={s.index} className="p-2 rounded bg-kronos-accent/15 border border-kronos-accent/25 flex items-center gap-2">
+                            <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] font-bold text-kronos-accent uppercase">{t('ui.dashboard.lyon_sanctuary')}</p>
+                              <Tooltip content={penanceDesc(s)} position="top">
+                                <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
+                              </Tooltip>
+                            </div>
+                          </div>);
+                      }
+                      if (s.isBoss) {
+                        return (
+                          <div key={s.index} className="p-2 rounded bg-kronos-accent/15 border border-kronos-accent/25 flex items-center gap-2">
+                            <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] font-bold text-kronos-accent uppercase">{resolveGameTerm('/Lotus/Language/CircleOfHell/CoHProtoframeDevil', locale)}</p>
+                              <Tooltip content={penanceDesc(s)} position="top">
+                                <p className="text-[9px] text-kronos-dim uppercase truncate">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
+                              </Tooltip>
+                            </div>
+                          </div>);
+                      }
+                      return (
+                        <div key={s.index} className="p-1.5 rounded bg-kronos-panel/30 flex items-center gap-1.5">
+                          <span className="text-[9px] font-black text-kronos-dim bg-kronos-panel/60 px-1.5 py-0.5 rounded w-6 text-center flex-shrink-0">{s.index}</span>
+                          <div className="flex-1 min-w-0 p-1 rounded bg-kronos-panel/40">
+                            <Tooltip content={missionTypeDesc(s)} position="top">
+                              <p className="text-[10px] font-bold text-kronos-text uppercase">{s.missionTypeI18nKey ? t(`ui.dashboard.${s.missionTypeI18nKey}`) : s.missionType}</p>
+                            </Tooltip>
+                          </div>
+                          <div className="flex-1 min-w-0 p-1 rounded bg-kronos-panel/20">
+                            <Tooltip content={penanceDesc(s)} position="top">
+                              <p className="text-[10px] text-kronos-dim uppercase">{s.penanceI18nKey ? t(`ui.dashboard.${s.penanceI18nKey}`) : s.penance}</p>
+                            </Tooltip>
+                          </div>
+                        </div>);
+                    })}
                   </div>
                 }
               </div>);
