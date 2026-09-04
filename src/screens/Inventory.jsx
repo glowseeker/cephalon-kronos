@@ -12,6 +12,7 @@ import { Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, Check, Box, Zap, Gem, 
 import { PageLayout, Card, Input, Button, Tabs, MonitorState, Tooltip } from '../components/UI';
 import { useMonitoring } from '../contexts/MonitoringContext';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
+import ItemDetailPanel from '../components/ItemDetailPanel';
 
 
 
@@ -567,7 +568,7 @@ export default function Inventory() {
     resources: [{ id: 'name', label: t('ui.inventory.sort_name') }, { id: 'quantity', label: t('ui.inventory.sort_count') }],
     ayatan: [{ id: 'name', label: t('ui.inventory.sort_name') }, { id: 'quantity', label: t('ui.inventory.sort_count') }]
   };
-  const { inventoryData, isInventoryLoading, allPrices, isPriceLoading, priceFetchProgress, dropIndex, ExportImages, exportData } = useMonitoring();
+  const { inventoryData, isInventoryLoading, allPrices, isPriceLoading, priceFetchProgress, dropIndex, ExportImages, exportData, cardImagesPath, ExportTextIcons } = useMonitoring();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterSortPanel, setShowFilterSortPanel] = useState(false);
@@ -579,6 +580,7 @@ export default function Inventory() {
   const [valueMetric, setValueMetric] = useState('plat');
   const [showFoundry, setShowFoundry] = useState(false);
   const [foundryFilters, setFoundryFilters] = useState({ crafting: true, ready: false, owned: false, unmastered: false });
+  const [selectedItem, setSelectedItem] = useState(null);
   const [framesPath, setFramesPath] = useState('');
   const [uiPath, setUiPath] = useState('');
   const [iconsPath, setIconsPath] = useState('');
@@ -817,8 +819,15 @@ export default function Inventory() {
         return sortDirection === 'asc' ? aComplete - bComplete : bComplete - aComplete;
       }
       if (activeTab === 'prime_parts' && sortCriteria === 'value') {
-        const aVal = valueMetric === 'ducat' ? (a._ducats ?? 0) : (a._value ?? 0);
-        const bVal = valueMetric === 'ducat' ? (b._ducats ?? 0) : (b._value ?? 0);
+        let aVal, bVal;
+        if (valueMetric === 'ducat') {
+          aVal = a._ducats ?? 0; bVal = b._ducats ?? 0;
+        } else if (valueMetric === 'ducat_plat') {
+          aVal = (a._value ?? 0) > 0 ? (a._ducats ?? 0) / a._value : 0;
+          bVal = (b._value ?? 0) > 0 ? (b._ducats ?? 0) / b._value : 0;
+        } else {
+          aVal = a._value ?? 0; bVal = b._value ?? 0;
+        }
         return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
       }
       let av = a[sortCriteria] ?? ''; let bv = b[sortCriteria] ?? '';
@@ -934,18 +943,26 @@ export default function Inventory() {
                         setSortDirection('asc');
                         return;
                       }
-                      // cycle: plat asc -> plat desc -> ducat asc -> ducat desc -> plat asc ...
+                      // cycle: plat asc -> plat desc -> ducat asc -> ducat desc -> ducat/plat asc -> ducat/plat desc -> plat asc ...
                       if (valueMetric === 'plat' && sortDirection === 'asc') setSortDirection('desc');
                       else if (valueMetric === 'plat' && sortDirection === 'desc') { setValueMetric('ducat'); setSortDirection('asc'); }
                       else if (valueMetric === 'ducat' && sortDirection === 'asc') setSortDirection('desc');
+                      else if (valueMetric === 'ducat' && sortDirection === 'desc') { setValueMetric('ducat_plat'); setSortDirection('asc'); }
+                      else if (valueMetric === 'ducat_plat' && sortDirection === 'asc') setSortDirection('desc');
                       else { setValueMetric('plat'); setSortDirection('asc'); }
                     }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-1.5 ${valueActive ? 'bg-kronos-accent text-kronos-bg shadow-[0_0_10px_rgba(var(--kronos-accent-rgb),0.3)]' : 'text-kronos-dim hover:text-white hover:bg-white/5'}`}>
 
-                    {valueActive ? (valueMetric === 'plat' ? t('ui.inventory.sort_plat') : t('ui.inventory.sort_ducat')) : c.label}
-                    {valueActive &&
+                    {valueActive ? (valueMetric === 'plat' ? t('ui.inventory.sort_plat') : valueMetric === 'ducat' ? t('ui.inventory.sort_ducat') : t('ui.inventory.sort_ducat_plat')) : c.label}
+                    {valueActive && valueMetric === 'ducat_plat' ? (
+                      <>
+                        <img src={iconSrc('Ducats') ?? ''} className="w-3 h-3 object-contain" alt="" />
+                        <span className="text-[8px]">/</span>
+                        <img src={iconSrc('Platinum') ?? ''} className="w-3 h-3 object-contain" alt="" />
+                      </>
+                    ) : valueActive && (
                       <img src={iconSrc(valueMetric === 'plat' ? 'Platinum' : 'Ducats') ?? ''} className="w-3 h-3 object-contain" alt="" />
-                    }
+                    )}
                     {valueActive && (sortDirection === 'desc'
                       ? <ArrowDown size={10} />
                       : <ArrowUp size={10} />
@@ -1012,6 +1029,7 @@ export default function Inventory() {
 
 
   return (
+    <>
     <PageLayout
       titleKey="screen.inventory"
       subtitle={t('ui.inventory.subtitle_items', { visible: visibleItems.length, total: filteredItems.length })}
@@ -1066,6 +1084,11 @@ export default function Inventory() {
                             <span className="absolute top-4 right-4 z-10 inline-block w-6 h-3 bg-white/10 rounded animate-pulse" /> :
                             (setValue > 0 || (set._ducats ?? 0) > 0) &&
                             <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 bg-zinc-800/90 border border-zinc-600 rounded px-1.5 py-0.5">
+                              {sortCriteria === 'value' && valueMetric === 'ducat_plat' && setValue > 0 &&
+                                <span className="text-[11px] font-bold text-kronos-accent">
+                                  {(set._ducats / setValue).toFixed(1)}
+                                </span>
+                              }
                               {(set._ducats ?? 0) > 0 &&
                                 <span className="flex items-center gap-1 text-[11px] font-bold text-amber-400">
                                   <img src={iconSrc('Ducats')} className="w-3.5 h-3.5 object-contain" alt="" />
@@ -1280,14 +1303,20 @@ export default function Inventory() {
                       const isUnowned = !item.owned;
                       const isPrimePart = item.category === 'prime_parts';
                       const isModOrResource = ['mods', 'resources', 'arcanes'].includes(item.category);
+                      const hasLoadout = item.loadouts || item.archonShards || item.focusLens;
                       return (
-                        <Card key={item.unique_name + idx} glow={!isUnowned} className={`relative p-0 overflow-hidden flex min-h-40 group transition-all duration-300 ${isUnowned ? 'bg-kronos-panel/10 border-2 border-dashed border-kronos-accent' : 'border-kronos-panel/40'}`}>
+                        <Card key={item.unique_name + idx} glow={!isUnowned} className={`relative p-0 overflow-hidden flex min-h-40 group transition-all duration-300 ${isUnowned ? 'bg-kronos-panel/10 border-2 border-dashed border-kronos-accent' : 'border-kronos-panel/40'} ${hasLoadout ? 'cursor-pointer hover:border-kronos-accent/50' : ''}`} onClick={hasLoadout ? () => setSelectedItem(item) : undefined}>
 
                           {/* Platinum + Ducat prices (prime parts) */}
                           {isPrimePart && (((item._value ?? 0) > 0 || (item._ducats ?? 0) > 0) || (primeViewMode === 'parts' && isPriceLoading)) &&
                             (primeViewMode === 'parts' && isPriceLoading ?
                               <span className="absolute top-4 right-4 z-20 inline-block w-6 h-3 bg-white/10 rounded animate-pulse" /> :
                               <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 bg-zinc-800/90 border border-zinc-600 rounded px-1.5 py-0.5">
+                                {sortCriteria === 'value' && valueMetric === 'ducat_plat' && (item._value ?? 0) > 0 &&
+                                  <span className="text-[10px] font-bold text-kronos-accent">
+                                    {((item._ducats ?? 0) / item._value).toFixed(1)}
+                                  </span>
+                                }
                                 {(item._ducats ?? 0) > 0 &&
                                   <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400">
                                     <img src={iconSrc('Ducats') ?? ''} className="w-3.5 h-3.5 object-contain" alt="" />
@@ -1540,7 +1569,18 @@ export default function Inventory() {
         {visibleCount < filteredItems.length && <div className="flex justify-center py-8"><Button onClick={() => setVisibleCount((prev) => prev + ITEMS_PER_PAGE)}>{t('ui.inventory.load_more_items')}</Button></div>}
       </div>
       <FoundryPanel isOpen={showFoundry} onClose={() => setShowFoundry(false)} inventoryData={inventoryData} foundryFilters={foundryFilters} setFoundryFilters={setFoundryFilters} />
-    </PageLayout>);
+    </PageLayout>
+    <ItemDetailPanel
+      item={selectedItem}
+      isOpen={!!selectedItem}
+      onClose={() => setSelectedItem(null)}
+      framesPath={framesPath}
+      iconsPath={iconsPath}
+      uiPath={uiPath}
+      cardImagesPath={cardImagesPath}
+      exportTextIcons={ExportTextIcons}
+    />
+    </>);
 
 }
 
